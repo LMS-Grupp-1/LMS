@@ -18,7 +18,7 @@ All code, including names and comments, is written in English.
 Direct pushes to `master` and `Dev` are blocked. All changes go through a pull request.
 
 ```mermaid
-%%{init: {'gitGraph': {'mainBranchName': 'master'}}}%%
+%%{init: {'gitGraph': {'mainBranchName': 'main'}}}%%
 gitGraph
     commit id: "init"
     branch Dev
