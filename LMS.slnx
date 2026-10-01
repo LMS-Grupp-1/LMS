@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="LMS.Shared/LMS.Shared.csproj" Id="ca774471-fcf8-4723-b080-0867c06280aa" />
+  </Folder>
+  <Folder Name="/src/API/">
+    <Project Path="LMS.API/LMS.API.csproj" />
+    <Project Path="LMS.Infrastructure/LMS.Infrastructure.csproj" Id="d1745ff1-344f-469f-93f5-95ea9d4956d8" />
+    <Project Path="LMS.Presentation/LMS.Presentation.csproj" Id="c6610857-6d45-406f-8111-9845ebc750c5" />
+    <Project Path="LMS.Services/LMS.Services.csproj" Id="38a95051-5742-4eca-b666-1effaec11a2c" />
+    <Project Path="Domain.Contracts/Domain.Contracts.csproj" Id="52e72200-02ca-4b1b-a2d0-0e62b7aa8057" />
+    <Project Path="Domain.Models/Domain.Models.csproj" Id="0dec5142-e850-490d-832d-bb6344f48791" />
+    <Project Path="Service.Contracts/Service.Contracts.csproj" Id="1073e315-bb90-456e-ae5c-822618c855f5" />
+  </Folder>
+  <Folder Name="/src/Blazor/">
+    <Project Path="LMS.Blazor/LMS.Blazor.Client/LMS.Blazor.Client.csproj" Id="55f09990-8f15-4eda-ac6e-2f9771ab1e58" />
+    <Project Path="LMS.Blazor/LMS.Blazor/LMS.Blazor.csproj" Id="e2cec9bb-ac1a-472a-84c8-d9ec66b988bb" />
+  </Folder>
+</Solution>
