@@ -15,10 +15,10 @@ All code, including names and comments, is written in English.
 
 `Dev` is the repository's default branch, so new pull requests target `Dev` automatically and `Closes #<number>` closes issues when a pull request is merged.
 
-Direct pushes to `master` and `Dev` are blocked. All changes go through a pull request.
+Direct pushes to `main` and `Dev` are blocked. All changes go through a pull request.
 
 ```mermaid
-%%{init: {'gitGraph': {'mainBranchName': 'main'}}}%%
+%%{init: {'gitGraph': {'mainBranchName': 'master'}}}%%
 gitGraph
     commit id: "init"
     branch Dev
