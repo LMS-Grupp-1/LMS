@@ -6,7 +6,7 @@
 |---|---|---|
 | Local | – | Development on each team member's machine |
 | Test | `Dev` | Verifying merged features in Azure before release |
-| Production | `master` | Sprint demos and final delivery |
+| Production | `main` | Sprint demos and final delivery |
 
 Test and production each have their own database and their own blob container. Nobody tests against the production database.
 
@@ -28,8 +28,8 @@ flowchart LR
     PR["Pull request<br/>to Dev"] --> CI["CI<br/>restore · build · test"]
     CI -->|approved and merged| DEV["Dev"]
     DEV --> TEST["Deploy to Test"]
-    DEV -->|end of sprint PR| MASTER["master"]
-    MASTER --> PROD["Deploy to Production"]
+    DEV -->|end of sprint PR| MAIN["main"]
+    MAIN --> PROD["Deploy to Production"]
 ```
 
 ### Continuous integration
@@ -39,4 +39,4 @@ CI restores, builds and tests the solution on every pull request. A failed build
 ### Continuous deployment
 
 - A merge into `Dev` deploys to the test environment.
-- At the end of each sprint, `Dev` is merged into `master` through a pull request, which deploys to production.
+- At the end of each sprint, `Dev` is merged into `main` through a pull request, which deploys to production.
