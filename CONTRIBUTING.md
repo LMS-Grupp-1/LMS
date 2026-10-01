@@ -8,7 +8,7 @@ All code, including names and comments, is written in English.
 
 | Branch | Purpose |
 |---|---|
-| `master` | Stable, released code. Updated at the end of each sprint. |
+| `main` | Stable, released code. Updated at the end of each sprint. |
 | `Dev` | Integration branch. All features are merged here. |
 | `feature/<issue>-<short-name>` | New functionality, e.g. `feature/us04-modules` |
 | `bugfix/<short-name>` | Bug fixes, e.g. `bugfix/submission-deadline` |
