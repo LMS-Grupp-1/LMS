@@ -25,10 +25,11 @@ public class AuthController(IServiceManager serviceManager) : ControllerBase
     [SwaggerResponse(StatusCodes.Status401Unauthorized, "Invalid username or password")]
     public async Task<ActionResult<TokenDto>> Authenticate(UserAuthDto userDto)
     {
-        if (!await _serviceManager.AuthService.ValidateUserAsync(userDto))
+        var token = await _serviceManager.AuthService.AuthenticateAsync(userDto);
+        if (token is null)
             return Unauthorized();
 
-        return await _serviceManager.AuthService.CreateTokenAsync(addTime: true);
+        return Ok(token);
     }
 
     [HttpGet("me")]

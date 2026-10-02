@@ -16,26 +16,31 @@ namespace LMS.Services;
 public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> userManager;
-    private readonly RoleManager<IdentityRole> roleManager;
-    private JwtSettings jwtSettings;
-    private ApplicationUser? user;
+    private readonly JwtSettings jwtSettings;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole> roleManager,
         IOptions<JwtSettings> jwtSettings)
     {
         this.userManager = userManager;
-        this.roleManager = roleManager;
         this.jwtSettings = jwtSettings.Value;
     }
 
-    public async Task<TokenDto> CreateTokenAsync(bool addTime)
+    public async Task<TokenDto?> AuthenticateAsync(UserAuthDto userDto)
     {
-        ArgumentNullException.ThrowIfNull(user, nameof(user));
+        ArgumentNullException.ThrowIfNull(userDto);
 
+        var user = await userManager.FindByEmailAsync(userDto.Email);
+        if (user is null || !await userManager.CheckPasswordAsync(user, userDto.Password))
+            return null;
+
+        return await CreateTokenAsync(user, addTime: true);
+    }
+
+    private async Task<TokenDto> CreateTokenAsync(ApplicationUser user, bool addTime)
+    {
         SigningCredentials signing = GetSigningCredentials();
-        IEnumerable<Claim> claims = await GetClaimsAsync();
+        IEnumerable<Claim> claims = await GetClaimsAsync(user);
         JwtSecurityToken token = GenerateToken(signing, claims);
 
         user.RefreshToken = GenerateRefreshToken();
@@ -75,9 +80,8 @@ public class AuthService : IAuthService
         return token;
     }
 
-    private async Task<IEnumerable<Claim>> GetClaimsAsync()
+    private async Task<IEnumerable<Claim>> GetClaimsAsync(ApplicationUser user)
     {
-        ArgumentNullException.ThrowIfNull(user, nameof(user));
         var claims = new List<Claim>()
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
@@ -105,15 +109,6 @@ public class AuthService : IAuthService
         return new SigningCredentials(secret, SecurityAlgorithms.HmacSha256);
     }
 
-    public async Task<bool> ValidateUserAsync(UserAuthDto userDto)
-    {
-        ArgumentNullException.ThrowIfNull(userDto);
-
-        user = await userManager.FindByEmailAsync(userDto.Email);
-
-        return user != null && await userManager.CheckPasswordAsync(user, userDto.Password);
-    }
-
     public async Task<TokenDto> RefreshTokenAsync(TokenDto token)
     {
         ClaimsPrincipal principal = GetPrincipalFromExpiredToken(token.AccessToken);
@@ -122,9 +117,7 @@ public class AuthService : IAuthService
         if (user == null || user.RefreshToken != token.RefreshToken || user.RefreshTokenExpireTime <= DateTime.UtcNow)
             throw new TokenValidationException();
 
-        this.user = user;
-
-        return await CreateTokenAsync(addTime: false);
+        return await CreateTokenAsync(user, addTime: false);
     }
 
     private ClaimsPrincipal GetPrincipalFromExpiredToken(string accessToken)
