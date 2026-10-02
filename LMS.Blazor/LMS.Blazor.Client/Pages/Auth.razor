@@ -1,0 +1,89 @@
+@page "/auth"
+
+@using LMS.Shared.DTOs.AuthDtos
+@using LMS.Blazor.Client.Services.ApiProxy
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+@implements IDisposable
+
+@inject IApiProxyClient ApiProxyClient
+@inject NavigationManager NavigationManager
+
+<PageTitle>Auth</PageTitle>
+
+<h1>Remote API authentication</h1>
+
+<AuthorizeView>
+    <Authorized>
+        <p>Cookie-authenticated in Blazor as <strong>@context.User.Identity?.Name</strong>.</p>
+    </Authorized>
+</AuthorizeView>
+
+@if (isLoading)
+{
+    <p><em>Calling the Remote API through the Blazor proxy...</em></p>
+}
+else if (demoResult is not null)
+{
+    <div class="alert alert-success" role="status">
+        <p class="mb-1">@demoResult.Message</p>
+        <p class="mb-1">Remote user: @demoResult.UserName</p>
+        <p class="mb-1">Roles: @(demoResult.Roles.Count > 0 ? string.Join(", ", demoResult.Roles) : "None")</p>
+        <small>Remote response: @demoResult.RequestedAtUtc.ToLocalTime()</small>
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">@errorMessage</div>
+}
+
+@code {
+    private DemoAuthDto? demoResult;
+    private string? errorMessage;
+    private bool isLoading = true;
+    private readonly CancellationTokenSource componentCancellation = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await ApiProxyClient.GetAsync<DemoAuthDto>(
+                "demo-auth",
+                componentCancellation.Token);
+
+            // The server-side prerender service deliberately returns null. Keep
+            // showing the loading state until WebAssembly runs this lifecycle
+            // method again with the real client implementation.
+            if (result is null)
+            {
+                return;
+            }
+
+            demoResult = result;
+            isLoading = false;
+        }
+        catch (OperationCanceledException) when (componentCancellation.IsCancellationRequested)
+        {
+            // Navigating away disposes the component and cancels its request.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                $"Account/Login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}",
+                forceLoad: true);
+            return;
+        }
+        catch (HttpRequestException exception)
+        {
+            errorMessage = $"The proxy request failed: {exception.Message}";
+            isLoading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        componentCancellation.Cancel();
+        componentCancellation.Dispose();
+    }
+}
