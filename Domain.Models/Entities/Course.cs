@@ -15,8 +15,9 @@ namespace Domain.Models.Entities
         public DateTime EndDate { get; set; }
 
         // Navigation properties
-        public ICollection<Module> Modules { get; set; } = new List<Module>();
         public ICollection<ApplicationUser> Students { get; set; } = new List<ApplicationUser>();
-        public ICollection<Document> Documents { get; set; } = new List<Document>();
+
+        //public ICollection<Module> Modules { get; set; } = new List<Module>();
+        //public ICollection<Document> Documents { get; set; } = new List<Document>();
     }
 }
