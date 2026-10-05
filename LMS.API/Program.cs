@@ -28,8 +28,9 @@ internal class Program
         builder.Services.ConfigureAuthentication(builder.Configuration);
         builder.Services.ConfigureIdentity();
         builder.Services.ConfigurePolicys();
+		builder.Services.ConfigureCors(builder.Configuration);
 
-        var app = builder.Build();
+		var app = builder.Build();
 
         app.ConfigureExceptionHandler();
 

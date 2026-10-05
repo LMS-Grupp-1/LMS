@@ -64,18 +64,20 @@ public static class AuthExtensions
     }
 
 
-    public static void ConfigureCors(this IServiceCollection services)
-    {
-        //ToDo: Restrict to Blazor BFF
-        services.AddCors(options =>
+    public static void ConfigureCors(this IServiceCollection services, IConfiguration configuration)
+    {		
+		var allowedOrigins = configuration
+			.GetSection("Cors:AllowedOrigins")
+			.Get<string[]>() ?? [];
+
+		services.AddCors(options =>
         {
             options.AddDefaultPolicy(policy =>
             {
-                policy.AllowAnyOrigin()
-                      .AllowAnyMethod()
-                      .AllowAnyHeader();
+                policy.WithOrigins(allowedOrigins)
+                .AllowAnyMethod()
+                .AllowAnyHeader();
             });
-
         });
     }
 }
