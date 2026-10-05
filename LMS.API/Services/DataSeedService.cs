@@ -4,14 +4,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LMS.API.Services;
 
-//ToDo: Add in UserSecrets (you can change password and secretkey):
-//{
-//  "password": "abc",
-//  "JwtSettings": {
-//    "secretkey" :  "ThisMustNeReallyLong!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-//  }
-//}
-
 
 internal class DataSeedService : IHostedService
 {
