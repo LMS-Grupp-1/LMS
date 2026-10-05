@@ -13,7 +13,7 @@ internal class DataSeedService : IHostedService
     private UserManager<ApplicationUser> userManager = null!;
     private RoleManager<IdentityRole> roleManager = null!;
     private string _password = null!;
-    private const string DemoRole = "Demo";
+    private const string DemoRole = "Teacher";
     private const string DefaultUserEmail = "DemoUser@Lms.com";
 
     public DataSeedService(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DataSeedService> logger)

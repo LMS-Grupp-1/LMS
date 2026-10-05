@@ -1,0 +1,50 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@page "/users"
+@attribute [Authorize(Roles = "Teacher")]
+@inject NavigationManager Navigation
+
+<PageTitle>Användarhantering</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Administrera Användare</h3>
+        <button class="btn btn-primary" @onclick="NavigeraToCreateUser">
+            <i class="bi bi-plus-circle"></i> Lägga till en användare
+        </button>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Namn</th>
+                <th>E-post</th>
+                <th>Roll</th>
+                <th>Kopplad Kurs</th>
+                <th>Åtgärder</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Anna Andersson</td>
+                <td>anna@example.com</td>
+                <td>Student</td>
+                <td>C# Grundkurs</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditUser(1)">Redigera</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private void NavigeraToCreateUser()
+    {
+        Navigation.NavigateTo("/users/create");
+    }
+
+    private void EditUser(int id)
+    {
+        Navigation.NavigateTo($"/users/edit/{id}");
+    }
+}
