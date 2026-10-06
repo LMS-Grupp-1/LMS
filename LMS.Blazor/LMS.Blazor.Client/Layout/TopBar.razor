@@ -1,0 +1,13 @@
+
+<div class="top-row px-4">
+    <button class="btn"><i class="bi bi-bell"></i></button>
+
+    <button class="btn"><i class="bi bi-person-circle"></i> @UserName</button>
+
+    <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
+</div>
+
+@code {
+    [Parameter]
+    public string UserName { get; set; } = "";
+}
