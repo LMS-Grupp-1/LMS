@@ -13,8 +13,9 @@ internal class DataSeedService : IHostedService
     private UserManager<ApplicationUser> userManager = null!;
     private RoleManager<IdentityRole> roleManager = null!;
     private string _password = null!;
-    private const string DemoRole = "Demo";
-    private const string DefaultUserEmail = "DemoUser@Lms.com";
+    private const string DemoRole = "Teacher";
+    private const string DefaultUserEmail = "admin@lms.com";
+    private const string NameForDefaultUser = "Admin";
 
     public DataSeedService(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DataSeedService> logger)
     {
@@ -76,6 +77,7 @@ internal class DataSeedService : IHostedService
         {
             Email = DefaultUserEmail,
             UserName = DefaultUserEmail,
+            Name = NameForDefaultUser
         };
 
         await CreateUserAsync(user, DemoRole);

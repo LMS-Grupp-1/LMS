@@ -1,0 +1,107 @@
+﻿
+@page "/users/create"
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@using LMS.Shared.DTOs.Users
+@using LMS.Blazor.Client.Services
+@attribute [Authorize(Roles = "Teacher")]
+@inject IUsersService UsersService
+@inject NavigationManager Navigation
+
+<div class="container mt-4">
+    <div class="col-md-6">
+        <h3>Lägg till en användare</h3>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        <EditForm Model="@model" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-danger" />
+
+            <div class="mb-3">
+                <label class="form-label">Namn:</label>
+                <InputText @bind-Value="model.Name" class="form-control" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">E-post:</label>
+                <InputText @bind-Value="model.Email" class="form-control" />
+                <ValidationMessage For="@(() => model.Email)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Lösenord:</label>
+                <InputText @bind-Value="model.Password" class="form-control" type="password" />
+                <ValidationMessage For="@(() => model.Password)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Roll:</label>
+                <InputSelect @bind-Value="model.Role" class="form-control">
+                    <option value="">Välj roll...</option>
+                    <option value="Student">Student</option>
+                    <option value="Teacher">Teacher</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => model.Role)" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Kurs:</label>
+                <InputSelect @bind-Value="model.Course" class="form-control">
+                    <option value="">Välj kurs...</option>
+                    <option value="Kurs 1">Kurs 1</option>
+                    <option value="Kurs 2">Kurs 2</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => model.Course)" />
+            </div>
+
+            <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                @if (isSubmitting)
+                {
+                    <span>Skapar...</span>
+                }
+                else
+                {
+                    <span>Skapar användare</span>
+                }
+            </button>
+        </EditForm>
+    </div>
+</div>
+
+@code {
+    private CreateUserDto model = new();
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await UsersService.CreateUserAsync(model);
+            if (response.IsSuccessStatusCode)
+            {
+                Navigation.NavigateTo("/users");
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                errorMessage = $"Det gick inte att skapa användaren: {errorContent}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ett fel uppstod: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}
