@@ -62,4 +62,55 @@ public class UsersService : IUsersService
 
         return userDtos;
     }
+
+    public async Task<UserDto?> GetUserByIdAsync(string id)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null) return null;
+
+        var roles = await _userManager.GetRolesAsync(user);
+
+        // ToDo: Get the course
+
+        return new UserDto { 
+            Id = user.Id, 
+            Email = user.Email, 
+            Name = user.Name, 
+            Role = roles.FirstOrDefault() ?? string.Empty
+        };
+    }
+
+    public async Task<IdentityResult> UpdateUserAsync(UpdateUserDto dto)
+    {
+        var user = await _userManager.FindByIdAsync(dto.Id);
+        if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+
+        user.UserName = dto.Email;
+        user.Email = dto.Email;
+        user.Name = dto.Name;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded) return result;
+
+        if (!string.IsNullOrEmpty(dto.Role))
+        {
+            var currentRoles = await _userManager.GetRolesAsync(user);
+
+            if (!currentRoles.Contains(dto.Role))
+            {
+                if (currentRoles.Any())
+                {
+                    var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                    if (!removeResult.Succeeded) return removeResult;
+                }
+
+                var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
+                if (!addResult.Succeeded) return addResult;
+            }
+        }
+
+        // ToDo: Update user's course if dto.Course is provided
+
+        return IdentityResult.Success;
+    }
 }
