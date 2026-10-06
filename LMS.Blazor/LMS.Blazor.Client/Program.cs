@@ -1,4 +1,5 @@
 using LMS.Blazor.Client.Services.ApiProxy;
+using LMS.Blazor.Client.Services;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 namespace LMS.Blazor.Client;
@@ -17,6 +18,7 @@ internal class Program
             BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
         });
         builder.Services.AddScoped<IApiProxyClient, ApiProxyClient>();
+        builder.Services.AddScoped<IUsersService, UsersService>();
 
         await builder.Build().RunAsync();
     }

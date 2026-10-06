@@ -52,7 +52,8 @@ public static class AuthExtensions
         })
            .AddRoles<IdentityRole>()
            .AddEntityFrameworkStores<ApplicationDbContext>()
-           .AddDefaultTokenProviders();
+           .AddDefaultTokenProviders()
+           .AddRoles<IdentityRole>();
     }
     public static void ConfigurePolicys(this IServiceCollection services)
     {
