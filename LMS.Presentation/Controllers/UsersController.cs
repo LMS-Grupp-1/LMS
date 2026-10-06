@@ -3,8 +3,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using LMS.Shared.DTOs.Users;
 using Service.Contracts;
-using Domain.Models.Entities;
-using LMS.Infrastructure.Data;
 
 [Authorize(Roles = "Teacher")]
 [ApiController]

@@ -19,8 +19,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\Service.Contracts\Service.Contracts.csproj" />
-		<ProjectReference Include="..\LMS.Infrastructure\LMS.Infrastructure.csproj" />
-		<ProjectReference Include="..\Domain.Models\Domain.Models.csproj" />
 	</ItemGroup>
 
 </Project>
