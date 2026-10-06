@@ -13,7 +13,11 @@ public static class ServiceExtensions
     public static void AddServiceLayer(this IServiceCollection services)
     {
         services.AddScoped<IServiceManager, ServiceManager>();
+
         services.AddScoped<IAuthService, AuthService>();
         services.AddLazy<IAuthService>();
+
+        services.AddScoped<IUsersService, UsersService>();
+        services.AddLazy<IUsersService>();
     }
 }

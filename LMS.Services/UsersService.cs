@@ -1,0 +1,65 @@
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Domain.Models.Entities;
+using Service.Contracts;
+using LMS.Shared.DTOs.Users;
+
+namespace LMS.Services;
+
+public class UsersService : IUsersService
+{
+    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly RoleManager<IdentityRole> _roleManager;
+
+    public UsersService(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+    {
+        _userManager = userManager;
+        _roleManager = roleManager;
+    }
+    public async Task<IdentityResult> CreateUserAsync(CreateUserDto dto)
+    {
+        var user = new ApplicationUser
+        {
+            UserName = dto.Email,
+            Email = dto.Email,
+            Name = dto.Name
+        };
+
+        var result = await _userManager.CreateAsync(user, dto.Password);
+        if (!result.Succeeded) return result;
+
+        if (!string.IsNullOrEmpty(dto.Role))
+        {
+            if (!await _roleManager.RoleExistsAsync(dto.Role))
+            {
+                await _roleManager.CreateAsync(new IdentityRole(dto.Role));
+            }
+            await _userManager.AddToRoleAsync(user, dto.Role);
+        }
+
+        // ToDo: Add user to course if dto.Course is provided
+
+        return IdentityResult.Success;
+    }
+    public async Task<IEnumerable<UserDto>?> GetUsersAsync()
+    {
+        var users = _userManager.Users.ToList();
+        var userDtos = new List<UserDto>();
+
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            userDtos.Add(new UserDto
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                Name = user.Name,
+                Role = roles.FirstOrDefault()
+            });
+
+            // ToDo: Get the course
+        }
+
+        return userDtos;
+    }
+}

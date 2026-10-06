@@ -11,15 +11,11 @@ using LMS.Infrastructure.Data;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly ApplicationDbContext _context;
+    private readonly IServiceManager _service;
 
-    public UsersController(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ApplicationDbContext context)
+    public UsersController(IServiceManager service)
     {
-        _userManager = userManager;
-        _roleManager = roleManager;
-        _context = context;
+        _service = service;
     }
 
     [HttpPost]
@@ -30,38 +26,19 @@ public class UsersController : ControllerBase
             return BadRequest(new { message = "Request body is empty or invalid." });
         }
 
-        var user = new ApplicationUser
-        {
-            UserName = dto.Email,
-            Email = dto.Email,
-            Name = dto.Name
-        };
-
-        var result = await _userManager.CreateAsync(user, dto.Password);
+        var result = await _service.UsersService.CreateUserAsync(dto);
         if (!result.Succeeded)
         {
             return BadRequest(result.Errors);
         }
 
-        if (!string.IsNullOrWhiteSpace(dto.Role))
-        {
-            if (_roleManager != null)
-            {
-                if (!await _roleManager.RoleExistsAsync(dto.Role))
-                {
-                    await _roleManager.CreateAsync(new IdentityRole(dto.Role));
-                }
-                await _userManager.AddToRoleAsync(user, dto.Role);
-            }
-        }
+        return Ok(new { message = "User created successfully" });
+    }
 
-        if (!string.IsNullOrWhiteSpace(dto.Course))
-        {
-            // Add your course association logic here 
-            // e.g., finding the course and adding the user to a join table, 
-            // or saving it depending on how your LMS database is structured.
-        }
-
-        return Ok(new { message = "User created successfully!" });
+    [HttpGet]
+    public async Task<IActionResult> GetUsers()
+    {
+        var users = await _service.UsersService.GetUsersAsync();
+        return Ok(users);
     }
 }

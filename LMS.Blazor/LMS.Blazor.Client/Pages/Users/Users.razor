@@ -1,12 +1,27 @@
-﻿@using Microsoft.AspNetCore.Authorization
-@page "/users"
+﻿@page "/users"
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.DTOs.Users
 @attribute [Authorize(Roles = "Teacher")]
 @inject NavigationManager Navigation
+@inject IUsersService UsersService
 
 <PageTitle>Användarhantering</PageTitle>
 
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    @if (users == null)
+{
+    <h3 class="mb-3">Administrera Användare</h3>
+    <p><em>Laddar användare...</em></p>
+}
+else if (!users.Any())
+{
+    <h3 class="mb-3">Administrera Användare</h3>
+    <p>Inga användare hittades.</p>
+}
+else
+{
+     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Administrera Användare</h3>
         <button class="btn btn-primary" @onclick="NavigeraToCreateUser">
             <i class="bi bi-plus-circle"></i> Lägga till en användare
@@ -24,26 +39,37 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td>Anna Andersson</td>
-                <td>anna@example.com</td>
-                <td>Student</td>
-                <td>C# Grundkurs</td>
-                <td>
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditUser(1)">Redigera</button>
-                </td>
-            </tr>
+            @foreach (var user in users)
+            {
+                <tr>
+                    <td>@user.Name</td>
+                    <td>@user.Email</td>
+                    <td>@user.Role</td>
+                    <td>@user.Course</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditUser(user.Id)">Redigera</button>
+                    </td>
+                </tr>
+            }
         </tbody>
-    </table>
+    </table>   
+}
 </div>
 
 @code {
+    private IEnumerable<UserDto>? users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        users = await UsersService.GetUsersAsync();
+    }
+
     private void NavigeraToCreateUser()
     {
         Navigation.NavigateTo("/users/create");
     }
 
-    private void EditUser(int id)
+    private void EditUser(string id)
     {
         Navigation.NavigateTo($"/users/edit/{id}");
     }

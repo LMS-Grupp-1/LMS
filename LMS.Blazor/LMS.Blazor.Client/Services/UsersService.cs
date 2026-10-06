@@ -16,7 +16,11 @@ public class UsersService : IUsersService
     public async Task<HttpResponseMessage> CreateUserAsync(CreateUserDto dto)
     {
         using var content = JsonContent.Create(dto);
-
         return await _apiProxy.SendAsync<HttpResponseMessage>(HttpMethod.Post, "users", content);
+    }
+
+    public async Task<IEnumerable<UserDto>?> GetUsersAsync()
+    {
+        return await _apiProxy.SendAsync<IEnumerable<UserDto>>(HttpMethod.Get, "users");
     }
 }
