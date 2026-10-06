@@ -5,7 +5,7 @@ using LMS.Presentation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-internal class Program
+public class Program
 {
     private static void Main(string[] args)
     {
