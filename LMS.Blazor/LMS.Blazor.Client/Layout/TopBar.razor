@@ -1,13 +1,24 @@
 
+
 <div class="top-row px-4">
-    <button class="btn"><i class="bi bi-bell"></i></button>
+    <AuthorizeView>
+        <button class="btn"><i class="bi bi-bell"></i></button>
 
-    <button class="btn"><i class="bi bi-person-circle"></i> @UserName</button>
-
-    <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-</div>
+        <button class="btn"><i class="bi bi-person-circle "></i> @context.User.Identity?.Name</button>
+        
+        <div class="nav-item px-3">
+            <form action="Account/Logout" method="post">
+                <AntiforgeryToken />
+                <input type="hidden" name="ReturnUrl" value="" />
+                <button type="submit" class="nav-link">
+                    <span class="bi bi-arrow-bar-left-nav-menu" aria-hidden="true"></span>
+                    <i class="bi bi-box-arrow-in-right"></i>  Logout
+                </button>
+            </form>
+        </div>
+    </AuthorizeView>
+    </div>
 
 @code {
-    [Parameter]
-    public string UserName { get; set; } = "";
+    
 }
