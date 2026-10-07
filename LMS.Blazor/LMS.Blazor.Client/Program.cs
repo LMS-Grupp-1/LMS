@@ -19,7 +19,8 @@ internal class Program
         });
         builder.Services.AddScoped<IApiProxyClient, ApiProxyClient>();
         builder.Services.AddScoped<IUsersService, UsersService>();
+		builder.Services.AddScoped<ICourseService, CourseService>();
 
-        await builder.Build().RunAsync();
+		await builder.Build().RunAsync();
     }
 }

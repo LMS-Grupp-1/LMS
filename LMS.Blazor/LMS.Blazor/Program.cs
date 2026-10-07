@@ -21,9 +21,10 @@ public class Program
         builder.Services.AddBffAntiforgery();
         builder.Services.AddRemoteApiProxy(builder.Configuration);
 
-        builder.Services.AddScoped<LMS.Blazor.Client.Services.IUsersService, LMS.Blazor.Client.Services.UsersService>();
+        builder.Services.AddScoped<LMS.Blazor.Client.Services.IUsersService, LMS.Blazor.Client.Services.UsersService>();		
+		builder.Services.AddScoped<LMS.Blazor.Client.Services.ICourseService, LMS.Blazor.Client.Services.CourseService>();
 
-        var app = builder.Build();
+		var app = builder.Build();
 
         // Load and validate persisted sessions before the first request arrives.
         // Forces it to get an instance before app starts

@@ -1,0 +1,117 @@
+﻿@page "/participants"
+@attribute [Authorize(Roles = UserRoles.Student)]
+@implements IDisposable
+
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.CourseDtos
+@using System.Net
+
+@inject NavigationManager NavigationManager
+@inject ICourseService CourseService
+
+<PageTitle>Participants</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center gap-2 text-muted">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Loading participants...</span>
+    </div>
+}
+else if (errorMessage is not null)
+{
+    <div class="alert alert-warning">@errorMessage</div>
+}
+else if (course is not null)
+{
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">Participants</h1>
+        <p class="text-muted mb-0">
+            @course.Name · @course.Participants.Count participants
+        </p>
+    </div>
+
+    @if (course.Participants.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-muted">There are no participants in this course yet.</div>
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-uppercase small text-muted">Name</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var participant in course.Participants)
+                        {
+                            <tr @key="participant.Id">
+                                <td>@participant.FirstName @participant.LastName</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private StudentCourseDto? course;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private readonly CancellationTokenSource componentCancellation = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // The participant list is part of the student's course
+            var result = await CourseService.GetMyCourseAsync(componentCancellation.Token);
+
+            // The server-side prerender service deliberately returns null.
+            // Keep showing the loading state until WebAssembly runs this again.
+            if (result is null)
+            {
+                return;
+            }
+
+            course = result;
+            isLoading = false;
+        }
+        catch (OperationCanceledException) when (componentCancellation.IsCancellationRequested)
+        {
+            // Navigating away disposes the component and cancels its request.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // The session has expired, send the user to the login page
+            NavigationManager.NavigateTo(
+                $"Account/Login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}",
+                forceLoad: true);
+        }
+        catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        {
+            errorMessage = "You are not enrolled in a course yet.";
+            isLoading = false;
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "The participants could not be loaded. Please try again later.";
+            isLoading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        componentCancellation.Cancel();
+        componentCancellation.Dispose();
+    }
+}
