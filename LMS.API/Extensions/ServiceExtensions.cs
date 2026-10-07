@@ -16,8 +16,11 @@ public static class ServiceExtensions
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddLazy<IAuthService>();
-
+      
         services.AddScoped<IUsersService, UsersService>();
         services.AddLazy<IUsersService>();
+
+        services.AddScoped<ICourseService, CourseService>();
+        services.AddLazy<ICourseService>();
     }
 }

@@ -54,8 +54,8 @@ public class UsersService : IUsersService
                 Id = user.Id,
                 Email = user.Email ?? string.Empty,
                 Name = user.Name,
-                Role = roles.FirstOrDefault()
-            });
+                Role = roles.FirstOrDefault() ?? string.Empty
+			});
 
             // ToDo: Get the course
         }
