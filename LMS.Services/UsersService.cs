@@ -116,6 +116,13 @@ public class UsersService : IUsersService
                     if (!removeResult.Succeeded) return removeResult;
                 }
 
+                // Ensure the role exists before adding
+                if (!await _roleManager.RoleExistsAsync(dto.Role))
+                {
+                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(dto.Role));
+                    if (!roleResult.Succeeded) return roleResult;
+                }
+
                 var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
                 if (!addResult.Succeeded) return addResult;
             }
