@@ -1,5 +1,6 @@
 using LMS.API.Extensions;
 using LMS.API.Services;
+using LMS.Blazor.Client.Services;
 using LMS.Infrastructure.Data;
 using LMS.Presentation;
 using Microsoft.AspNetCore.Mvc;
@@ -30,7 +31,7 @@ public class Program
         builder.Services.ConfigurePolicys();
 		builder.Services.ConfigureCors(builder.Configuration);
 
-		var app = builder.Build();
+        var app = builder.Build();
 
         app.ConfigureExceptionHandler();
 
@@ -49,8 +50,7 @@ public class Program
         app.UseAuthentication();
         app.UseAuthorization();
 
-        app.MapControllers()
-           .RequireAuthorization("Default");
+        app.MapControllers();
 
         app.Run();
     }

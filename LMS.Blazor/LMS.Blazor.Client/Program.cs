@@ -1,5 +1,5 @@
-using LMS.Blazor.Client.Services.ApiProxy;
 using LMS.Blazor.Client.Services;
+using LMS.Blazor.Client.Services.ApiProxy;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
 namespace LMS.Blazor.Client;
@@ -13,9 +13,10 @@ internal class Program
         builder.Services.AddAuthorizationCore();
         builder.Services.AddCascadingAuthenticationState();
         builder.Services.AddAuthenticationStateDeserialization();
-        builder.Services.AddScoped(_ => new HttpClient
+        builder.Services.AddScoped<ICourseApiService, CourseApiService>();
+        builder.Services.AddScoped(sp => new HttpClient
         {
-            BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
+            BaseAddress = new Uri("https://localhost:7003/")
         });
         builder.Services.AddScoped<IApiProxyClient, ApiProxyClient>();
         builder.Services.AddScoped<IUsersService, UsersService>();

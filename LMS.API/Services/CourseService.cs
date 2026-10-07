@@ -64,4 +64,14 @@ public class CourseService(ICourseRepository repository) : ICourseService
         _repository.UpdateCourse(course);
         await _repository.SaveAsync();
     }
+
+    public async Task DeleteCourseAsync(int id)
+    {
+        var course = await _repository.GetByIdAsync(id, trackChanges: true);
+        if (course is null)
+            throw new KeyNotFoundException($"Course with id {id} was not found.");
+
+        _repository.DeleteCourse(course);
+        await _repository.SaveAsync();
+    }
 }

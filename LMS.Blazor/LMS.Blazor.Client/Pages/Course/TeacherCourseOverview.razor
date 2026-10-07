@@ -1,0 +1,192 @@
+﻿@rendermode @(new InteractiveAutoRenderMode(prerender: false))
+@page "/teacher/courses"
+@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Blazor.Client.Services
+@inject ICourseApiService CourseApiService
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Teacher Course Overview</h3>
+    <button class="btn btn-primary" @onclick="OpenCreateModal">
+        + Create New Course
+    </button>
+</div>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center gap-2 my-4">
+        <div class="spinner-border text-primary" role="status"></div>
+        <span>Loading courses...</span>
+    </div>
+}
+else if (courses != null && !courses.Any())
+{
+    <div class="alert alert-info">
+        No courses found. Click "+ Create New Course" above to add your first course.
+    </div>
+}
+else if (courses != null)
+{
+    <div class="row">
+        @foreach (var course in courses)
+        {
+            <div @key="course.Id" class="col-md-4 mb-3">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">@course.Name</h5>
+                        <p class="card-text">@course.Description</p>
+                    </div>
+                    <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            @course.StartDate.ToShortDateString() - @course.EndDate.ToShortDateString()
+                        </small>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => OpenEditModal(course)">
+                                Edit
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCourse(course.Id)">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* --- MODUL FOR EDITING --- *@
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Edit Course" : "Create New Course")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Course Name</label>
+                        <input type="text" class="form-control" @bind="courseForm.Name" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" rows="3" @bind="courseForm.Description"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" class="form-control" @bind="courseForm.StartDate" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" @bind="courseForm.EndDate" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-success" @onclick="SaveCourse">
+                        @(isEditing ? "Save Changes" : "Create Course")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private IEnumerable<CourseDto>? courses;
+    private bool showModal = false;
+    private bool isEditing = false;
+    private bool isLoading = true;
+    private int editingCourseId = 0;
+
+    private CourseFormModel courseForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCourses();
+    }
+
+    private async Task LoadCourses()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await CourseApiService.GetAllCoursesAsync();
+            courses = result ?? new List<CourseDto>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        isEditing = false;
+        courseForm = new CourseFormModel
+        {
+            StartDate = DateTime.Today,
+            EndDate = DateTime.Today.AddMonths(1)
+        };
+        showModal = true;
+    }
+
+    private void OpenEditModal(CourseDto course)
+    {
+        isEditing = true;
+        editingCourseId = course.Id;
+        courseForm = new CourseFormModel
+        {
+            Name = course.Name,
+            Description = course.Description,
+            StartDate = course.StartDate,
+            EndDate = course.EndDate
+        };
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+    }
+
+    private async Task SaveCourse()
+    {
+        if (isEditing)
+        {
+            var updateDto = new CourseUpdateDto(courseForm.Name, courseForm.Description, courseForm.StartDate, courseForm.EndDate);
+            await CourseApiService.UpdateCourseAsync(editingCourseId, updateDto);
+        }
+        else
+        {
+            var createDto = new CourseCreateDto(courseForm.Name, courseForm.Description, courseForm.StartDate, courseForm.EndDate);
+            await CourseApiService.CreateCourseAsync(createDto);
+        }
+
+        CloseModal();
+        await LoadCourses();
+    }
+
+    private async Task DeleteCourse(int id)
+    {
+        var success = await CourseApiService.DeleteCourseAsync(id);
+        if (success)
+        {
+            await LoadCourses();
+        }
+    }
+
+    public class CourseFormModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public DateTime StartDate { get; set; } = DateTime.Today;
+        public DateTime EndDate { get; set; } = DateTime.Today.AddMonths(1);
+    }
+}
