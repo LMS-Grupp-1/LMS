@@ -1,8 +1,11 @@
 @page "/Account/Login"
 
 @using System.ComponentModel.DataAnnotations
+@using LMS.Blazor.Client.Layout
 @using LMS.Shared.DTOs.AuthDtos
 @using LMS.Blazor.Services.Authentication
+
+@layout EmptyLayout
 
 @inject ILogger<Login> Logger
 @inject AccountRedirectManager RedirectManager
@@ -10,14 +13,16 @@
 
 <PageTitle>Log in</PageTitle>
 
-<h1>Log in</h1>
-<div class="row">
-    <div class="col-lg-6">
+
+<div class="row background"> 
+    <div class="bg-white shadow m-4 p-5 col-lg-6 position-absolute top-50 start-50 translate-middle">
+
+        <h1 class="text-center text-primary"><i class="bi bi-book"></i></h1>
         <section>
             <StatusMessage Message="@errorMessage" />
             <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login">
                 <DataAnnotationsValidator />
-                <h2>Use your account to log in.</h2>
+                <h2 class="text-center">LMS Lexicon</h2>
                 <hr />
                 <div class="form-floating mb-3">
                     <InputText @bind-Value="Input.Email"
@@ -52,7 +57,6 @@
         </section>
     </div>
 </div>
-
 @code {
     private string? errorMessage;
     private EditContext editContext = default!;
