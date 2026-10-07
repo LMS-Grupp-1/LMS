@@ -13,13 +13,13 @@ internal class Program
         builder.Services.AddAuthorizationCore();
         builder.Services.AddCascadingAuthenticationState();
         builder.Services.AddAuthenticationStateDeserialization();
-        builder.Services.AddScoped<ICourseApiService, CourseApiService>();
         builder.Services.AddScoped(sp => new HttpClient
         {
-            BaseAddress = new Uri("https://localhost:7003/")
+            BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
         });
         builder.Services.AddScoped<IApiProxyClient, ApiProxyClient>();
         builder.Services.AddScoped<IUsersService, UsersService>();
+        builder.Services.AddScoped<ICourseApiService, CourseApiService>();
 
         await builder.Build().RunAsync();
     }

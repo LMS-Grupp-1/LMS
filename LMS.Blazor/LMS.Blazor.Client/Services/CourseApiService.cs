@@ -1,47 +1,52 @@
-﻿using LMS.Shared.DTOs.CourseDtos;
+﻿using LMS.Blazor.Client.Services.ApiProxy;
+using LMS.Shared.DTOs.CourseDtos;
+using LMS.Shared.DTOs.Users;
 using System.Net.Http.Json;
+using System.Reflection.Metadata;
 
 namespace LMS.Blazor.Client.Services
 {
     public class CourseApiService : ICourseApiService
     {
-        private readonly HttpClient _http;
+        private readonly IApiProxyClient _apiProxy;
 
-        public CourseApiService(HttpClient http)
+        public CourseApiService(IApiProxyClient apiProxy)
         {
-            _http = http;
+            _apiProxy = apiProxy;
         }
-
         public async Task<IEnumerable<CourseDto>> GetAllCoursesAsync()
         {
-            try
-            {
-                // Calling API-endpoint.
-                var response = await _http.GetFromJsonAsync<IEnumerable<CourseDto>>("api/courses");
-                return response ?? Enumerable.Empty<CourseDto>();
-            }
-            catch
-            {
-                // Empty list, no crasch
-                return Enumerable.Empty<CourseDto>();
-            }
+            var courses = await _apiProxy.SendAsync<IEnumerable<CourseDto>>(
+                HttpMethod.Get, "courses");
+
+            return courses ?? Enumerable.Empty<CourseDto>();
         }
+
         public async Task<bool> CreateCourseAsync(CourseCreateDto dto)
         {
-            var response = await _http.PostAsJsonAsync("api/courses", dto);
-            return response.IsSuccessStatusCode;
+            using var content = JsonContent.Create(dto);
+
+            await _apiProxy.SendAsync<CourseDto>(
+                HttpMethod.Post, "courses", content);
+
+            return true;
         }
 
         public async Task<bool> UpdateCourseAsync(int id, CourseUpdateDto dto)
         {
-            var response = await _http.PutAsJsonAsync($"api/courses/{id}", dto);
-            return response.IsSuccessStatusCode;
+            using var content = JsonContent.Create(dto);
+
+            await _apiProxy.SendAsync<object>(
+            HttpMethod.Put, $"courses/{id}", content);
+            return true;
         }
 
         public async Task<bool> DeleteCourseAsync(int id)
         {
-            var response = await _http.DeleteAsync($"api/courses/{id}");
-            return response.IsSuccessStatusCode;
+            await _apiProxy.SendAsync<object>(
+                HttpMethod.Delete, $"courses/{id}");
+
+            return true;
         }
     }
 }
