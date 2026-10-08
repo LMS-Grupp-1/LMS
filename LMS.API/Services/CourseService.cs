@@ -48,7 +48,7 @@ public class CourseService(ICourseRepository repository) : ICourseService
         var course = await _repository.GetByIdAsync(id, trackChanges: true);
         if (course is null)
         {
-            throw new KeyNotFoundException($"Course with ID {id} was not found.");
+            throw new KeyNotFoundException($"Course with {id} could not be found.");
         }
 
         await ValidateCourseAsync(
@@ -71,7 +71,7 @@ public class CourseService(ICourseRepository repository) : ICourseService
     {
         var course = await _repository.GetByIdAsync(id, trackChanges: true);
         if (course is null)
-            throw new KeyNotFoundException($"Course with id {id} was not found.");
+            throw new KeyNotFoundException($"Course with {id} could not be found.");
 
         _repository.DeleteCourse(course);
         await _repository.SaveAsync();
@@ -86,7 +86,7 @@ public class CourseService(ICourseRepository repository) : ICourseService
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 50)
         {
             throw new ArgumentException(
-                "Course name must contain 1–50 characters.");
+                "Course name needs to contain 1-50 characters.");
         }
 
         var today = DateTime.Today;
@@ -94,13 +94,13 @@ public class CourseService(ICourseRepository repository) : ICourseService
         if (startDate.Date < today || endDate.Date < today)
         {
             throw new ArgumentException(
-                "Course dates cannot be before today.");
+                "Course dates can't be before today's date.");
         }
 
         if (startDate > endDate)
         {
             throw new ArgumentException(
-                "Start date cannot be after end date.");
+                "End date can't be before the start date.");
         }
 
         var existingCourses =

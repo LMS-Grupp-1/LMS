@@ -68,15 +68,15 @@ internal class DataSeedService : IHostedService
         {
             new Course
             {
-                Name = "C# and .NET Core Development",
-                Description = "Learn modern backend development using C#, ASP.NET Core, and Entity Framework Core.",
+                Name = "C# och .NET",
+                Description = "Utvecklas inom modern backend utveckling med C#, ASP.NET Core, och Entity Framework Core.",
                 StartDate = DateTime.Today,
                 EndDate = DateTime.Today.AddMonths(2)
             },
             new Course
             {
-                Name = "Frontend Web Development with Blazor",
-                Description = "Build interactive single-page web applications using Blazor WebAssembly and C#.",
+                Name = "Frontend Webbutveckling med Blazor",
+                Description = "Bygg interaktiva webbapplikationer med Blazor WebAssembly och C#.",
                 StartDate = DateTime.Today.AddDays(7),
                 EndDate = DateTime.Today.AddMonths(3)
             }
