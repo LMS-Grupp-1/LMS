@@ -87,7 +87,7 @@ namespace LMS.Services
 			if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 50)
 			{
 				throw new ArgumentException(
-					"Course name must contain 1–50 characters.");
+					"Course name needs to contain 1-50 characters.");
 			}
 
 			var today = DateTime.Today;
@@ -95,13 +95,13 @@ namespace LMS.Services
 			if (startDate.Date < today || endDate.Date < today)
 			{
 				throw new ArgumentException(
-					"Course dates cannot be before today.");
+					"Course dates can't be before today's date.");
 			}
 
 			if (startDate > endDate)
 			{
 				throw new ArgumentException(
-					"Start date cannot be after end date.");
+					"End date can't be before the start date.");
 			}
 
 			var existingCourses =

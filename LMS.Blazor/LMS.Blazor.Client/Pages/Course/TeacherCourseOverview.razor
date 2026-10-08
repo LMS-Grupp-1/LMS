@@ -9,9 +9,9 @@
 @inject ILogger<TeacherCourseOverview> Logger
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Teacher Course Overview</h3>
+    <h3>Kursöversikt</h3>
     <button class="btn btn-primary" @onclick="OpenCreateModal">
-        + Create New Course
+        + Skapa ny kurs
     </button>
 </div>
 
@@ -26,7 +26,7 @@
 {
     <div class="d-flex align-items-center gap-2 my-4" role="status">
         <div class="spinner-border text-primary" aria-hidden="true"></div>
-        <span>Courses loading...</span>
+        <span>Kurser laddas...</span>
     </div>
 }
 else if (!string.IsNullOrWhiteSpace(loadError))
@@ -34,14 +34,14 @@ else if (!string.IsNullOrWhiteSpace(loadError))
     <div class="alert alert-danger" role="alert">
         @loadError
         <button class="btn btn-outline-danger ms-2" @onclick="LoadCourses">
-            Try again
+            Försök igen
         </button>
     </div>
 }
 else if (courses != null && !courses.Any())
 {
     <div class="alert alert-info">
-        No courses found. Click "+ Create New Course" above to add your first course.
+        Det finns inga kurser registrerade. Klicka på "+ Skapa ny kurs" för att lägga till din första kurs.
     </div>
 }
 else if (courses != null)
@@ -61,10 +61,10 @@ else if (courses != null)
                         </small>
                         <div>
                             <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => OpenEditModal(course)">
-                                Edit
+                                Redigera
                             </button>
                             <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCourse(course.Id)">
-                                Delete
+                                Radera
                             </button>
                         </div>
                     </div>
@@ -81,7 +81,7 @@ else if (courses != null)
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(isEditing ? "Edit Course" : "Create New Course")</h5>
+                    <h5 class="modal-title">@(isEditing ? "Redigera kurs" : "Skapa ny kurs")</h5>
                     <button type="button" class="btn-close" disabled="@isBusy" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -92,28 +92,28 @@ else if (courses != null)
                         </div>
                     }
                     <div class="mb-3">
-                        <label class="form-label">Course Name</label>
+                        <label class="form-label">Kursnamn</label>
                         <input type="text" class="form-control" @bind="courseForm.Name" />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
+                        <label class="form-label">Beskrivning</label>
                         <textarea class="form-control" rows="3" @bind="courseForm.Description"></textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Start Date</label>
+                            <label class="form-label">Startdatum</label>
                             <input type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="courseForm.StartDate" />
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">End Date</label>
+                            <label class="form-label">Slutdatum</label>
                             <input type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="courseForm.EndDate" />
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" disabled="@isBusy" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" disabled="@isBusy" @onclick="CloseModal">Avbryt</button>
                     <button type="button" class="btn btn-success" disabled="@isBusy" @onclick="SaveCourse">
-                        @(isEditing ? "Save Changes" : "Create Course")
+                        @(isEditing ? "Spara ändringar" : "Skapa kurs")
                     </button>
                 </div>
             </div>
@@ -154,13 +154,13 @@ else if (courses != null)
         }
         catch (UnauthorizedAccessException ex)
         {
-            Logger.LogWarning(ex, "The session expired while loadin courses.");
-            loadError = "Your session has expired. Please log in again.";
+            Logger.LogWarning(ex, "The session expired while the courses were loading.");
+            loadError = "Your session expired. Please log in again.";
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Could not load courses.");
-            loadError = "Could not load courses. Please try again.";
+            Logger.LogError(ex, "Courses couldn't load.");
+            loadError = "Courses couldn't load. Please try again.";
         }
         finally
         {
@@ -212,7 +212,7 @@ else if (courses != null)
         if (string.IsNullOrWhiteSpace(courseForm.Name) ||
             courseForm.Name.Trim().Length > 50)
         {
-            formError = "Enter a course name of 1–50 characters.";
+            formError = "Registrera ett kursnamn mellan 1-50 tecken.";
             return;
         }
 
@@ -222,7 +222,7 @@ else if (courses != null)
                 courseForm.Name.Trim(),
                 StringComparison.OrdinalIgnoreCase)))
         {
-            formError = "A course with this name already exists.";
+            formError = "Det existerar redan en kurs med det här namnet.";
             return;
         }
 
@@ -231,12 +231,12 @@ else if (courses != null)
         if (courseForm.StartDate.Date < today ||
             courseForm.EndDate.Date < today)
         {
-            formError = "Course dates cannot before today.";
+            formError = "Kursdatum får inte ligga före dagens datum.";
         }
 
     if (courseForm.StartDate > courseForm.EndDate)
     {
-        formError = "Start date cannot be after end date.";
+        formError = "Startdatum får inte ligga efter slutdatum.";
         return;
     }
 
@@ -270,7 +270,7 @@ else if (courses != null)
 
         if (!success)
         {
-            formError = "Could not save the course. Please try again.";
+            formError = "Kursen kunde inte sparas. Vänligen försök igen.";
             return;
         }
 
@@ -280,12 +280,12 @@ else if (courses != null)
     catch (UnauthorizedAccessException ex)
     {
         Logger.LogWarning(ex, "The session expired while saving a course.");
-        formError = "Your session has expired. Please log in again.";
+        formError = "Your session has expired. Log in again.";
     }
     catch (Exception ex)
     {
-        Logger.LogError(ex, "Could not save the course.");
-        formError = "Could not save the course. Please try again.";
+        Logger.LogError(ex, "The course could not be saved.");
+        formError = "The course could not be saved. Please try again.";
     }
     finally
     {
@@ -311,18 +311,18 @@ else if (courses != null)
         }
         else
         {
-            actionError = "Could not delete the course. Please try again.";
+            actionError = "Kursen kunde inte raderas. Vänligen försök igen.";
         }
     }
     catch (UnauthorizedAccessException ex)
     {
-        Logger.LogWarning(ex, "The session expired while deleting a course.");
+        Logger.LogWarning(ex, "The session expired while the course was deleted.");
         actionError = "Your session has expired. Please log in again.";
     }
     catch (Exception ex)
     {
-        Logger.LogError(ex, "Could not delete course {CourseId}.", id);
-        actionError = "Could not delete the course. Please try again.";
+        Logger.LogError(ex, "Course with id {CourseId} could not be deleted.", id);
+        actionError = "The course could not be deleted. Try again.";
     }
     finally
     {
