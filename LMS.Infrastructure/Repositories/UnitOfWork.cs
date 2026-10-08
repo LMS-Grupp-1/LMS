@@ -3,7 +3,7 @@ using LMS.Infrastructure.Data;
 
 namespace LMS.Infrastructure.Repositories;
 
-public class UnitOfWork(ApplicationDbContext context) : IUnitOfWork
+public class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
 
