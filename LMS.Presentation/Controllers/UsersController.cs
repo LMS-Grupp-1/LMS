@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Mvc;
 using LMS.Shared.DTOs.Users;
 using Service.Contracts;
 
+namespace LMS.Presentation.Controllers;
+
 [Authorize(Roles = "Teacher")]
 [ApiController]
 [Route("api/[controller]")]

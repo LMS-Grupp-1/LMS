@@ -1,3 +1,4 @@
+using LMS.Blazor.Client.Services;
 using LMS.Blazor.Components;
 using LMS.Blazor.Extensions;
 using LMS.Blazor.Services.Authentication.Tokens;
@@ -22,6 +23,8 @@ public class Program
         builder.Services.AddRemoteApiProxy(builder.Configuration);
 
         builder.Services.AddScoped<LMS.Blazor.Client.Services.IUsersService, LMS.Blazor.Client.Services.UsersService>();
+
+        builder.Services.AddScoped<LMS.Blazor.Client.Services.IModuleService, LMS.Blazor.Client.Services.ModuleService>();
 
         var app = builder.Build();
 

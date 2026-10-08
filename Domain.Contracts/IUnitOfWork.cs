@@ -1,6 +1,7 @@
 ﻿namespace Domain.Contracts;
 
-public interface IUnitOfWork
+public interface IUnitOfWork : IDisposable
 {
-
+    IModuleRepository Modules { get; }
+    Task<int> CompleteAsync(); // Commits all changes to the database
 }

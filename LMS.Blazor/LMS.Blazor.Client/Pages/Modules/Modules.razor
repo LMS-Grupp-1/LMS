@@ -1,0 +1,90 @@
+﻿@page "/teacher/courses/{CourseId:int}/modules"
+
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.DTOs.ModulesDtos
+@attribute [Authorize(Roles = "Teacher")]
+@inject IModuleService ModuleService
+
+<div class="container my-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h3>Moduler</h3>
+
+        <button class="btn btn-primary" @onclick="OpenAddModuleModal">
+            <i class="bi bi-plus-circle me-1"></i> Lägga till Modul
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <p class="text-muted">Laddar moduler...</p>
+    }
+    else if (modules == null || !modules.Any())
+    {
+        <div class="alert alert-info">Inga moduler hittades för denna kurs.</div>
+    }
+    else
+    {
+        <div class="row row-cols-1 g-3">
+            @foreach (var module in modules)
+            {
+                <div class="col">
+                    <div class="card shadow-sm p-3">
+                        <div class="row align-items-center">
+                        
+                            <div class="col-auto text-center" style="font-size: 2.5rem;">
+                                📚
+                            </div>
+
+                            <div class="col">
+                                <h5 class="mb-1 fw-bold">@module.Name</h5>
+                                <div class="text-muted small">
+                                    <span>Start: @module.StartDate.ToShortDateString()</span> | 
+                                    <span>Slut: @module.EndDate.ToShortDateString()</span>
+                                </div>
+                                <div class="small text-secondary mt-1">@module.Description</div>
+                            </div>
+
+                            <div class="col-auto">
+                                <a href="teacher/modules/@module.Id/activities" class="btn btn-outline-primary btn-sm">
+                                    Aktiviteter
+                                </a>
+                                <button class="btn btn-outline-secondary btn-sm" @onclick="() => EditModule(module.Id)">
+                                    Redigera
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteModule(module.Id)">
+                                    Ta bort
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+</div>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private IEnumerable<ModuleDto> modules = new List<ModuleDto>();
+    private bool isLoading = true;
+
+    private void OpenAddModuleModal()
+    {
+        // Placeholder for opening create modal/form in next steps
+    }
+
+    private void EditModule(int moduleId)
+    {
+        // Placeholder for editing module logic
+    }
+
+    private void DeleteModule(int moduleId)
+    {
+        // Placeholder for deleting module logic
+    }
+}
