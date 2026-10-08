@@ -73,6 +73,24 @@
     private IEnumerable<ModuleDto> modules = new List<ModuleDto>();
     private bool isLoading = true;
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadModulesAsync();
+    }
+    
+    private async Task LoadModulesAsync()
+    {
+        isLoading = true;
+        try
+        {
+            modules = await ModuleService.GetModulesByCourseIdAsync(CourseId);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
     private void OpenAddModuleModal()
     {
         // Placeholder for opening create modal/form in next steps
