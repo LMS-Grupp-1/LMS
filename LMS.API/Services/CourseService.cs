@@ -48,7 +48,7 @@ public class CourseService(ICourseRepository repository) : ICourseService
         var course = await _repository.GetByIdAsync(id, trackChanges: true);
         if (course is null)
         {
-            throw new KeyNotFoundException($"Kurs med {id} hittades ej.");
+            throw new KeyNotFoundException($"Course with {id} could not be found.");
         }
 
         await ValidateCourseAsync(
@@ -71,7 +71,7 @@ public class CourseService(ICourseRepository repository) : ICourseService
     {
         var course = await _repository.GetByIdAsync(id, trackChanges: true);
         if (course is null)
-            throw new KeyNotFoundException($"Kurs med {id} hittades ej.");
+            throw new KeyNotFoundException($"Course with {id} could not be found.");
 
         _repository.DeleteCourse(course);
         await _repository.SaveAsync();
@@ -86,7 +86,7 @@ public class CourseService(ICourseRepository repository) : ICourseService
         if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 50)
         {
             throw new ArgumentException(
-                "Kursnamnet måste innehålla mellan 1-50 tecken.");
+                "Course name needs to contain 1-50 characters.");
         }
 
         var today = DateTime.Today;
@@ -94,13 +94,13 @@ public class CourseService(ICourseRepository repository) : ICourseService
         if (startDate.Date < today || endDate.Date < today)
         {
             throw new ArgumentException(
-                "Kursdatum kan inte vara före dagens datum.");
+                "Course dates can't be before today's date.");
         }
 
         if (startDate > endDate)
         {
             throw new ArgumentException(
-                "Startdatum kan inte ligga före slutdatum.");
+                "End date can't be before the start date.");
         }
 
         var existingCourses =
@@ -114,7 +114,7 @@ public class CourseService(ICourseRepository repository) : ICourseService
                 StringComparison.OrdinalIgnoreCase)))
         {
             throw new ArgumentException(
-                "Det existerar redan en kurs med det här namnet.");
+                "A course with this name already exists.");
         }
     }
 

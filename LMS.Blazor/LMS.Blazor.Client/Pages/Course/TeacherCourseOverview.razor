@@ -154,13 +154,13 @@ else if (courses != null)
         }
         catch (UnauthorizedAccessException ex)
         {
-            Logger.LogWarning(ex, "Sessionen har utlöpt medan kurserna laddades.");
-            loadError = "Din session har utlöpt. Vänligen logga in igen.";
+            Logger.LogWarning(ex, "The session expired while the courses were loading.");
+            loadError = "Your session expired. Please log in again.";
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Kurserna kunde inte laddas.");
-            loadError = "Kurserna kunde inte laddas. Försök igen.";
+            Logger.LogError(ex, "Courses couldn't load.");
+            loadError = "Courses couldn't load. Please try again.";
         }
         finally
         {
@@ -279,13 +279,13 @@ else if (courses != null)
     }
     catch (UnauthorizedAccessException ex)
     {
-        Logger.LogWarning(ex, "Sessionen har utlöpt medan kursen sparades.");
-        formError = "Din session har utlöpt. Logga in igen.";
+        Logger.LogWarning(ex, "The session expired while saving a course.");
+        formError = "Your session has expired. Log in again.";
     }
     catch (Exception ex)
     {
-        Logger.LogError(ex, "Kursen kunde inte sparas.");
-        formError = "Kursen kunde inte sparas. Vänligen försök igen.";
+        Logger.LogError(ex, "The course could not be saved.");
+        formError = "The course could not be saved. Please try again.";
     }
     finally
     {
@@ -316,13 +316,13 @@ else if (courses != null)
     }
     catch (UnauthorizedAccessException ex)
     {
-        Logger.LogWarning(ex, "Sessionen utlöpte medan kursen raderades.");
-        actionError = "Din session har utlöpt. Vänligen logga in igen.";
+        Logger.LogWarning(ex, "The session expired while the course was deleted.");
+        actionError = "Your session has expired. Please log in again.";
     }
     catch (Exception ex)
     {
-        Logger.LogError(ex, "Kursen med id {CourseId} kunde inte raderas.", id);
-        actionError = "Kursen kunde inte raderas. Försök igen.";
+        Logger.LogError(ex, "Course with id {CourseId} could not be deleted.", id);
+        actionError = "The course could not be deleted. Try again.";
     }
     finally
     {
