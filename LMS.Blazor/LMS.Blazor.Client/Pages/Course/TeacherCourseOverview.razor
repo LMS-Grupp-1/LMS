@@ -92,26 +92,26 @@ else if (courses != null)
                         </div>
                     }
                     <div class="mb-3">
-                        <label class="form-label">Course Name</label>
+                        <label class="form-label">Kursnamn</label>
                         <input type="text" class="form-control" @bind="courseForm.Name" />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Description</label>
+                        <label class="form-label">Beskrivning</label>
                         <textarea class="form-control" rows="3" @bind="courseForm.Description"></textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Start Date</label>
+                            <label class="form-label">Startdatum</label>
                             <input type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="courseForm.StartDate" />
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">End Date</label>
+                            <label class="form-label">Slutdatum</label>
                             <input type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="courseForm.EndDate" />
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" disabled="@isBusy" @onclick="CloseModal">Cancel</button>
+                    <button type="button" class="btn btn-secondary" disabled="@isBusy" @onclick="CloseModal">Avbryt</button>
                     <button type="button" class="btn btn-success" disabled="@isBusy" @onclick="SaveCourse">
                         @(isEditing ? "Spara ändringar" : "Skapa kurs")
                     </button>
