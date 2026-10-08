@@ -5,15 +5,15 @@ using System.Text;
 
 namespace LMS.Shared.DTOs.CourseDtos;
 public record CourseUpdateDto(
-    [Required(ErrorMessage = "Course name is required.")]
-    [StringLength(50, ErrorMessage = "Course name cannot exceed 50 characters.")]
+    [Required(ErrorMessage = "Kursnamn måste anges.")]
+    [StringLength(50, ErrorMessage = "Kursnamnet får inte överskrida 50 tecken.")]
     string Name,
 
     string Description,
 
-    [Required(ErrorMessage = "Start date is required.")]
+    [Required(ErrorMessage = "Startdatum måste anges.")]
     DateTime StartDate,
 
-    [Required(ErrorMessage = "End date is required.")]
+    [Required(ErrorMessage = "Slutdatum måste anges.")]
     DateTime EndDate
 );
