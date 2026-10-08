@@ -32,7 +32,7 @@ public class CourseController(ICourseService courseService) : ControllerBase
     }
 
     [HttpPost]
-    //[Authorize(Roles = "Teacher")] 
+    [Authorize(Roles = "Teacher")] 
     public async Task<ActionResult<CourseDto>> CreateCourse([FromBody] CourseCreateDto courseCreateDto)
     {
         try
