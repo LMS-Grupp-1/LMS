@@ -34,6 +34,8 @@ internal class DataSeedService : IHostedService
         ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()
                             ?? throw new ArgumentNullException();
 
+        await SeedCoursesAsync(context, cancellationToken);
+
         if (await context.Users.AnyAsync(cancellationToken)) return;
 
         userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>()
@@ -58,7 +60,33 @@ internal class DataSeedService : IHostedService
         }
     }
 
+    private async Task SeedCoursesAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    {
+        if (!await context.Courses.AnyAsync(cancellationToken))
+        {
+            var courses = new List<Course>
+        {
+            new Course
+            {
+                Name = "C# and .NET Core Development",
+                Description = "Learn modern backend development using C#, ASP.NET Core, and Entity Framework Core.",
+                StartDate = DateTime.Today,
+                EndDate = DateTime.Today.AddMonths(2)
+            },
+            new Course
+            {
+                Name = "Frontend Web Development with Blazor",
+                Description = "Build interactive single-page web applications using Blazor WebAssembly and C#.",
+                StartDate = DateTime.Today.AddDays(7),
+                EndDate = DateTime.Today.AddMonths(3)
+            }
+        };
 
+            await context.Courses.AddRangeAsync(courses, cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Course seed complete");
+        }
+    }
     private async Task CreateRolesAsync(string[] rolenames)
     {
         foreach (string rolename in rolenames)

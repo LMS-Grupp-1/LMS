@@ -32,7 +32,7 @@ public class CourseController(ICourseService courseService) : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Teacher")] // Ändra rollnamn om ni använder något annat än "Teacher"
+    [Authorize(Roles = "Teacher")] 
     public async Task<ActionResult<CourseDto>> CreateCourse([FromBody] CourseCreateDto courseCreateDto)
     {
         try
@@ -62,6 +62,21 @@ public class CourseController(ICourseService courseService) : ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Teacher")] 
+    public async Task<IActionResult> DeleteCourse(int id)
+    {
+        try
+        {
+            await _courseService.DeleteCourseAsync(id); 
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
         }
     }
 }
