@@ -4,6 +4,8 @@ namespace LMS.Blazor.Client.Services;
 
 public interface IUsersService
 {
-    Task<HttpResponseMessage> CreateUserAsync(CreateUserDto dto);
+    Task<bool> CreateUserAsync(CreateUserDto dto);
     Task<IEnumerable<UserDto>?> GetUsersAsync();
+    Task<UserDto?> GetUserByIdAsync(string id);
+    Task<bool> UpdateUserAsync(UpdateUserDto dto);
 }

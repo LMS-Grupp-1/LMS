@@ -2,6 +2,7 @@ using LMS.Blazor.Client.Services;
 using LMS.Blazor.Components;
 using LMS.Blazor.Extensions;
 using LMS.Blazor.Services.Authentication.Tokens;
+using LMS.Blazor.Client.Services;
 
 namespace LMS.Blazor;
 
@@ -21,6 +22,11 @@ public class Program
         builder.Services.AddBffAuthentication(builder.Configuration);
         builder.Services.AddBffAntiforgery();
         builder.Services.AddRemoteApiProxy(builder.Configuration);
+        builder.Services.AddScoped<ICourseApiService, CourseApiService>();
+        //builder.Services.AddScoped(sp => new HttpClient
+        //{
+        //    BaseAddress = new Uri("https://localhost:7249/") 
+        //});
 
         builder.Services.AddScoped<LMS.Blazor.Client.Services.IUsersService, LMS.Blazor.Client.Services.UsersService>();
 

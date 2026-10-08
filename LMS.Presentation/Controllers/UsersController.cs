@@ -32,7 +32,7 @@ public class UsersController : ControllerBase
             return BadRequest(result.Errors);
         }
 
-        return Ok(new { message = "User created successfully" });
+        return Ok(true);
     }
 
     [HttpGet]
@@ -40,5 +40,23 @@ public class UsersController : ControllerBase
     {
         var users = await _service.UsersService.GetUsersAsync();
         return Ok(users);
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetUserById(string id)
+    {
+        var user = await _service.UsersService.GetUserByIdAsync(id);
+        if (user == null) return NotFound();
+        return Ok(user);
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto dto)
+    {
+        dto.Id = id;
+        var result = await _service.UsersService.UpdateUserAsync(dto);
+        if (!result.Succeeded) return BadRequest(result.Errors);
+
+        return Ok(true);
     }
 }
