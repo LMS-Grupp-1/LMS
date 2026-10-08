@@ -10,7 +10,7 @@ namespace LMS.Presentation.Controllers;
 
 [ApiController]
 [Route("api/courses")]
-//[Authorize]
+[Authorize]
 public class CourseController(ICourseService courseService) : ControllerBase
 {
     private readonly ICourseService _courseService = courseService;
@@ -47,7 +47,7 @@ public class CourseController(ICourseService courseService) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    //[Authorize(Roles = "Teacher")]
+    [Authorize(Roles = "Teacher")]
     public async Task<IActionResult> UpdateCourse(int id, [FromBody] CourseUpdateDto courseUpdateDto)
     {
         try
@@ -66,7 +66,7 @@ public class CourseController(ICourseService courseService) : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
-    //[Authorize(Roles = "Teacher")] 
+    [Authorize(Roles = "Teacher")] 
     public async Task<IActionResult> DeleteCourse(int id)
     {
         try
