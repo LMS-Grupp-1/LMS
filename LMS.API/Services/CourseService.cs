@@ -24,14 +24,14 @@ public class CourseService(ICourseRepository repository) : ICourseService
 
     public async Task<CourseDto> CreateCourseAsync(CourseCreateDto courseCreateDto)
     {
-        if (courseCreateDto.StartDate > courseCreateDto.EndDate)
-        {
-            throw new ArgumentException("Start date cannot be after end date.");
-        }
+        await ValidateCourseAsync(
+            courseCreateDto.Name,
+            courseCreateDto.StartDate,
+            courseCreateDto.EndDate);
 
         var course = new Course
         {
-            Name = courseCreateDto.Name,
+            Name = courseCreateDto.Name.Trim(),
             Description = courseCreateDto.Description,
             StartDate = courseCreateDto.StartDate,
             EndDate = courseCreateDto.EndDate
@@ -45,18 +45,20 @@ public class CourseService(ICourseRepository repository) : ICourseService
 
     public async Task UpdateCourseAsync(int id, CourseUpdateDto courseUpdateDto)
     {
-        if (courseUpdateDto.StartDate > courseUpdateDto.EndDate)
-        {
-            throw new ArgumentException("Start date cannot be after end date.");
-        }
-
         var course = await _repository.GetByIdAsync(id, trackChanges: true);
         if (course is null)
         {
             throw new KeyNotFoundException($"Course with ID {id} was not found.");
         }
 
-        course.Name = courseUpdateDto.Name;
+        await ValidateCourseAsync(
+            courseUpdateDto.Name,
+            courseUpdateDto.StartDate,
+            courseUpdateDto.EndDate,
+            id);
+
+        course.Name = courseUpdateDto.Name.Trim();
+
         course.Description = courseUpdateDto.Description;
         course.StartDate = courseUpdateDto.StartDate;
         course.EndDate = courseUpdateDto.EndDate;
@@ -64,4 +66,56 @@ public class CourseService(ICourseRepository repository) : ICourseService
         _repository.UpdateCourse(course);
         await _repository.SaveAsync();
     }
+
+    public async Task DeleteCourseAsync(int id)
+    {
+        var course = await _repository.GetByIdAsync(id, trackChanges: true);
+        if (course is null)
+            throw new KeyNotFoundException($"Course with id {id} was not found.");
+
+        _repository.DeleteCourse(course);
+        await _repository.SaveAsync();
+    }
+
+    private async Task ValidateCourseAsync(
+    string name,
+    DateTime startDate,
+    DateTime endDate,
+    int? excludedId = null)
+    {
+        if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 50)
+        {
+            throw new ArgumentException(
+                "Course name must contain 1–50 characters.");
+        }
+
+        var today = DateTime.Today;
+
+        if (startDate.Date < today || endDate.Date < today)
+        {
+            throw new ArgumentException(
+                "Course dates cannot be before today.");
+        }
+
+        if (startDate > endDate)
+        {
+            throw new ArgumentException(
+                "Start date cannot be after end date.");
+        }
+
+        var existingCourses =
+            await _repository.GetAllAsync(trackChanges: false);
+
+        if (existingCourses.Any(course =>
+            course.Id != excludedId &&
+            string.Equals(
+                course.Name.Trim(),
+                name.Trim(),
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            throw new ArgumentException(
+                "A course with this name already exists.");
+        }
+    }
+
 }
