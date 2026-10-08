@@ -1,6 +1,5 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
-using LMS.Shared.DTOs;
 using LMS.Shared.DTOs.ModulesDtos;
 using Service.Contracts;
 

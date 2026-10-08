@@ -2,7 +2,6 @@ using LMS.Blazor.Client.Services;
 using LMS.Blazor.Components;
 using LMS.Blazor.Extensions;
 using LMS.Blazor.Services.Authentication.Tokens;
-using LMS.Blazor.Client.Services;
 
 namespace LMS.Blazor;
 
@@ -28,9 +27,9 @@ public class Program
         //    BaseAddress = new Uri("https://localhost:7249/") 
         //});
 
-        builder.Services.AddScoped<LMS.Blazor.Client.Services.IUsersService, LMS.Blazor.Client.Services.UsersService>();
+        builder.Services.AddScoped<IUsersService, UsersService>();
 
-        builder.Services.AddScoped<LMS.Blazor.Client.Services.IModuleService, LMS.Blazor.Client.Services.ModuleService>();
+        builder.Services.AddScoped<IModuleService, ModuleService>();
 
         var app = builder.Build();
 

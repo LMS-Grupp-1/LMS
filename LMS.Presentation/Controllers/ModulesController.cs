@@ -11,17 +11,17 @@ namespace LMS.Presentation.Controllers;
 [Route("api/teacher/courses/{courseId:int}/[controller]")]
 public class ModulesController : ControllerBase
 {
-    private readonly IModuleService _moduleService;
+    private readonly IServiceManager _service;
 
-    public ModulesController(IModuleService moduleService)
+    public ModulesController(IServiceManager service)
     {
-        _moduleService = moduleService;
+        _service = service;
     }
 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<ModuleDto>>> GetModules(int courseId)
     {
-        var modules = await _moduleService.GetModulesByCourseIdAsync(courseId);
+        var modules = await _service.ModuleService.GetModulesByCourseIdAsync(courseId);
         return Ok(modules);
     }
 
@@ -33,7 +33,7 @@ public class ModulesController : ControllerBase
             return BadRequest(ModelState);
         }
 
-        var (success, errorMessage) = await _moduleService.CreateModuleAsync(courseId, dto);
+        var (success, errorMessage) = await _service.ModuleService.CreateModuleAsync(courseId, dto);
 
         if (!success)
         {
