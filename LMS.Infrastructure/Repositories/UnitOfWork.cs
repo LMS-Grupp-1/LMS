@@ -7,12 +7,15 @@ public class UnitOfWork : IUnitOfWork
 {
     private readonly ApplicationDbContext _context;
 
+    public ICourseRepository Courses { get; }
     public IModuleRepository Modules { get; }
 
     public UnitOfWork(ApplicationDbContext context,
+                      ICourseRepository courseRepository,
                       IModuleRepository moduleRepository)
     {
         _context = context;
+        Courses = courseRepository;
         Modules = moduleRepository;
     }
 

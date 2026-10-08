@@ -37,7 +37,7 @@ public class ModuleService : IModuleService
             return (false, "Modulens startdatum måste vara före dess slutdatum.");
         }
 
-        var course = await _unitOfWork.Courses.GetByIdAsync(courseId);
+        var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
         if (course == null)
         {
             return (false, "Den valda kursen hittades inte.");
