@@ -1,6 +1,7 @@
 ﻿@implements IDisposable
 
 @inject NavigationManager NavigationManager
+@using LMS.Shared.Constants
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
@@ -59,11 +60,11 @@
                 </div>
             </Authorized>
         </AuthorizeView>
-        
-        <AuthorizeView Roles="Student">
+
+        <AuthorizeView Roles="@UserRoles.Student">
             <Authorized>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="my_course">
+                    <NavLink class="nav-link" href="my-course">
                         <h4 class="m-1"><i class="bi bi-book"></i></h4>
                         Min Kurs
                     </NavLink>
@@ -77,7 +78,7 @@
                 </div>
         
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="Students">
+                    <NavLink class="nav-link" href="participants">
                         <h4 class="m-1"><i class="bi bi-people"></i></h4>
                         Kursdeltagare
                     </NavLink>
@@ -107,4 +108,3 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
     }
 }
-

@@ -1,0 +1,97 @@
+﻿@page "/my-course"
+@attribute [Authorize(Roles = UserRoles.Student)]
+@implements IDisposable
+
+@using System.Net
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.CourseDtos
+
+@inject ICourseService CourseService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Min kurs</PageTitle>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center gap-2 text-muted">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Hämtar kurs...</span>
+    </div>
+}
+else if (errorMessage is not null)
+{
+    <div class="alert alert-warning">@errorMessage</div>
+}
+else if (course is not null)
+{
+    <div class="mb-4">
+        <h1 class="h3 fw-bold mb-1">@course.Name</h1>
+        <p class="text-muted mb-1">@course.Description</p>
+        <small class="text-muted">
+            <i class="bi bi-calendar"></i>
+            @course.StartDate.ToString("yyyy-MM-dd") – @course.EndDate.ToString("yyyy-MM-dd")
+        </small>
+    </div>
+
+    <h2 class="h5 fw-semibold mb-3">Moduler</h2>
+    <div class="card">
+        <div class="card-body text-muted">
+            Kursens moduler visas här.
+        </div>
+    </div>
+}
+
+@code {
+    private StudentCourseDto? course;
+    private bool isLoading = true;
+    private string? errorMessage;
+    private readonly CancellationTokenSource componentCancellation = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await CourseService.GetMyCourseAsync(componentCancellation.Token);
+
+            // The server-side prerender service deliberately returns null.
+            // Keep showing the loading state until WebAssembly runs this again.
+            if (result is null)
+            {
+                return;
+            }
+
+            course = result;
+            isLoading = false;
+        }
+        catch (OperationCanceledException) when (componentCancellation.IsCancellationRequested)
+        {
+            // Navigating away disposes the component and cancels its request.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // The session has expired, send the user to the login page
+            NavigationManager.NavigateTo(
+                $"Account/Login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}",
+                forceLoad: true);
+        }
+        catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        {
+            // The API returns 404 when the student is not enrolled in a course
+            errorMessage = "Du är inte kopplad till någon kurs ännu.";
+            isLoading = false;
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Kursen kunde inte hämtas. Försök igen senare.";
+            isLoading = false;
+        }
+    }
+
+    public void Dispose()
+    {
+        componentCancellation.Cancel();
+        componentCancellation.Dispose();
+    }
+}

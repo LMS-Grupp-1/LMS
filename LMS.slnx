@@ -16,6 +16,7 @@
     <Project Path="LMS.Blazor/LMS.Blazor/LMS.Blazor.csproj" Id="e2cec9bb-ac1a-472a-84c8-d9ec66b988bb" />
   </Folder>
   <Folder Name="/tests/">
-    <Project Path="LMS.API.Tests/LMS.API.Tests.csproj" Id="a02177a0-ed93-4ca7-b3e8-d3a2bb2394d3" />
+    <Project Path="tests/LMS.API.Tests/LMS.API.Tests.csproj" />
+    <Project Path="tests/LMS.Services.Tests/LMS.Services.Tests.csproj" Id="15f2e062-eef1-460d-a310-8ec94b8cd94f" />
   </Folder>
 </Solution>

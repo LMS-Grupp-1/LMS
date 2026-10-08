@@ -1,21 +1,21 @@
-﻿using LMS.Shared.DTOs.CourseDtos;
+﻿using LMS.Shared.Constants;
+using LMS.Shared.DTOs.CourseDtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Contracts;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Security.Claims;
 
 namespace LMS.Presentation.Controllers;
 
 [ApiController]
 [Route("api/courses")]
 [Authorize]
-public class CourseController(ICourseService courseService) : ControllerBase
+public class CourseController(IServiceManager serviceManager) : ControllerBase
 {
-    private readonly ICourseService _courseService = courseService;
+	private readonly ICourseService _courseService = serviceManager.CourseService;
 
     [HttpGet]
+	[Authorize(Roles = UserRoles.Teacher)]
     public async Task<ActionResult<IEnumerable<CourseDto>>> GetCourses()
     {
         var courses = await _courseService.GetAllCoursesAsync();
@@ -23,6 +23,7 @@ public class CourseController(ICourseService courseService) : ControllerBase
     }
 
     [HttpGet("{id:int}")]
+	[Authorize(Roles = UserRoles.Teacher)]
     public async Task<ActionResult<CourseDto>> GetCourse(int id)
     {
         var course = await _courseService.GetCourseByIdAsync(id);
@@ -31,8 +32,19 @@ public class CourseController(ICourseService courseService) : ControllerBase
         return Ok(course);
     }
 
+	[HttpGet("my")]
+	[Authorize(Roles = UserRoles.Student)]
+	public async Task<ActionResult<StudentCourseDto>> GetMyCourse()
+	{		
+		var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+		if (userId is null) return Unauthorized();
+
+		var course = await _courseService.GetMyCourseAsync(userId);
+		return Ok(course);
+	}
+
     [HttpPost]
-    [Authorize(Roles = "Teacher")] 
+	[Authorize(Roles = UserRoles.Teacher)]
     public async Task<ActionResult<CourseDto>> CreateCourse([FromBody] CourseCreateDto courseCreateDto)
     {
         try
@@ -47,7 +59,7 @@ public class CourseController(ICourseService courseService) : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    [Authorize(Roles = "Teacher")]
+	[Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> UpdateCourse(int id, [FromBody] CourseUpdateDto courseUpdateDto)
     {
         try

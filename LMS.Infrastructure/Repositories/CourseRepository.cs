@@ -2,9 +2,6 @@
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace LMS.Infrastructure.Repositories;
 public class CourseRepository(ApplicationDbContext context) : ICourseRepository
@@ -21,7 +18,20 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
             ? await _context.Courses.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id)
             : await _context.Courses.FirstOrDefaultAsync(c => c.Id == id);
 
-    public void CreateCourse(Course course) => _context.Courses.Add(course);
+	public async Task<Course?> GetForStudentAsync(string userId, bool trackChanges)
+	{
+		var query = _context.Courses			
+			.Include(c => c.Students
+				.OrderBy(s => s.LastName)
+				.ThenBy(s => s.FirstName))			
+			.Where(c => c.Students.Any(s => s.Id == userId));
+
+		return !trackChanges
+			? await query.AsNoTracking().FirstOrDefaultAsync()
+			: await query.FirstOrDefaultAsync();
+	}
+
+	public void CreateCourse(Course course) => _context.Courses.Add(course);
 
     public void UpdateCourse(Course course) => _context.Courses.Update(course);
 

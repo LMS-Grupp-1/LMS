@@ -1,11 +1,9 @@
 using LMS.API.Extensions;
 using LMS.API.Services;
-using LMS.Blazor.Client.Services;
 using LMS.Infrastructure.Data;
 using LMS.Presentation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 public class Program
 {
     private static void Main(string[] args)

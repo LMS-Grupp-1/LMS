@@ -1,18 +1,21 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using LMS.Shared.Constants;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
+
 
 namespace LMS.Shared.DTOs.CourseDtos;
-    public record CourseCreateDto(
-        [Required(ErrorMessage = "Kursnamn måste anges.")]
-        [StringLength(50, ErrorMessage = "Kursnamnet får inte överskrida 50 tecken.")]
-        string Name,
-        string Description,
 
-        [Required(ErrorMessage = "Startdatum måste anges.")]
-        DateTime StartDate,
+public record CourseCreateDto(
+	
+	[Required(ErrorMessage = "Kursnamn måste anges.")]
+	[StringLength(CourseConstraints.NameMaxLength, ErrorMessage = "Kursnamnet får inte överskrida {1} tecken.")]
+	string Name,
+	
+	[StringLength(CourseConstraints.DescriptionMaxLength, ErrorMessage = "Kursbeskrivningen får inte överskrida {1} tecken.")]
+	string Description,
 
-        [Required(ErrorMessage = "Slutdatum måste anges.")]
-        DateTime EndDate
-        );
+	[Required(ErrorMessage = "Startdatum måste anges.")]
+	DateTime StartDate,
+
+	[Required(ErrorMessage = "Slutdatum måste anges.")]
+	DateTime EndDate
+);

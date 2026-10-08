@@ -1,4 +1,5 @@
 ﻿using LMS.Infrastructure.Data;
+using LMS.Shared.Constants;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,9 +14,9 @@ internal class DataSeedService : IHostedService
     private UserManager<ApplicationUser> userManager = null!;
     private RoleManager<IdentityRole> roleManager = null!;
     private string _password = null!;
-    private const string DemoRole = "Teacher";
-    private const string DefaultUserEmail = "admin@lms.com";
-    private const string NameForDefaultUser = "Admin";
+	    
+	private const string DefaultUserEmail = "admin@lms.com";
+    
 
     public DataSeedService(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DataSeedService> logger)
     {
@@ -24,109 +25,129 @@ internal class DataSeedService : IHostedService
         this.logger = logger;
     }
 
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        using var scope = serviceProvider.CreateScope();
+	public async Task StartAsync(CancellationToken cancellationToken)
+	{
+		using var scope = serviceProvider.CreateScope();
 
-        var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
-        if (!env.IsDevelopment()) return;
+		var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
+		if (!env.IsDevelopment()) return;
 
-        ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>()
-                            ?? throw new ArgumentNullException();
+		ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+				
+		if (await context.Users.AnyAsync(cancellationToken)) return;
 
-        await SeedCoursesAsync(context, cancellationToken);
+		userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+		roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-        if (await context.Users.AnyAsync(cancellationToken)) return;
+		_password = configuration["password"]!;
+		ArgumentNullException.ThrowIfNull(_password, nameof(_password));
 
-        userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>()
-                            ?? throw new ArgumentNullException();
+		try
+		{
+			await CreateRolesAsync(UserRoles.All);
+			await CreateDefaultUserAsync();
+						
+			await CreateCourseWithStudentsAsync(context,
+				new Course
+				{
+					Name = "Lexicon LTU",
+					Description = "Fullstack .NET developer course.",
+					StartDate = new DateTime(2026, 9, 1),
+					EndDate = new DateTime(2026, 12, 18)
+				},
+				[
+					("anna.andersson@lms.com", "Anna", "Andersson"),
+					("erik.eriksson@lms.com", "Erik", "Eriksson"),
+					("maria.svensson@lms.com", "Maria", "Svensson")
+				]);
 
-        roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>()
-                            ?? throw new ArgumentNullException();
+			await CreateCourseWithStudentsAsync(context,
+				new Course
+				{
+					Name = "Lexicon GBG",
+					Description = "Frontend developer course.",
+					StartDate = new DateTime(2026, 10, 1),
+					EndDate = new DateTime(2027, 1, 29)
+				},
+				[
+					("johan.nilsson@lms.com", "Johan", "Nilsson"),
+					("sara.lindberg@lms.com", "Sara", "Lindberg")
+				]);
 
-        _password = configuration["password"]!;
-        ArgumentNullException.ThrowIfNull(_password, nameof(_password));
+			logger.LogInformation("Seed complete");
+		}
+		catch (Exception ex)
+		{
+			logger.LogError($"Data seed fail with message: {ex.Message}. Exception: {ex.InnerException}");
+			throw;
+		}
+	}
 
-        try
-        {
-            await CreateRolesAsync([DemoRole]);
-            await CreateDefaultUserAsync();
-            logger.LogInformation("Seed complete");
-        }
-        catch (Exception ex)
-        {
-            logger.LogError($"Data seed fail with message: {ex.Message}. Exceeption: {ex.InnerException}");
-            throw;
-        }
-    }
+	private async Task CreateRolesAsync(string[] rolenames)
+	{
+		foreach (string rolename in rolenames)
+		{
+			if (await roleManager.RoleExistsAsync(rolename)) continue;
+			var role = new IdentityRole { Name = rolename };
+			var res = await roleManager.CreateAsync(role);
 
-    private async Task SeedCoursesAsync(ApplicationDbContext context, CancellationToken cancellationToken)
-    {
-        if (!await context.Courses.AnyAsync(cancellationToken))
-        {
-            var courses = new List<Course>
-        {
-            new Course
-            {
-                Name = "C# och .NET",
-                Description = "Utvecklas inom modern backend utveckling med C#, ASP.NET Core, och Entity Framework Core.",
-                StartDate = DateTime.Today,
-                EndDate = DateTime.Today.AddMonths(2)
-            },
-            new Course
-            {
-                Name = "Frontend Webbutveckling med Blazor",
-                Description = "Bygg interaktiva webbapplikationer med Blazor WebAssembly och C#.",
-                StartDate = DateTime.Today.AddDays(7),
-                EndDate = DateTime.Today.AddMonths(3)
-            }
-        };
+			if (!res.Succeeded) throw new Exception
+					(string.Join("\n", res.Errors.Select(e => $"{e.Code}: {e.Description}")));
+		}
+	}
+	private async Task CreateDefaultUserAsync()
+	{
+		var user = new ApplicationUser
+		{
+			Email = DefaultUserEmail,
+			UserName = DefaultUserEmail,
+			Name = "Admin Teacher",
+			FirstName = "Admin",
+			LastName = "Teacher"			
+		};
 
-            await context.Courses.AddRangeAsync(courses, cancellationToken);
-            await context.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Course seed complete");
-        }
-    }
-    private async Task CreateRolesAsync(string[] rolenames)
-    {
-        foreach (string rolename in rolenames)
-        {
-            if (await roleManager.RoleExistsAsync(rolename)) continue;
-            var role = new IdentityRole { Name = rolename };
-            var res = await roleManager.CreateAsync(role);
+		await CreateUserAsync(user, UserRoles.Teacher);
+	}
 
-            if (!res.Succeeded) throw new Exception
-                    (string.Join("\n", res.Errors.Select(e => $"{e.Code}: {e.Description}")));
-        }
-    }
-    private async Task CreateDefaultUserAsync()
-    {
-        var user = new ApplicationUser
-        {
-            Email = DefaultUserEmail,
-            UserName = DefaultUserEmail,
-            Name = NameForDefaultUser
-        };
+	private async Task CreateCourseWithStudentsAsync(
+		ApplicationDbContext context, Course course, 
+		(string Email, string FirstName, string LastName)[] students)
+	{
+		
+		context.Courses.Add(course);
+		await context.SaveChangesAsync();
 
-        await CreateUserAsync(user, DemoRole);
-    }
+		foreach (var (email, firstName, lastName) in students)
+		{
+			var user = new ApplicationUser
+			{
+				Email = email,
+				UserName = email,
+				Name = $"{firstName} {lastName}",
+				FirstName = firstName,
+				LastName = lastName,
+				CourseId = course.Id
+			};
 
-    private async Task CreateUserAsync(ApplicationUser user, string role)
-    {
-        var result = await userManager.CreateAsync(user, _password);
+			await CreateUserAsync(user, UserRoles.Student);
+		}
+	}
 
-        if (!result.Succeeded)
-            throw new Exception(string.Join("\n",
-            result.Errors.Select(e => $"{e.Code}: {e.Description}")));
+	private async Task CreateUserAsync(ApplicationUser user, string role)
+	{
+		var result = await userManager.CreateAsync(user, _password);
 
-        var roleResult = await userManager.AddToRoleAsync(user, role);
+		if (!result.Succeeded)
+			throw new Exception(string.Join("\n",
+			result.Errors.Select(e => $"{e.Code}: {e.Description}")));
 
-        if (!roleResult.Succeeded)
-            throw new Exception(string.Join("\n",
-            roleResult.Errors.Select(e => $"{e.Code}: {e.Description}")));
+		var roleResult = await userManager.AddToRoleAsync(user, role);
 
-    }
+		if (!roleResult.Succeeded)
+			throw new Exception(string.Join("\n",
+			roleResult.Errors.Select(e => $"{e.Code}: {e.Description}")));
+	}
 
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+	public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
 }
