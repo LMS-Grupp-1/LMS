@@ -36,11 +36,15 @@
             </NavLink>
         </div>
         
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="users">
-                <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Användare
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="Teacher">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="users">
+                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Användare
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
 
         <AuthorizeView>
             <Authorized>

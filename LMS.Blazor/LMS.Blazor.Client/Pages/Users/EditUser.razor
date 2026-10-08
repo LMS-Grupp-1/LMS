@@ -1,0 +1,144 @@
+﻿@page "/users/edit/{Id}"
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@using LMS.Shared.DTOs.Users
+@using LMS.Blazor.Client.Services
+@attribute [Authorize(Roles = "Teacher")]
+@inject IUsersService UsersService
+@inject NavigationManager navigationManager
+
+<div class="container mt-4">
+    <div class="col-md-6">
+        <h3>Redigera Användare</h3>
+
+        @if (isLoading)
+        {
+            <p><em>Laddar användare...</em></p>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+        <EditForm Model="model" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Name</label>
+                <InputText id="name" class="form-control" @bind-Value="model.Name" />
+             </div>
+
+             <div class="mb-3">
+                 <label for="email" class="form-label">Email</label>
+                 <InputText id="email" class="form-control" @bind-Value="model.Email" />
+             </div>
+
+             <div class="mb-3">
+                <label class="form-label">Roll:</label>
+                <InputSelect @bind-Value="model.Role" class="form-control">
+                    <option value="">Välj roll...</option>
+                    <option value="Student">Student</option>
+                    <option value="Teacher">Teacher</option>
+                 </InputSelect>
+                 <ValidationMessage For="@(() => model.Role)" />
+              </div>
+
+              <div class="mb-3">
+                  <label class="form-label">Kurs:</label>
+                  <InputSelect @bind-Value="model.Course" class="form-control">
+                      <option value="">Välj kurs...</option>
+                      <option value="Kurs 1">Kurs 1</option>
+                      <option value="Kurs 2">Kurs 2</option>
+                  </InputSelect>
+                  <ValidationMessage For="@(() => model.Course)" />
+              </div>
+
+                <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                        <span> Sparar...</span>
+                    }
+                    else
+                    {
+                        <span>Spara ändringar</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Avbryt</button>
+            </EditForm>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private UpdateUserDto model = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var user = await UsersService.GetUserByIdAsync(Id);
+            if (user == null)
+            {
+                errorMessage = "Användaren hittades inte.";
+            }
+            else
+            {
+                model = new UpdateUserDto
+                {
+                    Id = user.Id,
+                    Email = user.Email,
+                    Name = user.Name,
+                    Role = user.Role,
+                    Course = user.Course
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kunde inte ladda användardata: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            bool success = await UsersService.UpdateUserAsync(model);
+            
+            if (success)
+            {
+                navigationManager.NavigateTo("/users");
+            }
+            else
+            {
+                errorMessage = "Misslyckades med att uppdatera användaren.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ett fel uppstod: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        navigationManager.NavigateTo("/users");
+    }
+}

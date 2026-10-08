@@ -13,16 +13,23 @@ public class UsersService : IUsersService
         _apiProxy = apiProxy;
     }
 
-    public async Task<HttpResponseMessage> CreateUserAsync(CreateUserDto dto)
+    public async Task<bool> CreateUserAsync(CreateUserDto dto)
     {
         using var content = JsonContent.Create(dto);
-        var response = await _apiProxy.SendAsync<HttpResponseMessage>(HttpMethod.Post, "users", content);
-
-        return response ?? new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
+        return await _apiProxy.SendAsync<bool>(HttpMethod.Post, "users", content);
     }
 
     public async Task<IEnumerable<UserDto>?> GetUsersAsync()
     {
         return await _apiProxy.SendAsync<IEnumerable<UserDto>>(HttpMethod.Get, "users");
+    }
+
+    public async Task<UserDto?> GetUserByIdAsync(string id) =>
+    await _apiProxy.SendAsync<UserDto>(HttpMethod.Get, $"users/{id}");
+
+    public async Task<bool> UpdateUserAsync(UpdateUserDto dto)
+    {
+        using var content = JsonContent.Create(dto);
+        return await _apiProxy.SendAsync<bool>(HttpMethod.Put, $"users/{dto.Id}", content);
     }
 }
