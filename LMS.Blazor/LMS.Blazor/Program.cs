@@ -21,17 +21,12 @@ public class Program
         builder.Services.AddBffAuthentication(builder.Configuration);
         builder.Services.AddBffAntiforgery();
         builder.Services.AddRemoteApiProxy(builder.Configuration);
-        builder.Services.AddScoped<ICourseApiService, CourseApiService>();
-        //builder.Services.AddScoped(sp => new HttpClient
-        //{
-        //    BaseAddress = new Uri("https://localhost:7249/") 
-        //});
 
         builder.Services.AddScoped<IUsersService, UsersService>();
 
         builder.Services.AddScoped<IModuleService, ModuleService>();
 
-        var app = builder.Build();
+		var app = builder.Build();
 
         // Load and validate persisted sessions before the first request arrives.
         // Forces it to get an instance before app starts
