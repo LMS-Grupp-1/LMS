@@ -1,22 +1,20 @@
-
 using LMS.Shared.Constants;
 using System.ComponentModel.DataAnnotations;
 
-namespace LMS.Shared.DTOs.CourseDtos
-{
-	public record CourseUpdateDto
-	{
-		[Required(ErrorMessage = "Course name is required.")]
-		[StringLength(CourseConstraints.NameMaxLength, ErrorMessage = "Course name cannot exceed {1} characters.")]
-		public string Name { get; init; } = string.Empty;
-		
-		[MaxLength(CourseConstraints.DescriptionMaxLength, ErrorMessage = "Course description cannot exceed {1} characters.")]
-		public string Description { get; init; } = string.Empty;
 
-		[Required(ErrorMessage = "Start date is required.")]
-		public DateTime StartDate { get; init; }
+namespace LMS.Shared.DTOs.CourseDtos;
 
-		[Required(ErrorMessage = "End date is required.")]
-		public DateTime EndDate { get; init; }
-	}
-}
+public record CourseUpdateDto(
+	[Required(ErrorMessage = "Kursnamn måste anges.")]
+	[StringLength(CourseConstraints.NameMaxLength, ErrorMessage = "Kursnamnet får inte överskrida {1} tecken.")]
+	string Name,
+
+	[StringLength(CourseConstraints.DescriptionMaxLength, ErrorMessage = "Kursbeskrivningen får inte överskrida {1} tecken.")]
+	string Description,
+
+	[Required(ErrorMessage = "Startdatum måste anges.")]
+	DateTime StartDate,
+
+	[Required(ErrorMessage = "Slutdatum måste anges.")]
+	DateTime EndDate
+);

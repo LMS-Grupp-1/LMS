@@ -6,7 +6,7 @@
 @using LMS.Blazor.Client.Services
 @attribute [Authorize(Roles = "Teacher")]
 @inject IUsersService UsersService
-@inject NavigationManager Navigation
+@inject NavigationManager navigationManager
 
 <div class="container mt-4">
     <div class="col-md-6">
@@ -68,6 +68,8 @@
                     <span>Skapar användare</span>
                 }
             </button>
+            
+            <button type="button" class="btn btn-secondary ms-2" @onclick="Cancel">Avbryt</button>
         </EditForm>
     </div>
 </div>
@@ -84,15 +86,15 @@
 
         try
         {
-            var response = await UsersService.CreateUserAsync(model);
-            if (response.IsSuccessStatusCode)
+            bool success = await UsersService.CreateUserAsync(model);
+
+            if (success)
             {
-                Navigation.NavigateTo("/users");
+                navigationManager.NavigateTo("/users");
             }
             else
             {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                errorMessage = $"Det gick inte att skapa användaren: {errorContent}";
+                errorMessage = $"Det gick inte att skapa användaren.";
             }
         }
         catch (Exception ex)
@@ -103,5 +105,10 @@
         {
             isSubmitting = false;
         }
+    }
+
+    private void Cancel()
+    {
+        navigationManager.NavigateTo("/users");
     }
 }

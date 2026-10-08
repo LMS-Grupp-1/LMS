@@ -11,13 +11,13 @@
 @inject ICourseService CourseService
 @inject NavigationManager NavigationManager
 
-<PageTitle>My course</PageTitle>
+<PageTitle>Min kurs</PageTitle>
 
 @if (isLoading)
 {
     <div class="d-flex align-items-center gap-2 text-muted">
         <div class="spinner-border spinner-border-sm" role="status"></div>
-        <span>Loading course...</span>
+        <span>Hämtar kurs...</span>
     </div>
 }
 else if (errorMessage is not null)
@@ -35,10 +35,10 @@ else if (course is not null)
         </small>
     </div>
 
-    <h2 class="h5 fw-semibold mb-3">Modules</h2>
+    <h2 class="h5 fw-semibold mb-3">Moduler</h2>
     <div class="card">
         <div class="card-body text-muted">
-            The course modules will be shown here.
+            Kursens moduler visas här.
         </div>
     </div>
 }
@@ -79,12 +79,12 @@ else if (course is not null)
         catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
         {
             // The API returns 404 when the student is not enrolled in a course
-            errorMessage = "You are not enrolled in a course yet.";
+            errorMessage = "Du är inte kopplad till någon kurs ännu.";
             isLoading = false;
         }
         catch (HttpRequestException)
         {
-            errorMessage = "The course could not be loaded. Please try again later.";
+            errorMessage = "Kursen kunde inte hämtas. Försök igen senare.";
             isLoading = false;
         }
     }

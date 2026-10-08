@@ -4,7 +4,6 @@ using LMS.Infrastructure.Data;
 using LMS.Presentation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 public class Program
 {
     private static void Main(string[] args)
@@ -30,7 +29,7 @@ public class Program
         builder.Services.ConfigurePolicys();
 		builder.Services.ConfigureCors(builder.Configuration);
 
-		var app = builder.Build();
+        var app = builder.Build();
 
         app.ConfigureExceptionHandler();
 
@@ -50,7 +49,7 @@ public class Program
         app.UseAuthorization();
 
         app.MapControllers()
-           .RequireAuthorization("Default");
+            .RequireAuthorization("Default");
 
         app.Run();
     }

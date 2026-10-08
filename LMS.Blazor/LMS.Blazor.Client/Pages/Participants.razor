@@ -11,13 +11,13 @@
 @inject NavigationManager NavigationManager
 @inject ICourseService CourseService
 
-<PageTitle>Participants</PageTitle>
+<PageTitle>Kursdeltagare</PageTitle>
 
 @if (isLoading)
 {
     <div class="d-flex align-items-center gap-2 text-muted">
         <div class="spinner-border spinner-border-sm" role="status"></div>
-        <span>Loading participants...</span>
+        <span>Hämtar deltagare...</span>
     </div>
 }
 else if (errorMessage is not null)
@@ -27,16 +27,16 @@ else if (errorMessage is not null)
 else if (course is not null)
 {
     <div class="mb-4">
-        <h1 class="h3 fw-bold mb-1">Participants</h1>
+        <h1 class="h3 fw-bold mb-1">Kursdeltagare</h1>
         <p class="text-muted mb-0">
-            @course.Name · @course.Participants.Count participants
+            @course.Name · @course.Participants.Count deltagare
         </p>
     </div>
 
     @if (course.Participants.Count == 0)
     {
         <div class="card">
-            <div class="card-body text-muted">There are no participants in this course yet.</div>
+            <div class="card-body text-muted">Det finns inga deltagare i den här kursen ännu.</div>
         </div>
     }
     else
@@ -99,12 +99,12 @@ else if (course is not null)
         }
         catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
         {
-            errorMessage = "You are not enrolled in a course yet.";
+            errorMessage = "Du är inte kopplad till någon kurs ännu.";
             isLoading = false;
         }
         catch (HttpRequestException)
         {
-            errorMessage = "The participants could not be loaded. Please try again later.";
+            errorMessage = "Kursdeltagarna kunde inte hämtas. Försök igen senare.";
             isLoading = false;
         }
     }

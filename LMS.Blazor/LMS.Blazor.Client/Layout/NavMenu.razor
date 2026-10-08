@@ -37,23 +37,27 @@
             </NavLink>
         </div>
         
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="users">
-                <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Användare
-            </NavLink>
-        </div>
+        <AuthorizeView Roles="@UserRoles.Teacher">
+            <Authorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="users">
+                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Användare
+                    </NavLink>
+                </div>
+            </Authorized>
+        </AuthorizeView>
 
         <AuthorizeView Roles="@UserRoles.Student">
             <Authorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="my-course">
-                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> My course
+                        <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Min kurs
                     </NavLink>
                 </div>
 
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="participants">
-                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Participants
+                        <span class="bi bi-person-nav-menu" aria-hidden="true"></span> Kursdeltagare
                     </NavLink>
                 </div>
             </Authorized>

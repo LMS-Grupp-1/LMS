@@ -18,6 +18,19 @@ public class UsersService : IUsersService
     }
     public async Task<IdentityResult> CreateUserAsync(CreateUserDto dto)
     {
+        if (!string.IsNullOrEmpty(dto.Role))
+        {
+            if (!await _roleManager.RoleExistsAsync(dto.Role))
+            {
+                var roleResult = await _roleManager.CreateAsync(new IdentityRole(dto.Role));
+                if (!roleResult.Succeeded) return roleResult;
+            }
+        }
+        else
+        {
+            
+        }
+
         var user = new ApplicationUser
         {
             UserName = dto.Email,
@@ -28,13 +41,12 @@ public class UsersService : IUsersService
         var result = await _userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded) return result;
 
-        if (!string.IsNullOrEmpty(dto.Role))
+        var addToRoleResult = await _userManager.AddToRoleAsync(user, dto.Role);
+        if (!addToRoleResult.Succeeded)
         {
-            if (!await _roleManager.RoleExistsAsync(dto.Role))
-            {
-                await _roleManager.CreateAsync(new IdentityRole(dto.Role));
-            }
-            await _userManager.AddToRoleAsync(user, dto.Role);
+            // ROLLBACK: Delete the user if role assignment fails
+            await _userManager.DeleteAsync(user);
+            return addToRoleResult;
         }
 
         // ToDo: Add user to course if dto.Course is provided
@@ -61,5 +73,63 @@ public class UsersService : IUsersService
         }
 
         return userDtos;
+    }
+
+    public async Task<UserDto?> GetUserByIdAsync(string id)
+    {
+        var user = await _userManager.FindByIdAsync(id);
+        if (user == null) return null;
+
+        var roles = await _userManager.GetRolesAsync(user);
+
+        // ToDo: Get the course
+
+        return new UserDto { 
+            Id = user.Id, 
+            Email = user.Email ?? string.Empty, 
+            Name = user.Name, 
+            Role = roles.FirstOrDefault() ?? string.Empty
+        };
+    }
+
+    public async Task<IdentityResult> UpdateUserAsync(UpdateUserDto dto)
+    {
+        var user = await _userManager.FindByIdAsync(dto.Id);
+        if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found." });
+
+        user.UserName = dto.Email;
+        user.Email = dto.Email;
+        user.Name = dto.Name;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded) return result;
+
+        if (!string.IsNullOrEmpty(dto.Role))
+        {
+            var currentRoles = await _userManager.GetRolesAsync(user);
+
+            if (!currentRoles.Contains(dto.Role))
+            {
+                if (currentRoles.Any())
+                {
+                    var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                    if (!removeResult.Succeeded) return removeResult;
+                }
+
+                // Ensure the role exists before adding
+                if (!await _roleManager.RoleExistsAsync(dto.Role))
+                {
+                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(dto.Role));
+                    if (!roleResult.Succeeded) return roleResult;
+                }
+
+                var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
+                if (!addResult.Succeeded) return addResult;
+            }
+        }
+
+        // ToDo: Update user's course if dto.Course is provided
+
+        return IdentityResult.Success;
     }
 }

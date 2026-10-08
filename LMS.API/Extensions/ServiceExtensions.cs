@@ -1,4 +1,5 @@
-﻿using LMS.Infrastructure.Repositories;
+﻿using LMS.API.Services;
+using LMS.Infrastructure.Repositories;
 using LMS.Services;
 
 namespace LMS.API.Extensions;
@@ -8,6 +9,7 @@ public static class ServiceExtensions
     public static void AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ICourseRepository, CourseRepository>();
     }
 
     public static void AddServiceLayer(this IServiceCollection services)

@@ -14,9 +14,9 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
 {
 	private readonly ICourseService _courseService = serviceManager.CourseService;
 
-	[HttpGet]
+    [HttpGet]
 	[Authorize(Roles = UserRoles.Teacher)]
-	public async Task<ActionResult<IEnumerable<CourseDto>>> GetCourses()
+    public async Task<ActionResult<IEnumerable<CourseDto>>> GetCourses()
     {
         var courses = await _courseService.GetAllCoursesAsync();
         return Ok(courses);
@@ -24,7 +24,7 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
 
     [HttpGet("{id:int}")]
 	[Authorize(Roles = UserRoles.Teacher)]
-	public async Task<ActionResult<CourseDto>> GetCourse(int id)
+    public async Task<ActionResult<CourseDto>> GetCourse(int id)
     {
         var course = await _courseService.GetCourseByIdAsync(id);
         if (course is null) return NotFound();
@@ -43,9 +43,9 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
 		return Ok(course);
 	}
 
-	[HttpPost]
+    [HttpPost]
 	[Authorize(Roles = UserRoles.Teacher)]
-	public async Task<ActionResult<CourseDto>> CreateCourse([FromBody] CourseCreateDto courseCreateDto)
+    public async Task<ActionResult<CourseDto>> CreateCourse([FromBody] CourseCreateDto courseCreateDto)
     {
         try
         {
@@ -60,7 +60,7 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
 
     [HttpPut("{id:int}")]
 	[Authorize(Roles = UserRoles.Teacher)]
-	public async Task<IActionResult> UpdateCourse(int id, [FromBody] CourseUpdateDto courseUpdateDto)
+    public async Task<IActionResult> UpdateCourse(int id, [FromBody] CourseUpdateDto courseUpdateDto)
     {
         try
         {
@@ -74,6 +74,21 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = "Teacher")] 
+    public async Task<IActionResult> DeleteCourse(int id)
+    {
+        try
+        {
+            await _courseService.DeleteCourseAsync(id); 
+            return NoContent();
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
         }
     }
 }
