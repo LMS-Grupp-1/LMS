@@ -16,7 +16,9 @@ public class UsersService : IUsersService
     public async Task<HttpResponseMessage> CreateUserAsync(CreateUserDto dto)
     {
         using var content = JsonContent.Create(dto);
-        return await _apiProxy.SendAsync<HttpResponseMessage>(HttpMethod.Post, "users", content);
+        var response = await _apiProxy.SendAsync<HttpResponseMessage>(HttpMethod.Post, "users", content);
+
+        return response ?? new HttpResponseMessage(System.Net.HttpStatusCode.InternalServerError);
     }
 
     public async Task<IEnumerable<UserDto>?> GetUsersAsync()
