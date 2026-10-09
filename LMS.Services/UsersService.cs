@@ -35,8 +35,9 @@ public class UsersService : IUsersService
         {
             UserName = dto.Email,
             Email = dto.Email,
-            Name = dto.Name
-        };
+            FirstName = dto.FirstName ?? string.Empty,
+            LastName = dto.LastName ?? string.Empty
+		};
 
         var result = await _userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded) return result;
@@ -65,7 +66,8 @@ public class UsersService : IUsersService
             {
                 Id = user.Id,
                 Email = user.Email ?? string.Empty,
-                Name = user.Name,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
                 Role = roles.FirstOrDefault() ?? string.Empty
 			});
 
@@ -87,8 +89,9 @@ public class UsersService : IUsersService
         return new UserDto { 
             Id = user.Id, 
             Email = user.Email ?? string.Empty, 
-            Name = user.Name, 
-            Role = roles.FirstOrDefault() ?? string.Empty
+            FirstName = user.FirstName,
+			LastName = user.LastName,
+			Role = roles.FirstOrDefault() ?? string.Empty
         };
     }
 
@@ -99,7 +102,8 @@ public class UsersService : IUsersService
 
         user.UserName = dto.Email;
         user.Email = dto.Email;
-        user.Name = dto.Name;
+        user.FirstName = dto.FirstName ?? string.Empty;
+        user.LastName = dto.LastName ?? string.Empty;
 
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded) return result;

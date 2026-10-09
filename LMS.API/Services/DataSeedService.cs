@@ -101,7 +101,6 @@ internal class DataSeedService : IHostedService
 		{
 			Email = DefaultUserEmail,
 			UserName = DefaultUserEmail,
-			Name = "Admin Teacher",
 			FirstName = "Admin",
 			LastName = "Teacher"			
 		};
@@ -122,8 +121,7 @@ internal class DataSeedService : IHostedService
 			var user = new ApplicationUser
 			{
 				Email = email,
-				UserName = email,
-				Name = $"{firstName} {lastName}",
+				UserName = email,				
 				FirstName = firstName,
 				LastName = lastName,
 				CourseId = course.Id

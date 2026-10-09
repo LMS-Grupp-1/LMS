@@ -19,7 +19,7 @@ public class ModuleService : IModuleService
         {
             var result = await _apiProxy.SendAsync<IEnumerable<ModuleDto>>(
                 HttpMethod.Get,
-                $"api/teacher/courses/{courseId}/modules"
+                $"teacher/courses/{courseId}/modules"
             );
             return result ?? new List<ModuleDto>();
         }
@@ -32,6 +32,6 @@ public class ModuleService : IModuleService
     public async Task<bool> CreateModuleAsync(int courseId, CreateModuleDto dto)
     {
         using var content = JsonContent.Create(dto);
-        return await _apiProxy.SendAsync<bool>(HttpMethod.Post, $"api/teacher/courses/{courseId}/modules", content);
+        return await _apiProxy.SendAsync<bool>(HttpMethod.Post, $"teacher/courses/{courseId}/modules", content);
     }
 }
