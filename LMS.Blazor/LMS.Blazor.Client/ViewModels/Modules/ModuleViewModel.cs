@@ -1,4 +1,4 @@
-﻿namespace LMS.Blazor.Client.ViewModels;
+﻿namespace LMS.Blazor.Client.ViewModels.Modules;
 
 public class ModuleViewModel
 {

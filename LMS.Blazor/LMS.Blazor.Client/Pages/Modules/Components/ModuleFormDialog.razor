@@ -1,16 +1,17 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Shared.DTOs.ModulesDtos
 @using LMS.Blazor.Client.Services
+
 @if (IsOpen)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <EditForm Model="newModule" OnValidSubmit="HandleSubmitAsync">
+                <EditForm Model="moduleModel" OnValidSubmit="HandleSubmitAsync">
                     <DataAnnotationsValidator />
                     
                     <div class="modal-header">
-                        <h5 class="modal-title">Lägg till modul</h5>
+                        <h5 class="modal-title">@(IsEditMode ? "Redigera modul" : "Lägg till modul")</h5>
                         <button type="button" class="btn-close" @onclick="Close"></button>
                     </div>
 
@@ -29,32 +30,37 @@
 
                         <div class="mb-3">
                             <label class="form-label">Modulnamn <span class="text-danger">*</span></label>
-                            <InputText class="form-control" @bind-Value="newModule.Name" />
-                            <ValidationMessage For="() => newModule.Name" />
+                            <InputText class="form-control" @bind-Value="moduleModel.Name" />
+                            <ValidationMessage For="() => moduleModel.Name" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Beskrivning</label>
-                            <InputTextArea class="form-control" @bind-Value="newModule.Description" rows="3" />
+                            <InputTextArea class="form-control" @bind-Value="moduleModel.Description" rows="3" />
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Startdatum <span class="text-danger">*</span></label>
-                                <InputDate class="form-control" @bind-Value="newModule.StartDate" />
+                                <InputDate class="form-control" @bind-Value="moduleModel.StartDate" />
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Slutdatum <span class="text-danger">*</span></label>
-                                <InputDate class="form-control" @bind-Value="newModule.EndDate" />
+                                <InputDate class="form-control" @bind-Value="moduleModel.EndDate" />
                             </div>
                         </div>
+
+                        @if (!string.IsNullOrEmpty(errorMessage))
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">@errorMessage</div>
+                        }
                     </div>
 
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" @onclick="Close">Avbryt</button>
                         <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
                             @if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            Skapa
+                            @(IsEditMode ? "Spara ändringar" : "Skapa")
                         </button>
                     </div>
                 </EditForm>
@@ -67,24 +73,43 @@
     [Parameter] public bool IsOpen { get; set; }
     [Parameter] public int CourseId { get; set; }
     [Parameter] public CourseDto? CurrentCourse { get; set; }
+    [Parameter] public ModuleDto? ModuleToEdit { get; set; } // Null = Create mode, Populated = Edit mode
     [Parameter] public EventCallback OnClose { get; set; }
-    [Parameter] public EventCallback OnModuleCreated { get; set; }
+    [Parameter] public EventCallback OnModuleSaved { get; set; }
     [Parameter] public IModuleService ModuleService { get; set; } = default!;
 
-    private CreateModuleDto newModule = new();
+    private CreateModuleDto moduleModel = new();
     private bool IsSubmitting = false;
+    private string? errorMessage;
+    private bool IsEditMode => ModuleToEdit != null;
 
     protected override void OnParametersSet()
     {
         if (IsOpen)
         {
-            var startDate = CurrentCourse?.StartDate ?? DateTime.Today;
-            newModule = new CreateModuleDto 
-            { 
-                CourseId = CourseId,
-                StartDate = startDate,
-                EndDate = startDate.AddDays(7)
-            };
+            errorMessage = null;
+
+            if (IsEditMode && ModuleToEdit != null)
+            {
+                // Populate fields with existing module data for editing
+                moduleModel = new CreateModuleDto
+                {
+                    Name = ModuleToEdit.Name,
+                    Description = ModuleToEdit.Description,
+                    StartDate = ModuleToEdit.StartDate,
+                    EndDate = ModuleToEdit.EndDate
+                };
+            }
+            else
+            {
+                // Set up defaults for creating a new module
+                var startDate = CurrentCourse?.StartDate ?? DateTime.Today;
+                moduleModel = new CreateModuleDto 
+                { 
+                    StartDate = startDate,
+                    EndDate = startDate.AddDays(7)
+                };
+            }
         }
     }
 
@@ -93,11 +118,25 @@
     private async Task HandleSubmitAsync()
     {
         IsSubmitting = true;
+        errorMessage = null;
+
         try
         {
-            await ModuleService.CreateModuleAsync(CourseId, newModule);
-            await OnModuleCreated.InvokeAsync();
+            if (IsEditMode && ModuleToEdit != null)
+            {
+                await ModuleService.UpdateModuleAsync(CourseId, ModuleToEdit.Id, moduleModel);
+            }
+            else
+            {
+                await ModuleService.CreateModuleAsync(CourseId, moduleModel);
+            }
+
+            await OnModuleSaved.InvokeAsync();
             await Close();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ett fel uppstod: {ex.Message}";
         }
         finally
         {

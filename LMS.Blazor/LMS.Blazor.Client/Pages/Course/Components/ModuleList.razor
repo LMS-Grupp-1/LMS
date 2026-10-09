@@ -1,8 +1,9 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Shared.DTOs.ModulesDtos
 @using LMS.Blazor.Client.Services
-@using LMS.Blazor.Client.ViewModels
+@using LMS.Blazor.Client.ViewModels.Modules
 @using LMS.Blazor.Client.Pages.Modules.Components
+@using LMS.Blazor.Client.Components.Common
 @inject IModuleService ModuleService
 
 <div class="container-fluid px-0">
@@ -61,12 +62,11 @@
                             <button class="btn btn-outline-secondary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center" 
                                     style="width: 32px; height: 32px;" 
                                     @onclick="() => ToggleModuleExpansion(mod.Id)">
-                                <i class="bi @(isExpanded ? "bi-chevron-down" : "bi-chevron-up")"></i>
+                                <i class="bi @(isExpanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Expanded Section -->
                     @if (isExpanded)
                     {
                         <hr class="my-3 text-muted" />
@@ -76,14 +76,21 @@
                                     <p class="text-secondary mb-0">@(string.IsNullOrEmpty(mod.Description) ? "Ingen beskrivning angiven." : mod.Description)</p>
                                 </div>
                                 <div class="d-flex gap-2">
-                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => EditModule(mod.Id)">
+                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenEditModuleModal(mod)">
                                         <i class="bi bi-pencil me-1"></i> Redigera
                                     </button>
-                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteModule(mod.Id)">
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => PromptDeleteModule(mod.Id, mod.Name)">
                                         <i class="bi bi-trash me-1"></i> Ta bort
                                     </button>
                                 </div>
                             </div>
+
+                            @if (deleteErrors.TryGetValue(mod.Id, out var errorMsg) && !string.IsNullOrEmpty(errorMsg))
+                            {
+                                <div class="text-danger small mt-2">
+                                    <i class="bi bi-exclamation-circle me-1"></i> @errorMsg
+                                </div>
+                            }
 
                             <div class="mt-3 p-3 bg-light rounded">
                                 <ActivitiesForModule ModuleId="mod.Id" />
@@ -96,12 +103,22 @@
     }
 </div>
 
-<AddModuleDialog IsOpen="showAddModal"
+<!-- Unified Unified Form Dialog for both Add and Edit -->
+<ModuleFormDialog IsOpen="isModalOpen"
                  CourseId="CourseId"
                  CurrentCourse="CurrentCourse"
                  ModuleService="ModuleService"
-                 OnClose="() => showAddModal = false"
-                 OnModuleCreated="LoadModulesAsync" />
+                 ModuleToEdit="selectedModule"
+                 OnClose="CloseModal"
+                 OnModuleSaved="HandleModuleSaved" />
+
+<ConfirmDialog IsOpen="showDeleteModal"
+               Title="@($"Ta bort modul: {deleteModuleName}")"
+               Message="Är du säker på att du vill ta bort denna modul? Denna åtgärd går inte att ångra."
+               ConfirmButtonText="Ta bort"
+               ConfirmButtonClass="btn-danger"
+               OnCancel="CloseDeleteModal"
+               OnConfirm="ConfirmDeleteAsync" />
 
 @code {
     [Parameter] public int CourseId { get; set; }
@@ -109,8 +126,13 @@
 
     private IEnumerable<ModuleViewModel> modules = new List<ModuleViewModel>();
     private bool isLoading = true;
-    private bool showAddModal = false;
+    private bool isModalOpen = false;
+    private bool showDeleteModal = false;
+    private ModuleDto? selectedModule = null; // null = Add mode, Has value = Edit mode
     private HashSet<int> expandedModuleIds = new();
+    private Dictionary<int, string> deleteErrors = new();
+    private int? moduleToDeleteId = null;
+    private string? deleteModuleName = null;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -122,7 +144,6 @@
         isLoading = true;
         try
         {
-            // Fetch modules from your service and map or extend them
             var serviceModules = await ModuleService.GetModulesByCourseIdAsync(CourseId);
             
             modules = serviceModules.Select(m => new ModuleViewModel
@@ -155,16 +176,76 @@
 
     private void OpenAddModuleModal()
     {
-        showAddModal = true;
+        selectedModule = null; // Clear out any previous edit state -> triggers Add Mode
+        isModalOpen = true;
     }
 
-    private void EditModule(int moduleId)
+    private void OpenEditModuleModal(ModuleViewModel mod)
     {
-        // Trigger Edit Module Dialog
+        selectedModule = new ModuleDto
+        {
+            Id = mod.Id,
+            Name = mod.Name,
+            Description = mod.Description,
+            StartDate = mod.StartDate,
+            EndDate = mod.EndDate
+        };
+        
+        isModalOpen = true;
     }
 
-    private void DeleteModule(int moduleId)
+    private void CloseModal()
     {
-        // Trigger Delete Module Dialog
+        isModalOpen = false;
+        selectedModule = null;
+    }
+
+    private async Task HandleModuleSaved()
+    {
+        CloseModal();
+        await LoadModulesAsync(); // Refresh list after create or update
+    }
+
+    private void PromptDeleteModule(int moduleId, string moduleName)
+    {
+        moduleToDeleteId = moduleId;
+        deleteModuleName = moduleName;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        moduleToDeleteId = null;
+        deleteModuleName = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (moduleToDeleteId == null) return;
+
+        int moduleId = moduleToDeleteId.Value;
+        CloseDeleteModal();
+        
+        deleteErrors[moduleId] = string.Empty;
+
+        try
+        {
+            var success = await ModuleService.DeleteModuleAsync(CourseId, moduleId);
+
+            if (success)
+            {
+                deleteErrors.Remove(moduleId);
+                await LoadModulesAsync();
+            }
+            else
+            {
+                deleteErrors[moduleId] = "Det gick inte att ta bort modulen. Försök igen.";
+            }
+        }
+        catch (Exception ex)
+        {
+            deleteErrors[moduleId] = $"Ett fel uppstod: {ex.Message}";
+        }
     }
 }

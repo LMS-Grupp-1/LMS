@@ -1,5 +1,6 @@
 ﻿using LMS.Blazor.Client.Services.ApiProxy;
 using LMS.Shared.DTOs.ModulesDtos;
+using LMS.Shared.DTOs.Users;
 using System.Net.Http.Json;
 
 namespace LMS.Blazor.Client.Services;
@@ -33,5 +34,16 @@ public class ModuleService : IModuleService
     {
         using var content = JsonContent.Create(dto);
         return await _apiProxy.SendAsync<bool>(HttpMethod.Post, $"teacher/courses/{courseId}/modules", content);
+    }
+
+    public async Task<bool> UpdateModuleAsync(int courseId, int moduleId, CreateModuleDto dto)
+    {
+        using var content = JsonContent.Create(dto);
+        return await _apiProxy.SendAsync<bool>(HttpMethod.Put, $"teacher/courses/{courseId}/modules/{moduleId}", content);
+    }
+
+    public async Task<bool> DeleteModuleAsync(int courseId, int moduleId)
+    {
+        return await _apiProxy.SendAsync<bool>(HttpMethod.Delete, $"teacher/courses/{courseId}/modules/{moduleId}");
     }
 }
