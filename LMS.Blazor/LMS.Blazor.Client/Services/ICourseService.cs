@@ -9,5 +9,6 @@ namespace LMS.Blazor.Client.Services
 		Task<bool> UpdateCourseAsync(int id, CourseUpdateDto dto);
 		Task<bool> DeleteCourseAsync(int id);
 		Task<StudentCourseDto?> GetMyCourseAsync(CancellationToken cancellationToken = default);
-	}
+        Task<CourseDto?> GetCourseByIdAsync(int id);
+    }
 }

@@ -2,8 +2,11 @@
 
 @using Microsoft.AspNetCore.Authorization
 @using LMS.Blazor.Client.Services
+@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Shared.DTOs.ModulesDtos
-@attribute [Authorize(Roles = "Teacher")]
+@using LMS.Blazor.Client.Pages.Modules.Components
+@attribute [Authorize(Roles = UserRoles.Teacher)]
+@inject ICourseService CourseService
 @inject IModuleService ModuleService
 
 <div class="container my-4">
@@ -66,18 +69,27 @@
 
 </div>
 
+<AddModuleDialog IsOpen="showAddModal"
+                 CourseId="CourseId"
+                 CurrentCourse="currentCourse"
+                 ModuleService="ModuleService"
+                 OnClose="() => showAddModal = false"
+                 OnModuleCreated="LoadModulesAsync" />
+
 @code {
     [Parameter]
     public int CourseId { get; set; }
-
+    private CourseDto? currentCourse;
     private IEnumerable<ModuleDto> modules = new List<ModuleDto>();
     private bool isLoading = true;
+    private bool showAddModal = false;
 
     protected override async Task OnInitializedAsync()
     {
+        currentCourse = await CourseService.GetCourseByIdAsync(CourseId);
         await LoadModulesAsync();
     }
-    
+
     private async Task LoadModulesAsync()
     {
         isLoading = true;
@@ -93,7 +105,7 @@
 
     private void OpenAddModuleModal()
     {
-        // Placeholder for opening create modal/form in next steps
+        showAddModal = true;
     }
 
     private void EditModule(int moduleId)

@@ -1,0 +1,107 @@
+﻿@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Shared.DTOs.ModulesDtos
+@using LMS.Blazor.Client.Services
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <EditForm Model="newModule" OnValidSubmit="HandleSubmitAsync">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="modal-header">
+                        <h5 class="modal-title">Lägg till modul</h5>
+                        <button type="button" class="btn-close" @onclick="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        @if (CurrentCourse != null)
+                        {
+                            <div class="card bg-light border-0 mb-4 p-3">
+                                <h6 class="text-primary fw-bold mb-1">Kursinformation</h6>
+                                <p class="mb-1"><strong>Namn:</strong> @CurrentCourse.Name</p>
+                                <p class="mb-1 text-muted small"><strong>Beskrivning:</strong> @CurrentCourse.Description</p>
+                                <div class="text-muted small">
+                                    <span><strong>Kursperiod:</strong> @CurrentCourse.StartDate.ToShortDateString() - @CurrentCourse.EndDate.ToShortDateString()</span>
+                                </div>
+                            </div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label">Modulnamn <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="newModule.Name" />
+                            <ValidationMessage For="() => newModule.Name" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Beskrivning</label>
+                            <InputTextArea class="form-control" @bind-Value="newModule.Description" rows="3" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Startdatum <span class="text-danger">*</span></label>
+                                <InputDate class="form-control" @bind-Value="newModule.StartDate" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Slutdatum <span class="text-danger">*</span></label>
+                                <InputDate class="form-control" @bind-Value="newModule.EndDate" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="Close">Avbryt</button>
+                        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                            @if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            Skapa
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public int CourseId { get; set; }
+    [Parameter] public CourseDto? CurrentCourse { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnModuleCreated { get; set; }
+    [Parameter] public IModuleService ModuleService { get; set; } = default!;
+
+    private CreateModuleDto newModule = new();
+    private bool IsSubmitting = false;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen)
+        {
+            var startDate = CurrentCourse?.StartDate ?? DateTime.Today;
+            newModule = new CreateModuleDto 
+            { 
+                CourseId = CourseId,
+                StartDate = startDate,
+                EndDate = startDate.AddDays(7)
+            };
+        }
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+
+    private async Task HandleSubmitAsync()
+    {
+        IsSubmitting = true;
+        try
+        {
+            await ModuleService.CreateModuleAsync(CourseId, newModule);
+            await OnModuleCreated.InvokeAsync();
+            await Close();
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+}
