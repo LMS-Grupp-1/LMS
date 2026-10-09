@@ -3,7 +3,8 @@
 @using System.ComponentModel.DataAnnotations
 @using LMS.Shared.DTOs.Users
 @using LMS.Blazor.Client.Services
-@attribute [Authorize(Roles = "Teacher")]
+@using LMS.Shared.Constants
+@attribute [Authorize(Roles = UserRoles.Teacher)]
 @inject IUsersService UsersService
 @inject NavigationManager navigationManager
 
@@ -24,8 +25,12 @@
             <ValidationSummary />
 
             <div class="mb-3">
-                <label for="name" class="form-label">Name</label>
-                <InputText id="name" class="form-control" @bind-Value="model.Name" />
+                <label for="firstName" class="form-label">Förnamn</label>
+                <InputText id="firstName" class="form-control" @bind-Value="model.FirstName" />
+             </div>
+             <div class="mb-3">
+                <label for="lastName" class="form-label">Efternamn</label>
+                <InputText id="lastName" class="form-control" @bind-Value="model.LastName" />
              </div>
 
              <div class="mb-3">
@@ -93,7 +98,8 @@
                 {
                     Id = user.Id,
                     Email = user.Email,
-                    Name = user.Name,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
                     Role = user.Role,
                     Course = user.Course
                 };
