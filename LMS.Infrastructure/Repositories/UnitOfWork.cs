@@ -3,13 +3,29 @@ using LMS.Infrastructure.Data;
 
 namespace LMS.Infrastructure.Repositories;
 
-public class UnitOfWork(ApplicationDbContext context) : IUnitOfWork
+public class UnitOfWork : IUnitOfWork
 {
-	private readonly ApplicationDbContext _context = context;
-		
-	private readonly Lazy<ICourseRepository> _courses = new(() => new CourseRepository(context));
+    private readonly ApplicationDbContext _context;
 
-	public ICourseRepository Courses => _courses.Value;
+    public ICourseRepository Courses { get; }
+    public IModuleRepository Modules { get; }
 
-	public async Task CompleteAsync() => await _context.SaveChangesAsync();
+    public UnitOfWork(ApplicationDbContext context,
+                      ICourseRepository courseRepository,
+                      IModuleRepository moduleRepository)
+    {
+        _context = context;
+        Courses = courseRepository;
+        Modules = moduleRepository;
+    }
+
+    public async Task<int> CompleteAsync()
+    {
+        return await _context.SaveChangesAsync();
+    }
+
+    public void Dispose()
+    {
+        _context.Dispose();
+    }
 }

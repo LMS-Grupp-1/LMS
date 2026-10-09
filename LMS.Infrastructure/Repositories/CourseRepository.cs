@@ -13,7 +13,7 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
             ? await _context.Courses.AsNoTracking().ToListAsync()
             : await _context.Courses.ToListAsync();
 
-    public async Task<Course?> GetByIdAsync(int id, bool trackChanges) =>
+    public async Task<Course?> GetByIdAsync(int id, bool trackChanges = false) =>
         !trackChanges
             ? await _context.Courses.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id)
             : await _context.Courses.FirstOrDefaultAsync(c => c.Id == id);

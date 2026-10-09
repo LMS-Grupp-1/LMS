@@ -1,3 +1,4 @@
+using LMS.Blazor.Client.Services;
 using LMS.Blazor.Components;
 using LMS.Blazor.Extensions;
 using LMS.Blazor.Services.Authentication.Tokens;
@@ -21,8 +22,9 @@ public class Program
         builder.Services.AddBffAntiforgery();
         builder.Services.AddRemoteApiProxy(builder.Configuration);
 
-        builder.Services.AddScoped<LMS.Blazor.Client.Services.IUsersService, LMS.Blazor.Client.Services.UsersService>();		
-		builder.Services.AddScoped<LMS.Blazor.Client.Services.ICourseService, LMS.Blazor.Client.Services.CourseService>();
+        builder.Services.AddScoped<IUsersService, UsersService>();
+        builder.Services.AddScoped<ICourseService, CourseService>();
+        builder.Services.AddScoped<IModuleService, ModuleService>();
 
 		var app = builder.Build();
 
