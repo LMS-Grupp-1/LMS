@@ -4,6 +4,7 @@ using LMS.Infrastructure.Data;
 using LMS.Presentation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+
 public class Program
 {
     private static void Main(string[] args)

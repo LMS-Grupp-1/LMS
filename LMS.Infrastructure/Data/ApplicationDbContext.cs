@@ -1,19 +1,14 @@
 using Domain.Models.Entities;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client.NativeInterop;
+using Module = Domain.Models.Entities.Module;
 
 namespace LMS.Infrastructure.Data;
 
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext<ApplicationUser>(options)
 {
-	public DbSet<Course> Courses => Set<Course>();
+    public DbSet<Course> Courses { get; set; }
 
-	protected override void OnModelCreating(ModelBuilder builder)
-	{
-		// Must run first, it configures the Identity tables
-		base.OnModelCreating(builder);
-
-		// Picks up all IEntityTypeConfiguration classes in this assembly
-		builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
-	}
+    public DbSet<Module> Modules => Set<Module>();
 }
