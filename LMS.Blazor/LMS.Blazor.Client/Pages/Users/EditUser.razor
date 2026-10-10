@@ -2,10 +2,12 @@
 @using Microsoft.AspNetCore.Authorization
 @using System.ComponentModel.DataAnnotations
 @using LMS.Shared.DTOs.Users
+@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Blazor.Client.Services
 @using LMS.Shared.Constants
 @attribute [Authorize(Roles = UserRoles.Teacher)]
 @inject IUsersService UsersService
+@inject ICourseService CourseService
 @inject NavigationManager navigationManager
 
 <div class="container mt-4">
@@ -50,12 +52,17 @@
 
               <div class="mb-3">
                   <label class="form-label">Kurs:</label>
-                  <InputSelect @bind-Value="model.Course" class="form-control">
-                      <option value="">Välj kurs...</option>
-                      <option value="Kurs 1">Kurs 1</option>
-                      <option value="Kurs 2">Kurs 2</option>
-                  </InputSelect>
-                  <ValidationMessage For="@(() => model.Course)" />
+                  <InputSelect @bind-Value="model.CourseId" class="form-control">
+                        <option value="">Välj kurs...</option>
+                        @if (courses != null)
+                        {
+                            @foreach (var course in courses)
+                            {
+                                <option value="@course.Id">@course.Name</option>
+                            }
+                        }
+                    </InputSelect>
+                  <ValidationMessage For="@(() => model.CourseId)" />
               </div>
 
                 <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
@@ -82,6 +89,7 @@
     private bool isLoading = true;
     private bool isSubmitting = false;
     private string? errorMessage;
+    private IEnumerable<CourseDto>? courses;
 
     protected override async Task OnInitializedAsync()
     {
@@ -101,9 +109,11 @@
                     FirstName = user.FirstName,
                     LastName = user.LastName,
                     Role = user.Role,
-                    Course = user.Course
+                    CourseId = user.CourseId
                 };
             }
+
+            await LoadCoursesAsync();
         }
         catch (Exception ex)
         {
@@ -113,6 +123,11 @@
         {
             isLoading = false;
         }
+    }
+
+    private async Task LoadCoursesAsync()
+    {
+        courses = await CourseService.GetAllCoursesAsync();
     }
 
     private async Task HandleValidSubmit()

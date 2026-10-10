@@ -10,11 +10,13 @@ public class UsersService : IUsersService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly ICourseService _courseService;
 
-    public UsersService(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager)
+    public UsersService(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ICourseService courseService)
     {
         _userManager = userManager;
         _roleManager = roleManager;
+        _courseService = courseService;
     }
     public async Task<IdentityResult> CreateUserAsync(CreateUserDto dto)
     {
@@ -36,8 +38,9 @@ public class UsersService : IUsersService
             UserName = dto.Email,
             Email = dto.Email,
             FirstName = dto.FirstName ?? string.Empty,
-            LastName = dto.LastName ?? string.Empty
-		};
+            LastName = dto.LastName ?? string.Empty,
+            CourseId = dto.CourseId ?? null
+        };
 
         var result = await _userManager.CreateAsync(user, dto.Password);
         if (!result.Succeeded) return result;
@@ -50,28 +53,36 @@ public class UsersService : IUsersService
             return addToRoleResult;
         }
 
-        // ToDo: Add user to course if dto.Course is provided
-
         return IdentityResult.Success;
     }
     public async Task<IEnumerable<UserDto>?> GetUsersAsync()
     {
-        var users = _userManager.Users.ToList();
+        var users = _userManager.Users.OrderBy(u => u.FirstName).ToList();
         var userDtos = new List<UserDto>();
 
         foreach (var user in users)
         {
             var roles = await _userManager.GetRolesAsync(user);
+
+            var courseName = string.Empty;
+            if (user.CourseId != null)
+            {
+                var course = await _courseService.GetCourseByIdAsync(user.CourseId.Value);
+                if (course != null)
+                {
+                    courseName = course.Name;
+                }
+            }
             userDtos.Add(new UserDto
             {
                 Id = user.Id,
                 Email = user.Email ?? string.Empty,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                Role = roles.FirstOrDefault() ?? string.Empty
-			});
-
-            // ToDo: Get the course
+                Role = roles.FirstOrDefault() ?? string.Empty,
+                CourseId = user.CourseId,
+                CourseName = courseName
+            });
         }
 
         return userDtos;
@@ -84,14 +95,13 @@ public class UsersService : IUsersService
 
         var roles = await _userManager.GetRolesAsync(user);
 
-        // ToDo: Get the course
-
         return new UserDto { 
             Id = user.Id, 
             Email = user.Email ?? string.Empty, 
             FirstName = user.FirstName,
 			LastName = user.LastName,
-			Role = roles.FirstOrDefault() ?? string.Empty
+			Role = roles.FirstOrDefault() ?? string.Empty,
+            CourseId = user.CourseId
         };
     }
 
@@ -104,6 +114,7 @@ public class UsersService : IUsersService
         user.Email = dto.Email;
         user.FirstName = dto.FirstName ?? string.Empty;
         user.LastName = dto.LastName ?? string.Empty;
+        user.CourseId = dto.CourseId ?? null;
 
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded) return result;

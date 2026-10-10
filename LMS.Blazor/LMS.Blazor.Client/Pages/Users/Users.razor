@@ -49,13 +49,24 @@ else
                     <td>@user.LastName</td>
                     <td>@user.Email</td>
                     <td>@user.Role</td>
-                    <td>@user.Course</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-secondary me-1" @onclick="() => EditUser(user.Id)">
-                            <i class="bi bi-pencil"></i> Redigera
+                        @if (user.CourseId != null)
+                        {
+                            <NavLink href="@($"/teacher/courses/{user.CourseId}")">
+                                @user.CourseName
+                            </NavLink>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Ingen kurs</span>
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditUser(user.Id)">
+                            <i class="bi bi-pencil"></i>
                         </button>
                         <button class="btn btn-sm btn-outline-danger" @onclick="() => PromptDeleteUser(user.Id, user.FirstName, user.LastName)">
-                            <i class="bi bi-trash"></i> Ta bort
+                            <i class="bi bi-trash"></i>
                         </button>
                     </td>
                 </tr>
