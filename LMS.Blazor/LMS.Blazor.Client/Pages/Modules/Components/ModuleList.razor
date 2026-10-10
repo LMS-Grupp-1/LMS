@@ -231,7 +231,7 @@
 
         try
         {
-            var success = await ModuleService.DeleteModuleAsync(CourseId, moduleId);
+            var (success, responseErrorMessage) = await ModuleService.DeleteModuleAsync(CourseId, moduleId);
 
             if (success)
             {
@@ -240,7 +240,7 @@
             }
             else
             {
-                deleteErrors[moduleId] = "Det gick inte att ta bort modulen. Försök igen.";
+                deleteErrors[moduleId] = responseErrorMessage ?? "Det gick inte att ta bort modulen. Försök igen.";
             }
         }
         catch (Exception ex)

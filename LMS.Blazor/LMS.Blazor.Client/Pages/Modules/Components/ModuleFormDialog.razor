@@ -50,9 +50,9 @@
                             </div>
                         </div>
 
-                        @if (!string.IsNullOrEmpty(errorMessage))
+                        @if (!string.IsNullOrEmpty(submitErrorMessage))
                         {
-                            <div class="alert alert-danger mt-3 mb-0">@errorMessage</div>
+                            <div class="alert alert-danger mt-3 mb-0">@submitErrorMessage</div>
                         }
                     </div>
 
@@ -80,14 +80,14 @@
 
     private CreateModuleDto moduleModel = new();
     private bool IsSubmitting = false;
-    private string? errorMessage;
     private bool IsEditMode => ModuleToEdit != null;
+    private string? submitErrorMessage;
 
     protected override void OnParametersSet()
     {
         if (IsOpen)
         {
-            errorMessage = null;
+            submitErrorMessage = null;
 
             if (IsEditMode && ModuleToEdit != null)
             {
@@ -118,17 +118,27 @@
     private async Task HandleSubmitAsync()
     {
         IsSubmitting = true;
-        errorMessage = null;
+        submitErrorMessage = null;
 
         try
         {
             if (IsEditMode && ModuleToEdit != null)
             {
-                await ModuleService.UpdateModuleAsync(CourseId, ModuleToEdit.Id, moduleModel);
+                var (success, responseErrorMessage) = await ModuleService.UpdateModuleAsync(CourseId, ModuleToEdit.Id, moduleModel);
+                if (!success)
+                {
+                    submitErrorMessage = responseErrorMessage ?? "Det gick inte att uppdatera modulen. Försök igen.";
+                    return;
+                }
             }
             else
             {
-                await ModuleService.CreateModuleAsync(CourseId, moduleModel);
+                var (success, responseErrorMessage) = await ModuleService.CreateModuleAsync(CourseId, moduleModel);
+                if (!success)
+                {
+                    submitErrorMessage = responseErrorMessage ?? "Det gick inte att skapa modulen. Försök igen.";
+                    return;
+                }
             }
 
             await OnModuleSaved.InvokeAsync();
@@ -136,11 +146,12 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Ett fel uppstod: {ex.Message}";
+            submitErrorMessage = $"Ett fel uppstod: {ex.Message}";
         }
         finally
         {
             IsSubmitting = false;
         }
     }
+
 }

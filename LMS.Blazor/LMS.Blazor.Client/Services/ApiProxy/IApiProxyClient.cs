@@ -8,4 +8,10 @@ public interface IApiProxyClient
         string endpoint,
         HttpContent? content = null,
         CancellationToken cancellationToken = default);
+
+    Task<(TResponse? Data, string? ErrorMessage)> SendAndHandleErrorAsync<TResponse>(
+        HttpMethod method,
+        string endpoint,
+        HttpContent? content = null,
+        CancellationToken cancellationToken = default);
 }

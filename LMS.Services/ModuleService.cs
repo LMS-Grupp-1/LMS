@@ -31,9 +31,9 @@ public class ModuleService : IModuleService
 
     public async Task<(bool Success, string ErrorMessage)> CreateModuleAsync(int courseId, CreateModuleDto dto)
     {
-        if (dto.StartDate >= dto.EndDate)
+        if (dto.StartDate > dto.EndDate)
         {
-            return (false, "Modulens startdatum måste vara före dess slutdatum.");
+            return (false, "Modulens startdatum får inte vara efter dess slutdatum.");
         }
 
         var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
@@ -78,9 +78,9 @@ public class ModuleService : IModuleService
 
     public async Task<(bool Success, string ErrorMessage)> UpdateModuleAsync(int courseId, int moduleId, CreateModuleDto dto)
     {
-        if (dto.StartDate >= dto.EndDate)
+        if (dto.StartDate > dto.EndDate)
         {
-            return (false, "Modulens startdatum måste vara före dess slutdatum.");
+            return (false, "Modulens startdatum får inte vara efter dess slutdatum.");
         }
 
         var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
