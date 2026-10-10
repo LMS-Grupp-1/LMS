@@ -32,4 +32,7 @@ public class UsersService : IUsersService
         using var content = JsonContent.Create(dto);
         return await _apiProxy.SendAsync<bool>(HttpMethod.Put, $"users/{dto.Id}", content);
     }
+
+    public async Task<bool> DeleteUserAsync(string userId) =>
+        await _apiProxy.SendAsync<bool>(HttpMethod.Delete, $"users/{userId}");
 }
