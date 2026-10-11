@@ -24,6 +24,11 @@ public class UsersService : IUsersService
         return await _apiProxy.SendAsync<IEnumerable<UserDto>>(HttpMethod.Get, "users");
     }
 
+    public async Task<IEnumerable<UserDto>?> GetUsersByCourseIdAsync(int courseId)
+    {
+        return await _apiProxy.SendAsync<IEnumerable<UserDto>>(HttpMethod.Get, $"users/students/{courseId}");
+    }
+
     public async Task<UserDto?> GetUserByIdAsync(string id) =>
     await _apiProxy.SendAsync<UserDto>(HttpMethod.Get, $"users/{id}");
 

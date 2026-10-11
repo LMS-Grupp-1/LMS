@@ -7,7 +7,7 @@ public interface IUsersService
 {
     Task<IdentityResult> CreateUserAsync(CreateUserDto dto);
     Task<IEnumerable<UserDto>?> GetUsersAsync();
-
+    Task<IEnumerable<UserDto>?> GetUsersByCourseIdAsync(int courseId);
     Task<IdentityResult> UpdateUserAsync(UpdateUserDto dto);
     Task<UserDto?> GetUserByIdAsync(string id);
 }

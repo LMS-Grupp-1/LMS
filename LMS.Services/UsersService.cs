@@ -87,6 +87,37 @@ public class UsersService : IUsersService
 
         return userDtos;
     }
+    public async Task<IEnumerable<UserDto>?> GetUsersByCourseIdAsync(int courseId)
+    {
+        var users = _userManager.Users.Where(u => u.CourseId == courseId).OrderBy(u => u.FirstName).ToList();
+
+        var courseName = "Kurs finns inte";
+        var course = await _courseService.GetCourseByIdAsync(courseId);
+        if (course != null)
+        {
+            courseName = course.Name;
+        }
+
+        var userDtos = new List<UserDto>();
+
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+
+            userDtos.Add(new UserDto
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Role = roles.FirstOrDefault() ?? string.Empty,
+                CourseId = user.CourseId,
+                CourseName = courseName
+            });
+        }
+
+        return userDtos;
+    }
 
     public async Task<UserDto?> GetUserByIdAsync(string id)
     {

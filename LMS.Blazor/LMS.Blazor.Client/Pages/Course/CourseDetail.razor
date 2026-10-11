@@ -4,9 +4,10 @@
 @using LMS.Blazor.Client.Services
 @using LMS.Blazor.Client.Pages.Course.Components
 @using LMS.Blazor.Client.Pages.Modules.Components
+@using LMS.Blazor.Client.Pages.Users.Components
 @attribute [Authorize(Roles = "Teacher")]
 @inject ICourseService CourseService
-@inject NavigationManager NavigationManager
+@inject NavigationManager navigationManager
 
 <div class="container my-4">
     <div class="card shadow-sm p-4 mb-4 border-0 bg-light">
@@ -80,7 +81,7 @@
                     <div class="alert alert-info">Inlämningar kommer snart...</div>
                     break;
                 case "students":
-                    <div class="alert alert-info">Studenter kommer snart...</div>
+                    <StudentList CourseId="CourseId" />
                     break;
                 case "documents":
                     <div class="alert alert-info">Dokument kommer snart...</div>
@@ -101,11 +102,22 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        CheckTabQueryParam();
+
         // Only fetch from API if the CourseId has actually changed!
         if (CourseId != _loadedCourseId)
         {
             _loadedCourseId = CourseId;
             await LoadCourseAsync();
+        }
+    }
+
+    private void CheckTabQueryParam()
+    {
+        var uri = navigationManager.ToAbsoluteUri(navigationManager.Uri);
+        if (uri.Query.Contains("tab=students"))
+        {
+            activeTab = "students";
         }
     }
 
@@ -141,6 +153,6 @@
 
     private void OpenEditCourse()
     {
-        // TODO: Implement course edit modal
+        
     }
 }

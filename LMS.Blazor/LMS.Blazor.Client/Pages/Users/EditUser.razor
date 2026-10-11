@@ -9,6 +9,7 @@
 @inject IUsersService UsersService
 @inject ICourseService CourseService
 @inject NavigationManager navigationManager
+@inject ToastService ToastService
 
 <div class="container mt-4">
     <div class="col-md-6">
@@ -85,6 +86,10 @@
     [Parameter]
     public string Id { get; set; } = string.Empty;
 
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string? ReturnUrl { get; set; }
+
     private UpdateUserDto model = new();
     private bool isLoading = true;
     private bool isSubmitting = false;
@@ -125,6 +130,18 @@
         }
     }
 
+    private void NavigateToReturnUrl()
+    {
+        if (!string.IsNullOrEmpty(ReturnUrl))
+        {
+            navigationManager.NavigateTo(Uri.UnescapeDataString(ReturnUrl));
+        }
+        else
+        {
+            navigationManager.NavigateTo("/users");
+        }
+    }
+
     private async Task LoadCoursesAsync()
     {
         courses = await CourseService.GetAllCoursesAsync();
@@ -141,7 +158,9 @@
             
             if (success)
             {
-                navigationManager.NavigateTo("/users");
+                ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} uppdaterad successfully.", ToastType.Success);
+
+                NavigateToReturnUrl();
             }
             else
             {
@@ -160,6 +179,6 @@
 
     private void Cancel()
     {
-        navigationManager.NavigateTo("/users");
+        NavigateToReturnUrl();
     }
 }
