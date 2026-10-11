@@ -2,9 +2,9 @@
 @using Microsoft.AspNetCore.Authorization
 @using LMS.Shared.DTOs.CourseDtos
 @using LMS.Blazor.Client.Services
-@using LMS.Blazor.Client.Pages.Course.Components
-@using LMS.Blazor.Client.Pages.Modules.Components
-@using LMS.Blazor.Client.Pages.Users.Components
+@using LMS.Blazor.Client.Components.Courses
+@using LMS.Blazor.Client.Components.Modules
+@using LMS.Blazor.Client.Components.Users
 @attribute [Authorize(Roles = "Teacher")]
 @inject ICourseService CourseService
 @inject NavigationManager navigationManager
