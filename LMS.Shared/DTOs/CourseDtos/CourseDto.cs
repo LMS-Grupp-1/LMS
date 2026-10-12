@@ -5,5 +5,7 @@ public record CourseDto(
     string Name,
     string Description,
     DateTime StartDate,
-    DateTime EndDate
+    DateTime EndDate,
+    int StudentCount = 0,
+    int ModuleCount = 0
 );

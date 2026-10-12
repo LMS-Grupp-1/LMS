@@ -57,5 +57,19 @@ namespace LMS.Blazor.Client.Services
         {
             return await _apiProxy.SendAsync<CourseDto>(HttpMethod.Get, $"courses/{id}");
         }
+
+        public async Task<IEnumerable<CourseDto>> GetCoursesWithCountsAsync()
+        {
+            try
+            {
+                return await _apiProxy.SendAsync<IEnumerable<CourseDto>>(
+                HttpMethod.Get, "courses/with-counts");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching courses with counts: {ex.Message}");
+                return Enumerable.Empty<CourseDto>();
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
+using LMS.Shared.DTOs.CourseDtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories;
@@ -12,6 +13,29 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
         !trackChanges
             ? await _context.Courses.AsNoTracking().ToListAsync()
             : await _context.Courses.ToListAsync();
+
+    public async Task<IEnumerable<CourseDto>> GetAllWithCountsAsync(bool trackChanges)
+    {
+        IQueryable<Course> query = _context.Courses;
+
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
+        // Speed up including related entities' counts
+        return await query
+            .Select(c => new CourseDto(
+                c.Id,
+                c.Name,
+                c.Description,
+                c.StartDate,
+                c.EndDate,
+                c.Students.Count(),
+                c.Modules.Count()
+            ))
+            .ToListAsync();
+    }
 
     public async Task<Course?> GetByIdAsync(int id, bool trackChanges = false) =>
         !trackChanges

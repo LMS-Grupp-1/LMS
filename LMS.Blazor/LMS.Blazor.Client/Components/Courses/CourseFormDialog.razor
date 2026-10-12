@@ -1,0 +1,178 @@
+﻿<!--@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Shared.DTOs.ModulesDtos
+@using LMS.Blazor.Client.Services
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <EditForm Model="courseModel" OnValidSubmit="HandleSubmitAsync">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(IsEditMode ? "Redigera kurs" : "Skapa ny kurs")</h5>
+                        <button type="button" class="btn-close" disabled="@IsSubmitting" @onclick="async () => await CloseModal()"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        @if (!string.IsNullOrWhiteSpace(formError))
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @formError
+                            </div>
+                        }
+                        <div class="mb-3">
+                            <label class="form-label">Kursnamn</label>
+                            <input type="text" class="form-control" @bind="courseModel.Name" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Beskrivning</label>
+                            <textarea class="form-control" rows="3" @bind="courseModel.Description"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Startdatum</label>
+                                <input type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="courseModel.StartDate" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Slutdatum</label>
+                                <input type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="courseModel.EndDate" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" disabled="@IsSubmitting" @onclick="async () => await CloseModal()">Avbryt</button>
+                        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                            @if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            @(IsEditMode ? "Spara ändringar" : "Skapa kurs")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public IEnumerable<CourseDto>? courses { get; set; }
+    [Parameter] public bool IsOpen { get; set; } = false;
+    [Parameter] public CourseDto? CourseToEdit { get; set; } // Null = Create mode, Populated = Edit mode    
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnCourseSaved { get; set; }
+    [Parameter] public ICourseService CourseService { get; set; } = default!;
+
+    private CourseCreateDto courseModel = new();
+    private bool IsSubmitting = false;
+    private bool IsEditMode => CourseToEdit != null;
+    private string? formError;
+    private int editingCourseId => CourseToEdit?.Id ?? 0;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen)
+        {
+            formError = null;
+
+            if (IsEditMode && CourseToEdit != null)
+            {
+                // Populate fields with existing course data for editing                
+                courseModel = new CourseCreateDto
+                {
+                    Name = CourseToEdit.Name,
+                    Description = CourseToEdit.Description,
+                    StartDate = CourseToEdit.StartDate,
+                    EndDate = CourseToEdit.EndDate
+                };
+            }
+            else
+            {
+                // Set up defaults for creating a new course                
+                courseModel = new CourseCreateDto
+                {
+                    StartDate = DateTime.Today,
+                    EndDate = DateTime.Today.AddMonths(1)
+                };
+            }
+        }
+    }
+
+    private async Task CloseModal(Microsoft.AspNetCore.Components.Web.MouseEventArgs e) 
+    {
+        await OnClose.InvokeAsync();
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        if (IsSubmitting) return;
+        formError = null;
+
+        if (string.IsNullOrWhiteSpace(courseModel.Name) ||
+            courseModel.Name.Trim().Length > 50)
+        {
+            formError = "Registrera ett kursnamn mellan 1-50 tecken.";
+            return;
+        }
+
+        if (courses != null && courses.Any(course =>
+            (!IsEditMode || course.Id != editingCourseId) && string.Equals(
+                course.Name.Trim(),
+                courseModel.Name.Trim(),
+                StringComparison.OrdinalIgnoreCase)))
+        {
+            formError = "Det existerar redan en kurs med det här namnet.";
+            return;
+        }
+
+        var today = DateTime.Today;
+        if (courseModel.StartDate.Date < today ||
+            courseModel.EndDate.Date < today)
+        {
+            formError = "Kursdatum får inte ligga före dagens datum.";
+            return;
+        }
+
+        if (courseModel.StartDate > courseModel.EndDate)
+        {
+            formError = "Startdatum får inte ligga efter slutdatum.";
+            return;
+        }
+
+        IsSubmitting = true;
+
+        try
+        {
+            if (IsEditMode && CourseToEdit != null)
+            {
+                var success = await CourseService.UpdateCourseAsync(CourseToEdit.Id, courseModel);
+                if (!success)
+                {
+                    formError = "Det gick inte att uppdatera kursen. Försök igen.";
+                    return;
+                }
+            }
+            else
+            {
+                var success = await CourseService.CreateCourseAsync(courseModel);
+                if (!success)
+                {
+                    formError = "Det gick inte att skapa kursen. Försök igen.";
+                    return;
+                }
+            }
+
+            await OnCourseSaved.InvokeAsync();
+            await CloseModal();
+        }
+        catch (Exception ex)
+        {
+            formError = $"Ett fel uppstod: {ex.Message}";
+        }
+        finally
+        {
+            IsSubmitting = false;
+        }
+    }
+}
+-->

@@ -1,0 +1,185 @@
+﻿@page "/teacher/courses"
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Blazor.Client.Services
+@attribute [Authorize(Roles = UserRoles.Teacher)]
+@inject NavigationManager NavManager
+@inject ICourseService CourseService
+@inject ToastService ToastService
+
+<div class="container-fluid py-4">
+    <!-- Header Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Alla kurser</h2>
+            <p class="text-muted mb-0">En översikt över alla aktiva och kommande kurser</p>
+        </div>
+        <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" @onclick="OpenCreateModal">
+            <i class="bi bi-plus-lg"></i> Ny kurs
+        </button>
+    </div>
+
+    <!-- Search Bar & Filter Controls -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0 text-muted">
+                    <i class="bi bi-search"></i>
+                </span>
+                <input type="text" 
+                       class="form-control border-start-0 ps-0 shadow-none" 
+                       placeholder="Sök efter kurs..." 
+                       @bind="searchTerm" 
+                       @bind:event="oninput" />
+                @if (!string.IsNullOrEmpty(searchTerm))
+                {
+                    <button class="btn btn-outline-secondary border-start-0" type="button" @onclick="ClearSearch">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Courses Table Card -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-uppercase fs-7 text-secondary">
+                        <tr>
+                            <th class="py-3 ps-4">Kursnamn</th>
+                            <th class="py-3">Period</th>
+                            <th class="py-3 text-center">Elever</th>
+                            <th class="py-3 text-center">Moduler</th>
+                            <th class="py-3 text-end pe-4">Åtgärder</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (filteredCourses == null)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                                    Laddar kurser...
+                                </td>
+                            </tr>
+                        }
+                        else if (!filteredCourses.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    Inga kurser hittades.
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var course in filteredCourses)
+                            {
+                                <tr>
+                                    <td class="ps-4 fw-semibold text-dark">
+                                        @course.Name
+                                    </td>
+
+                                    <td class="text-secondary small">
+                                        <i class="bi bi-calendar3 me-1 text-primary"></i>
+                                        @course.StartDate.ToString("yyyy-MM-dd") — @course.EndDate.ToString("yyyy-MM-dd")
+                                    </td>
+
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border px-2 py-1">
+                                            <i class="bi bi-people me-1 text-muted"></i> @course.StudentCount
+                                        </span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border px-2 py-1">
+                                            <i class="bi bi-journal-text me-1 text-muted"></i> @course.ModuleCount
+                                        </span>
+                                    </td>
+
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group btn-group-sm gap-2" role="group">
+                                            <button class="btn btn-outline-secondary" title="Visa detaljer" @onclick="() => ViewCourse(course.Id)">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            <button class="btn btn-outline-primary" title="Redigera kurs" @onclick="() => EditCourse(course)">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger" title="Radera kurs" @onclick="() => DeleteCourse(course.Id)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IEnumerable<CourseDto>? courses;
+    private string searchTerm = string.Empty;
+
+    // Filter logic based on search input
+    private IEnumerable<CourseDto>? filteredCourses => string.IsNullOrWhiteSpace(searchTerm)
+        ? courses
+        : courses?.Where(c => c.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                             (c.Description != null && c.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCoursesAsync();
+    }
+
+    private async Task LoadCoursesAsync()
+    {
+        try
+        {
+            courses = await CourseService.GetCoursesWithCountsAsync();
+        }
+        catch (Exception ex)
+        {
+            ToastService.ShowToast($"Kunde inte ladda kurser: {ex.Message}", ToastType.Danger);
+            courses = new List<CourseDto>();
+        }
+    }
+
+    private void ClearSearch() => searchTerm = string.Empty;
+
+    private void ViewCourse(int id)
+    {
+        NavManager.NavigateTo($"/teacher/courses/{id}");
+    }
+
+    private void OpenCreateModal()
+    {
+        // Trigger your CourseFormDialog in Create Mode here
+    }
+
+    private void EditCourse(CourseDto course)
+    {
+        // Trigger your CourseFormDialog in Edit Mode for this specific course
+    }
+
+    private async Task DeleteCourse(int id)
+    {
+        // Add confirmation modal or direct deletion logic
+        bool success = await CourseService.DeleteCourseAsync(id);
+        if (success)
+        {
+            ToastService.ShowToast("Kursen har raderats.", ToastType.Success);
+            await LoadCoursesAsync();
+        }
+        else
+        {
+            ToastService.ShowToast("Kunde inte radera kursen.", ToastType.Danger);
+        }
+    }
+}
