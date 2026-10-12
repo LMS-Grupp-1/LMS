@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Text;
 
 namespace Domain.Models.Entities;
 
@@ -14,4 +13,7 @@ public class Module
     // Foreign key to Course
     public int CourseId { get; set; }
     public Course Course { get; set; } = null!;
+
+    // Navigation property for child activities
+    // public ICollection<Activity> Activities { get; set; } = new List<Activity>();
 }
