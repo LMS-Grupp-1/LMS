@@ -23,5 +23,5 @@ public class UpdateUserDto
 	[StringLength(UserConstraints.LastNameMaxLength, ErrorMessage = "Efternamnet får inte överskrida {1} tecken.")]
 	public string? LastName { get; set; } = string.Empty;
 
-	public string? Course { get; set; }
+	public int? CourseId { get; set; } = null;
 }

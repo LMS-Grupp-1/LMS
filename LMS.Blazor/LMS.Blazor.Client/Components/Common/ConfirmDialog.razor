@@ -1,0 +1,37 @@
+﻿@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header @HeaderTextClass">
+                    <h5 class="modal-title">@Title</h5>
+                    <button type="button" class="btn-close" @onclick="Cancel"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">@Message</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">@CancelButtonText</button>
+                    <button type="button" class="btn @ConfirmButtonClass" @onclick="Confirm">@ConfirmButtonText</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public string Title { get; set; } = "Bekräfta";
+    [Parameter] public string Message { get; set; } = "Är du säker på att du vill utföra denna åtgärd?";
+    [Parameter] public string ConfirmButtonText { get; set; } = "Bekräfta";
+    [Parameter] public string ConfirmButtonClass { get; set; } = "btn-danger"; // e.g. btn-danger or btn-primary
+    [Parameter] public string CancelButtonText { get; set; } = "Avbryt";
+    
+    [Parameter] public EventCallback OnConfirm { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private string HeaderTextClass => ConfirmButtonClass.Replace("btn-", "text-");
+
+    private async Task Confirm() => await OnConfirm.InvokeAsync();
+    private async Task Cancel() => await OnCancel.InvokeAsync();
+}

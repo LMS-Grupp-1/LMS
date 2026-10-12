@@ -31,9 +31,9 @@ public class ModuleService : IModuleService
 
     public async Task<(bool Success, string ErrorMessage)> CreateModuleAsync(int courseId, CreateModuleDto dto)
     {
-        if (dto.StartDate >= dto.EndDate)
+        if (dto.StartDate > dto.EndDate)
         {
-            return (false, "Modulens startdatum måste vara före dess slutdatum.");
+            return (false, "Modulens startdatum får inte vara efter dess slutdatum.");
         }
 
         var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
@@ -71,6 +71,70 @@ public class ModuleService : IModuleService
         };
 
         await _unitOfWork.Modules.AddAsync(module);
+        await _unitOfWork.CompleteAsync();
+
+        return (true, string.Empty);
+    }
+
+    public async Task<(bool Success, string ErrorMessage)> UpdateModuleAsync(int courseId, int moduleId, CreateModuleDto dto)
+    {
+        if (dto.StartDate > dto.EndDate)
+        {
+            return (false, "Modulens startdatum får inte vara efter dess slutdatum.");
+        }
+
+        var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
+        if (course == null)
+        {
+            return (false, "Den valda kursen hittades inte.");
+        }
+
+        // Check if the module to update actually exists
+        var moduleToUpdate = await _unitOfWork.Modules.GetByIdAsync(moduleId);
+        if (moduleToUpdate == null || moduleToUpdate.CourseId != courseId)
+        {
+            return (false, "Modulen hittades inte.");
+        }
+
+        // Module dates must be within course dates
+        if (dto.StartDate < course.StartDate || dto.EndDate > course.EndDate)
+        {
+            return (false, $"Modulens datum måste ligga inom kursens tidsram ({course.StartDate.ToShortDateString()} - {course.EndDate.ToShortDateString()}).");
+        }
+
+        var existingModules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
+
+        // Modules must not overlap (exclude the current module being updated)
+        foreach (var existing in existingModules.Where(m => m.Id != moduleId))
+        {
+            bool isOverlapping = dto.StartDate <= existing.EndDate && dto.EndDate >= existing.StartDate;
+            if (isOverlapping)
+            {
+                return (false, $"Modulen överlappar med en befintlig modul: '{existing.Name}' ({existing.StartDate.ToShortDateString()} - {existing.EndDate.ToShortDateString()}).");
+            }
+        }
+
+        // Update entity properties
+        moduleToUpdate.Name = dto.Name;
+        moduleToUpdate.Description = dto.Description;
+        moduleToUpdate.StartDate = dto.StartDate;
+        moduleToUpdate.EndDate = dto.EndDate;
+
+        _unitOfWork.Modules.Update(moduleToUpdate);
+        await _unitOfWork.CompleteAsync();
+
+        return (true, string.Empty);
+    }
+
+    public async Task<(bool Success, string ErrorMessage)> DeleteModuleAsync(int courseId, int moduleId)
+    {
+        var module = await _unitOfWork.Modules.GetByIdAsync(moduleId);
+        if (module == null || module.CourseId != courseId)
+        {
+            return (false, "Modulen kunde inte hittas.");
+        }
+
+        _unitOfWork.Modules.Delete(module);
         await _unitOfWork.CompleteAsync();
 
         return (true, string.Empty);

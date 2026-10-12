@@ -1,0 +1,152 @@
+﻿@using LMS.Shared.DTOs.CourseDtos
+
+<div class="container-fluid px-0">
+
+    <div class="row g-4 mb-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 p-4 h-100">
+                <h5 class="fw-bold mb-3">Kursframsteg</h5>
+                
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Genomsnittligt genomfört</span>
+                        <span class="fw-bold text-dark">@AverageProgress%</span>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: @(AverageProgress)%;" aria-valuenow="@AverageProgress" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+
+                <h6 class="fw-semibold text-secondary small mb-3">Moduler</h6>
+                <div class="d-flex flex-column gap-3">
+                    @if (Modules != null && Modules.Any())
+                    {
+                        @foreach (var mod in Modules)
+                        {
+                            <div>
+                                <div class="d-flex justify-content-between small mb-1">
+                                    <span class="fw-medium text-dark">@mod.Name</span>
+                                    <span class="text-muted">@mod.Progress%</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: @(mod.Progress)%;"></div>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted small">Inga moduler tillgängliga för framstegsvisning.</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 p-4 h-100">
+                <h5 class="fw-bold mb-3">Kursstatistik</h5>
+                
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #e3f2fd;">
+                            <div class="fs-3 text-primary"><i class="bi bi-book"></i></div>
+                            <div>
+                                <span class="text-muted small d-block">Moduler</span>
+                                <h4 class="fw-bold mb-0 text-primary">@ModuleCount</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #e8f5e9;">
+                            <div class="fs-3 text-success"><i class="bi bi-calendar-event"></i></div>
+                            <div>
+                                <span class="text-muted small d-block">Aktiviteter</span>
+                                <h4 class="fw-bold mb-0 text-success">@ActivityCount</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #f3e5f5;">
+                            <div class="fs-3" style="color: #6a1b9a;"><i class="bi bi-people"></i></div>
+                            <div>
+                                <span class="text-muted small d-block">Studenter</span>
+                                <h4 class="fw-bold mb-0" style="color: #6a1b9a;">@StudentCount</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #fffde7;">
+                            <div class="fs-3 text-warning"><i class="bi bi-file-text"></i></div>
+                            <div>
+                                <span class="text-muted small d-block">Inlämningar</span>
+                                <h4 class="fw-bold mb-0 text-warning">@SubmissionCount</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold mb-0">Senaste aktiviteter</h5>
+            <a href="javascript:void(0);" class="text-decoration-none small fw-semibold text-primary">Visa alla &gt;</a>
+        </div>
+
+        <div class="d-flex flex-column gap-3">
+            <div class="d-flex align-items-start gap-3 p-2 border-bottom pb-3">
+                <div class="fs-4 text-secondary mt-1"><i class="bi bi-file-earmark-text"></i></div>
+                <div>
+                    <p class="mb-0 fw-semibold text-dark">Anna Andersson lämnade in uppgift Java applikation</p>
+                    <span class="text-muted small">2 timmar sedan</span>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-start gap-3 p-2">
+                <div class="fs-4 text-secondary mt-1"><i class="bi bi-file-earmark-text"></i></div>
+                <div>
+                    <p class="mb-0 fw-semibold text-dark">Karl Karlsson lade till en ny aktivitet i Modul 1</p>
+                    <span class="text-muted small">5 timmar sedan</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    [Parameter] public CourseDto? Course { get; set; }
+
+    // Metrics and Progress Parameters
+    [Parameter] public int AverageProgress { get; set; } = 65;
+    [Parameter] public int ModuleCount { get; set; } = 3;
+    [Parameter] public int ActivityCount { get; set; } = 11;
+    [Parameter] public int StudentCount { get; set; } = 5;
+    [Parameter] public int SubmissionCount { get; set; } = 3;
+
+    [Parameter] public IEnumerable<ModuleProgressModel>? Modules { get; set; }
+
+    protected override void OnInitialized()
+    {
+        // Fallback mock module progress rows if none passed from parent
+        if (Modules == null || !Modules.Any())
+        {
+            Modules = new List<ModuleProgressModel>
+            {
+                new() { Name = "Introduktion till C#", Progress = 100 },
+                new() { Name = "Blazor WebAssembly", Progress = 60 },
+                new() { Name = "Clean Architecture", Progress = 35 }
+            };
+        }
+    }
+
+    public class ModuleProgressModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public int Progress { get; set; }
+    }
+}

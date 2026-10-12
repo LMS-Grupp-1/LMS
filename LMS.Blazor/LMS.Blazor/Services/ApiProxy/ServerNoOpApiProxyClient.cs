@@ -22,4 +22,16 @@ public sealed class ServerNoOpApiProxyClient(ILogger<ServerNoOpApiProxyClient> l
 
         return Task.FromResult<TResponse?>(default);
     }
+
+    public async Task<(TResponse? Data, string? ErrorMessage)> SendAndHandleErrorAsync<TResponse>(
+        HttpMethod method,
+        string endpoint,
+        HttpContent? content = null,
+        CancellationToken cancellationToken = default)
+    {
+        content?.Dispose();
+
+        logger.LogWarning("Server-side NoOp proxy client invoked for Error-Handled {Method} {Endpoint}", method, endpoint);
+        return await Task.FromResult((default(TResponse), "Prerendering mode: Proxy not active on server."));
+    }
 }

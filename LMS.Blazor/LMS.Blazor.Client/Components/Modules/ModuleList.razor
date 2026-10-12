@@ -1,0 +1,251 @@
+﻿@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Shared.DTOs.ModulesDtos
+@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.ViewModels.Modules
+@using LMS.Blazor.Client.Components.Common
+@using LMS.Blazor.Client.Components.Activities
+@inject IModuleService ModuleService
+
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h5 class="fw-bold mb-1">MODULER</h5>
+            <p class="text-muted small mb-0">Hantera moduler och tillhörande aktiviteter för denna kurs.</p>
+        </div>
+        <button class="btn btn-primary" @onclick="OpenAddModuleModal">
+            <i class="bi bi-plus-circle me-1"></i> Lägg till modul
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <p class="text-muted">Laddar moduler...</p>
+    }
+    else if (modules == null || !modules.Any())
+    {
+        <div class="alert alert-info">Inga moduler hittades för denna kurs.</div>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var mod in modules)
+            {
+                bool isExpanded = expandedModuleIds.Contains(mod.Id);
+
+                <div class="card shadow-sm border-0 p-3">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <div class="p-3 rounded bg-light text-primary fs-4">
+                                <i class="bi bi-journal-text"></i>
+                            </div>
+                        </div>
+
+                        <div class="col">
+                            <h5 class="fw-bold mb-1">@mod.Name</h5>
+                            <div class="text-muted small">
+                                <i class="bi bi-calendar3 me-1"></i>
+                                <span>@mod.StartDate.ToShortDateString() - @mod.EndDate.ToShortDateString()</span>
+                            </div>
+                        </div>
+
+                        <div class="col-auto d-flex align-items-center gap-4">
+                            <div style="width: 150px;">
+                                <div class="d-flex justify-content-between small text-muted mb-1">
+                                    <span>Avklarat</span>
+                                    <span>@mod.Progress%</span>
+                                </div>
+                                <div class="progress" style="height: 6px;">
+                                    <div class="progress-bar bg-success" role="progressbar" style="width: @(mod.Progress)%;"></div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-outline-secondary btn-sm rounded-circle p-2 d-flex align-items-center justify-content-center" 
+                                    style="width: 32px; height: 32px;" 
+                                    @onclick="() => ToggleModuleExpansion(mod.Id)">
+                                <i class="bi @(isExpanded ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (isExpanded)
+                    {
+                        <hr class="my-3 text-muted" />
+                        <div class="ps-2">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <p class="text-secondary mb-0">@(string.IsNullOrEmpty(mod.Description) ? "Ingen beskrivning angiven." : mod.Description)</p>
+                                </div>
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenEditModuleModal(mod)">
+                                        <i class="bi bi-pencil me-1"></i> Redigera modul
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" @onclick="() => PromptDeleteModule(mod.Id, mod.Name)">
+                                        <i class="bi bi-trash me-1"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            @if (deleteErrors.TryGetValue(mod.Id, out var errorMsg) && !string.IsNullOrEmpty(errorMsg))
+                            {
+                                <div class="text-danger small mt-2">
+                                    <i class="bi bi-exclamation-circle me-1"></i> @errorMsg
+                                </div>
+                            }
+
+                            <div class="p-3 bg-light rounded">
+                                <ActivityList/>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Unified Unified Form Dialog for both Add and Edit -->
+<ModuleFormDialog IsOpen="isModalOpen"
+                 CourseId="CourseId"
+                 CurrentCourse="CurrentCourse"
+                 ModuleService="ModuleService"
+                 ModuleToEdit="selectedModule"
+                 OnClose="CloseModal"
+                 OnModuleSaved="HandleModuleSaved" />
+
+<ConfirmDialog IsOpen="showDeleteModal"
+               Title="@($"Ta bort modul: {deleteModuleName}")"
+               Message="Är du säker på att du vill ta bort denna modul? Denna åtgärd går inte att ångra."
+               ConfirmButtonText="Ta bort"
+               ConfirmButtonClass="btn-danger"
+               OnCancel="CloseDeleteModal"
+               OnConfirm="ConfirmDeleteAsync" />
+
+@code {
+    [Parameter] public int CourseId { get; set; }
+    [Parameter] public CourseDto? CurrentCourse { get; set; }
+
+    private IEnumerable<ModuleViewModel> modules = new List<ModuleViewModel>();
+    private bool isLoading = true;
+    private bool isModalOpen = false;
+    private bool showDeleteModal = false;
+    private ModuleDto? selectedModule = null; // null = Add mode, Has value = Edit mode
+    private HashSet<int> expandedModuleIds = new();
+    private Dictionary<int, string> deleteErrors = new();
+    private int? moduleToDeleteId = null;
+    private string? deleteModuleName = null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadModulesAsync();
+    }
+
+    private async Task LoadModulesAsync()
+    {
+        isLoading = true;
+        try
+        {
+            var serviceModules = await ModuleService.GetModulesByCourseIdAsync(CourseId);
+            
+            modules = serviceModules.Select(m => new ModuleViewModel
+            {
+                Id = m.Id,
+                Name = m.Name,
+                Description = m.Description,
+                StartDate = m.StartDate,
+                EndDate = m.EndDate,
+                Progress = 45
+            }).ToList();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleModuleExpansion(int moduleId)
+    {
+        if (expandedModuleIds.Contains(moduleId))
+        {
+            expandedModuleIds.Remove(moduleId);
+        }
+        else
+        {
+            expandedModuleIds.Add(moduleId);
+        }
+    }
+
+    private void OpenAddModuleModal()
+    {
+        selectedModule = null; // Clear out any previous edit state -> triggers Add Mode
+        isModalOpen = true;
+    }
+
+    private void OpenEditModuleModal(ModuleViewModel mod)
+    {
+        selectedModule = new ModuleDto
+        {
+            Id = mod.Id,
+            Name = mod.Name,
+            Description = mod.Description,
+            StartDate = mod.StartDate,
+            EndDate = mod.EndDate
+        };
+        
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+        selectedModule = null;
+    }
+
+    private async Task HandleModuleSaved()
+    {
+        CloseModal();
+        await LoadModulesAsync(); // Refresh list after create or update
+    }
+
+    private void PromptDeleteModule(int moduleId, string moduleName)
+    {
+        moduleToDeleteId = moduleId;
+        deleteModuleName = moduleName;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        moduleToDeleteId = null;
+        deleteModuleName = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (moduleToDeleteId == null) return;
+
+        int moduleId = moduleToDeleteId.Value;
+        CloseDeleteModal();
+        
+        deleteErrors[moduleId] = string.Empty;
+
+        try
+        {
+            var (success, responseErrorMessage) = await ModuleService.DeleteModuleAsync(CourseId, moduleId);
+
+            if (success)
+            {
+                deleteErrors.Remove(moduleId);
+                await LoadModulesAsync();
+            }
+            else
+            {
+                deleteErrors[moduleId] = responseErrorMessage ?? "Det gick inte att ta bort modulen. Försök igen.";
+            }
+        }
+        catch (Exception ex)
+        {
+            deleteErrors[moduleId] = $"Ett fel uppstod: {ex.Message}";
+        }
+    }
+}

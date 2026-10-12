@@ -3,10 +3,13 @@
 @using LMS.Blazor.Client.Services
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.Users
+@using LMS.Shared.DTOs.CourseDtos
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize(Roles = UserRoles.Teacher)]
 @inject IUsersService UsersService
+@inject ICourseService CourseService
 @inject NavigationManager navigationManager
+@inject ToastService ToastService
 
 <div class="container mt-4">
     <div class="col-md-6">
@@ -54,13 +57,18 @@
 
             <div class="mb-3">
                 <label class="form-label">Kurs:</label>
-                <InputSelect @bind-Value="model.Course" class="form-control">
+                <InputSelect @bind-Value="model.CourseId" class="form-control">
                     <option value="">Välj kurs...</option>
-                    <option value="Kurs 1">Kurs 1</option>
-                    <option value="Kurs 2">Kurs 2</option>
+                    @if (courses != null)
+                    {
+                        @foreach (var course in courses)
+                        {
+                            <option value="@course.Id">@course.Name</option>
+                        }
+                    }
                 </InputSelect>
-                <ValidationMessage For="@(() => model.Course)" />
-            </div>
+                <ValidationMessage For="@(() => model.CourseId)" />
+           </div>
 
             <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
                 @if (isSubmitting)
@@ -79,9 +87,60 @@
 </div>
 
 @code {
+    private string? returnUrl;
+    private int? defaultCourseId;
     private CreateUserDto model = new();
     private bool isSubmitting = false;
     private string? errorMessage;
+    private IEnumerable<CourseDto>? courses;
+
+    protected override async Task OnInitializedAsync()
+    {
+        GetReturnUrlFromQuery();
+
+        await LoadCoursesAsync();
+    }
+
+    private void GetReturnUrlFromQuery()
+    {
+        var uri = new Uri(navigationManager.Uri);
+        var query = uri.Query;
+
+        if (!string.IsNullOrEmpty(query))
+        {
+            // Simple split to find returnUrl=...
+            var queryParams = query.TrimStart('?').Split('&');
+            foreach (var param in queryParams)
+            {
+                var parts = param.Split('=');
+                if (parts.Length == 2 && parts[0] == "returnUrl")
+                {
+                    returnUrl = Uri.UnescapeDataString(parts[1]);
+
+                    if (returnUrl.Contains("/teacher/courses/"))
+                    {
+                        var segments = returnUrl.Split('/');
+                        for (int i = 0; i < segments.Length - 1; i++)
+                        {
+                            if (segments[i] == "courses" && int.TryParse(segments[i + 1].Split('?')[0], out int courseId))
+                            {
+                                model.CourseId = courseId; // Set default dropdown value
+                                model.Role = "Student"; // Set default role to Student
+                                break;
+                            }
+                        }
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+
+    private async Task LoadCoursesAsync()
+    {
+        courses = await CourseService.GetAllCoursesAsync();
+    }
 
     private async Task HandleValidSubmit()
     {
@@ -94,7 +153,9 @@
 
             if (success)
             {
-                navigationManager.NavigateTo("/users");
+                ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} skapad successfully.", ToastType.Success);
+
+                NavigateToReturnUrl();
             }
             else
             {
@@ -113,6 +174,18 @@
 
     private void Cancel()
     {
-        navigationManager.NavigateTo("/users");
+        NavigateToReturnUrl();
+    }
+
+    private void NavigateToReturnUrl()
+    {
+        if (!string.IsNullOrEmpty(returnUrl))
+        {
+            navigationManager.NavigateTo(Uri.UnescapeDataString(returnUrl));
+        }
+        else
+        {
+            navigationManager.NavigateTo("/users");
+        }
     }
 }

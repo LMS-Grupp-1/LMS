@@ -51,6 +51,11 @@ namespace LMS.Blazor.Client.Services
 		public async Task<StudentCourseDto?> GetMyCourseAsync(CancellationToken cancellationToken = default)
 		{
 			return await _apiProxy.GetAsync<StudentCourseDto>("courses/my", cancellationToken);
-		}
-	}
+        }
+
+        public async Task<CourseDto?> GetCourseByIdAsync(int id)
+        {
+            return await _apiProxy.SendAsync<CourseDto>(HttpMethod.Get, $"courses/{id}");
+        }
+    }
 }

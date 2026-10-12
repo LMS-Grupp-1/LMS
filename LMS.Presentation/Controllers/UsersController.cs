@@ -42,6 +42,13 @@ public class UsersController : ControllerBase
         return Ok(users);
     }
 
+    [HttpGet("students/{courseId}")]
+    public async Task<IActionResult> GetUsersByCourseId(int courseId)
+    {
+        var users = await _service.UsersService.GetUsersByCourseIdAsync(courseId);
+        return Ok(users);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetUserById(string id)
     {
