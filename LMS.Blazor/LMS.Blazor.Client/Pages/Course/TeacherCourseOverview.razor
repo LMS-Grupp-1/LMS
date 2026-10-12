@@ -5,7 +5,7 @@
 @using LMS.Shared.DTOs.CourseDtos
 @using LMS.Blazor.Client.Services
 @attribute [Authorize(Roles = "Teacher")]
-@inject ICourseApiService CourseApiService
+@inject ICourseService CourseService
 @inject ILogger<TeacherCourseOverview> Logger
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -150,7 +150,7 @@ else if (courses != null)
 
         try
         {
-            courses = await CourseApiService.GetAllCoursesAsync();
+            courses = await CourseService.GetAllCoursesAsync();
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -254,7 +254,7 @@ else if (courses != null)
                 courseForm.StartDate,
                 courseForm.EndDate);
 
-            success = await CourseApiService.UpdateCourseAsync(
+            success = await CourseService.UpdateCourseAsync(
                 editingCourseId, dto);
         }
         else
@@ -265,7 +265,7 @@ else if (courses != null)
                 courseForm.StartDate,
                 courseForm.EndDate);
 
-            success = await CourseApiService.CreateCourseAsync(dto);
+            success = await CourseService.CreateCourseAsync(dto);
         }
 
         if (!success)
@@ -303,7 +303,7 @@ else if (courses != null)
 
     try
     {
-        var success = await CourseApiService.DeleteCourseAsync(id);
+        var success = await CourseService.DeleteCourseAsync(id);
 
         if (success)
         {

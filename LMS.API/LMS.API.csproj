@@ -25,7 +25,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LMS.Blazor\LMS.Blazor.Client\LMS.Blazor.Client.csproj" />
     <ProjectReference Include="..\LMS.Infrastructure\LMS.Infrastructure.csproj" />
     <ProjectReference Include="..\LMS.Presentation\LMS.Presentation.csproj" />
     <ProjectReference Include="..\LMS.Services\LMS.Services.csproj" />

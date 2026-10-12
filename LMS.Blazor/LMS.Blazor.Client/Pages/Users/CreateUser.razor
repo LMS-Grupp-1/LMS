@@ -1,10 +1,10 @@
 ﻿
 @page "/users/create"
-@using Microsoft.AspNetCore.Authorization
-@using System.ComponentModel.DataAnnotations
-@using LMS.Shared.DTOs.Users
 @using LMS.Blazor.Client.Services
-@attribute [Authorize(Roles = "Teacher")]
+@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.Users
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = UserRoles.Teacher)]
 @inject IUsersService UsersService
 @inject NavigationManager navigationManager
 
@@ -22,8 +22,12 @@
             <ValidationSummary class="text-danger" />
 
             <div class="mb-3">
-                <label class="form-label">Namn:</label>
-                <InputText @bind-Value="model.Name" class="form-control" />
+                <label class="form-label">Förnamn:</label>
+                <InputText @bind-Value="model.FirstName" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Efternamn:</label>
+                <InputText @bind-Value="model.LastName" class="form-control" />
             </div>
 
             <div class="mb-3">

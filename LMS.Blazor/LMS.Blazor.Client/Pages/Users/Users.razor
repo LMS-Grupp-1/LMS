@@ -31,7 +31,8 @@ else
     <table class="table table-striped">
         <thead>
             <tr>
-                <th>Namn</th>
+                <th>Förnamn</th>
+                <th>Efternamn</th>
                 <th>E-post</th>
                 <th>Roll</th>
                 <th>Kopplad Kurs</th>
@@ -42,7 +43,8 @@ else
             @foreach (var user in users)
             {
                 <tr>
-                    <td>@user.Name</td>
+                    <td>@user.FirstName</td>
+                    <td>@user.LastName</td>
                     <td>@user.Email</td>
                     <td>@user.Role</td>
                     <td>@user.Course</td>

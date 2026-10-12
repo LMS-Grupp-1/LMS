@@ -6,12 +6,12 @@ namespace LMS.Blazor.Client.Services;
 
 public class UsersService : IUsersService
 {
-    private readonly IApiProxyClient _apiProxy;
+	private readonly IApiProxyClient _apiProxy;
 
-    public UsersService(IApiProxyClient apiProxy)
-    {
-        _apiProxy = apiProxy;
-    }
+	public UsersService(IApiProxyClient apiProxy)
+	{
+		_apiProxy = apiProxy;
+	}
 
     public async Task<bool> CreateUserAsync(CreateUserDto dto)
     {
