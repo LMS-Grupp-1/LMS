@@ -62,8 +62,10 @@ namespace LMS.Blazor.Client.Services
         {
             try
             {
-                return await _apiProxy.SendAsync<IEnumerable<CourseDto>>(
-                HttpMethod.Get, "courses/with-counts");
+                var result = await _apiProxy.SendAsync<IEnumerable<CourseDto>>(
+					HttpMethod.Get, "courses/with-counts");
+
+                return result ?? Enumerable.Empty<CourseDto>();
             }
             catch (Exception ex)
             {
@@ -74,8 +76,10 @@ namespace LMS.Blazor.Client.Services
 
 		public async Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync()
 		{
-			return await _apiProxy.SendAsync<IEnumerable<CourseLookupDto>>(
-				HttpMethod.Get, "courses/lookups");
+            var result = await _apiProxy.SendAsync<IEnumerable<CourseLookupDto>>(
+                HttpMethod.Get, "courses/lookups");
+
+            return result ?? Enumerable.Empty<CourseLookupDto>();
 		}
     }
 }

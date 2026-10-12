@@ -64,7 +64,7 @@ public class ModuleService : IModuleService
         var module = new Module
         {
             Name = dto.Name,
-            Description = dto.Description,
+            Description = string.IsNullOrEmpty(dto.Description) ? "Ingen beskrivning" : dto.Description,
             StartDate = dto.StartDate,
             EndDate = dto.EndDate,
             CourseId = courseId
@@ -116,7 +116,7 @@ public class ModuleService : IModuleService
 
         // Update entity properties
         moduleToUpdate.Name = dto.Name;
-        moduleToUpdate.Description = dto.Description;
+        moduleToUpdate.Description = string.IsNullOrEmpty(dto.Description) ? "Ingen beskrivning" : dto.Description;
         moduleToUpdate.StartDate = dto.StartDate;
         moduleToUpdate.EndDate = dto.EndDate;
 

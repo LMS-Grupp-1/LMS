@@ -186,7 +186,7 @@
         {
             Id = mod.Id,
             Name = mod.Name,
-            Description = mod.Description,
+            Description = string.IsNullOrEmpty(mod.Description) ? "Ingen beskrivning" : mod.Description,
             StartDate = mod.StartDate,
             EndDate = mod.EndDate
         };
