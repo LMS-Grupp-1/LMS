@@ -11,5 +11,6 @@ namespace LMS.Blazor.Client.Services
 		Task<StudentCourseDto?> GetMyCourseAsync(CancellationToken cancellationToken = default);
         Task<CourseDto?> GetCourseByIdAsync(int id);
         Task<IEnumerable<CourseDto>> GetCoursesWithCountsAsync();
+        Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync();
     }
 }

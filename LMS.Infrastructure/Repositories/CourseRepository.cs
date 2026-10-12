@@ -14,6 +14,21 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
             ? await _context.Courses.AsNoTracking().ToListAsync()
             : await _context.Courses.ToListAsync();
 
+    // Lightweight DTO for lookups, only includes Id and Name
+    public async Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync(bool trackChanges)
+    {
+        IQueryable<Course> query = _context.Courses;
+
+        if (!trackChanges)
+        {
+            query = query.AsNoTracking();
+        }
+
+        return await query
+            .Select(c => new CourseLookupDto(c.Id, c.Name))
+            .ToListAsync();
+    }
+
     public async Task<IEnumerable<CourseDto>> GetAllWithCountsAsync(bool trackChanges)
     {
         IQueryable<Course> query = _context.Courses;

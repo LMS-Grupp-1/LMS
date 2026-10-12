@@ -71,5 +71,11 @@ namespace LMS.Blazor.Client.Services
                 return Enumerable.Empty<CourseDto>();
             }
         }
+
+		public async Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync()
+		{
+			return await _apiProxy.SendAsync<IEnumerable<CourseLookupDto>>(
+				HttpMethod.Get, "courses/lookups");
+		}
     }
 }

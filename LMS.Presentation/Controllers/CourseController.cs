@@ -30,6 +30,14 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
         return Ok(courses);
     }
 
+    [HttpGet("lookups")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public async Task<ActionResult<IEnumerable<CourseLookupDto>>> GetCourseLookups()
+    {
+        var courses = await _courseService.GetCourseLookupsAsync();
+        return Ok(courses);
+    }
+
     [HttpGet("{id:int}")]
 	[Authorize(Roles = UserRoles.Teacher)]
     public async Task<ActionResult<CourseDto>> GetCourse(int id)
