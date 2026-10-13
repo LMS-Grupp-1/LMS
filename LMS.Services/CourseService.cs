@@ -95,10 +95,10 @@ namespace LMS.Services
 		public async Task DeleteCourseAsync(int id)
 		{
 			var course = await _uow.Courses.GetByIdAsync(id, trackChanges: true);
-			if (course is null)
+            if (course is null)
 				throw new KeyNotFoundException($"Course with id {id} was not found.");
 
-			_uow.Courses.DeleteCourse(course);
+            _uow.Courses.DeleteCourse(course);
 			await _uow.CompleteAsync();
 		}
 
@@ -116,11 +116,11 @@ namespace LMS.Services
 
 			var today = DateTime.Today;
 
-			if (startDate.Date < today || endDate.Date < today)
+			/* if (startDate.Date < today || endDate.Date < today)
 			{
 				throw new ArgumentException(
 					"Course dates can't be before today's date.");
-			}
+			} */
 
 			if (startDate > endDate)
 			{
