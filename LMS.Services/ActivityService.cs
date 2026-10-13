@@ -13,9 +13,15 @@ public class ActivityService : IActivityService
         _unitOfWork = unitOfWork;
     }
     
-    public Task<IEnumerable<ActivityDto>> GetActivitesByModuleIdAsync(int moduleId)
+    public async Task<IEnumerable<ActivityDto>> GetActivitesByModuleIdAsync(int moduleId)
     {
-        
-        throw new NotImplementedException();
+        var result = await _unitOfWork.Activities.GetActivityByModuleIdAsync(moduleId);
+//        throw new NotImplementedException();
+        return result.Select(a => new ActivityDto(a.Id, 
+            "Unimplemented",
+            a.Name, 
+            a.Description,
+            a.StartDate,
+            a.EndDate));
     }
 }

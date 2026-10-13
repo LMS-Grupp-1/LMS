@@ -1,12 +1,11 @@
 namespace LMS.Shared.DTOs.ActivityDtos;
 
-public class ActivityDto
-{
-    public int Id { get; set; }
+public record ActivityDto(
+    int Id,
   //  public int ModuleId { get; set; } // add Module?
-    public string ActivityType {get; set; }
-    public string Name { get; set; } = string.Empty;
-    string Description { get; set; } = string.Empty;
-    DateTime StartDate { get; set; }
-    DateTime EndDate { get; set; }
-}
+    string ActivityType,
+    string Name,
+    string Description ,
+    DateTime StartDate,
+    DateTime EndDate
+);

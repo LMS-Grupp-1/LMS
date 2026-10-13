@@ -2,6 +2,7 @@ using LMS.Shared.DTOs.ActivityDtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Contracts;
+using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Presentation;
 
@@ -21,7 +22,7 @@ public class ActivityController : ControllerBase
    [HttpGet]
    public async Task<ActionResult<IEnumerable<ActivityDto>>> GetActivites(int moduleId)
    {
-      var modules = await _service.ModuleService.GetModulesByCourseIdAsync(moduleId);
-      return Ok(modules);
+      var activites = await _service.ActivityService.GetActivitesByModuleIdAsync(moduleId);
+      return Ok(null);
    }
 }
