@@ -105,3 +105,21 @@ jobs:
           --resource-group ${{ env.RESOURCE_GROUP }}
           --image ${{ env.REGISTRY }}/lms-web:${{ github.sha }}
           --output none
+
+      # .NET images listen on port 8080. The first deployment replaces the quickstart image (port 80),
+      # so the port is set here. Later deployments leave it unchanged.
+      - name: Set API port
+        run: >
+          az containerapp ingress update
+          --name lms-api-${{ env.TARGET_ENVIRONMENT }}
+          --resource-group ${{ env.RESOURCE_GROUP }}
+          --target-port 8080
+          --output none
+
+      - name: Set web port
+        run: >
+          az containerapp ingress update
+          --name lms-web-${{ env.TARGET_ENVIRONMENT }}
+          --resource-group ${{ env.RESOURCE_GROUP }}
+          --target-port 8080
+          --output none
