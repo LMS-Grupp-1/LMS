@@ -1,0 +1,99 @@
+# Creates and updates the Azure resources with Bicep (shared.bicep, then environment.bicep).
+# Runs when something in infra/ changes, or manually with "Run workflow".
+#
+#   Dev    -> shared resources + test environment
+#   master -> shared resources + prod environment
+#
+# bootstrap.bicep is not run here. It needs Owner permissions and is run once with infra/bootstrap.ps1.
+name: Infrastructure
+
+on:
+  push:
+    branches:
+      - Dev
+      - master
+      - feature/9-azure-infrastructure # TEMPORARY: for testing the workflow. Remove before merging.
+    paths:
+      - 'infra/**'
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+
+# Same group as deploy.yml: infrastructure and deployments to one environment never run at the same time.
+concurrency:
+  group: azure-${{ github.ref_name == 'master' && 'prod' || 'test' }}
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-lms
+  # master deploys to prod, everything else to test.
+  TARGET_ENVIRONMENT: ${{ github.ref_name == 'master' && 'prod' || 'test' }}
+
+jobs:
+  infrastructure:
+    name: Deploy Bicep
+    runs-on: ubuntu-latest
+    # Logs in to Azure through this environment's federated credential,
+    # and gives access to the environment's secrets (JWT_SECRET_KEY, SEED_PASSWORD).
+    environment: ${{ github.ref_name == 'master' && 'prod' || 'test' }}
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the Azure login
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy shared.bicep
+        env:
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+        run: >
+          az deployment group create
+          --name lms-shared
+          --resource-group "$RESOURCE_GROUP"
+          --template-file infra/shared.bicep
+          --parameters sqlAdminPassword="$SQL_ADMIN_PASSWORD"
+          --output none
+
+      # A new subscription has an empty registry. Until deploy.yml has pushed the first image,
+      # the apps are created with Microsoft's quickstart image.
+      - name: Check if images exist
+        id: images
+        run: |
+          if az acr repository show --name "${{ vars.AZURE_CONTAINER_REGISTRY }}" --image "lms-api:$TARGET_ENVIRONMENT" --output none 2>/dev/null; then
+            echo "useQuickstartImage=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No image yet, using the quickstart image."
+            echo "useQuickstartImage=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy environment.bicep
+        env:
+          SQL_ADMIN_PASSWORD: ${{ secrets.SQL_ADMIN_PASSWORD }}
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+          SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
+        run: >
+          az deployment group create
+          --name "lms-env-$TARGET_ENVIRONMENT"
+          --resource-group "$RESOURCE_GROUP"
+          --template-file infra/environment.bicep
+          --parameters
+          environmentName="$TARGET_ENVIRONMENT"
+          useQuickstartImage=${{ steps.images.outputs.useQuickstartImage }}
+          sqlAdminPassword="$SQL_ADMIN_PASSWORD"
+          jwtSecretKey="$JWT_SECRET_KEY"
+          seedPassword="$SEED_PASSWORD"
+          --output none
+
+      # Key Vault secrets are read when a container starts. Restarting the API makes sure
+      # it uses the values that were just written (for example a changed SQL password).
+      - name: Restart API
+        run: |
+          az config set extension.use_dynamic_install=yes_without_prompt
+          revision=$(az containerapp show --name "lms-api-$TARGET_ENVIRONMENT" --resource-group "$RESOURCE_GROUP" --query properties.latestRevisionName --output tsv)
+          az containerapp revision restart --name "lms-api-$TARGET_ENVIRONMENT" --resource-group "$RESOURCE_GROUP" --revision "$revision" --output none

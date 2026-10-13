@@ -15,7 +15,7 @@ on:
 
 # One deployment per environment at a time. A newer push waits for the running one to finish.
 concurrency:
-  group: deploy-${{ github.ref_name == 'master' && 'prod' || 'test' }}
+  group: azure-${{ github.ref_name == 'master' && 'prod' || 'test' }}
   cancel-in-progress: false
 
 env:
