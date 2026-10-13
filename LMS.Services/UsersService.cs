@@ -174,8 +174,6 @@ public class UsersService : IUsersService
             }
         }
 
-        // ToDo: Update user's course if dto.Course is provided
-
         return IdentityResult.Success;
     }
 }
