@@ -15,6 +15,9 @@
     powershell -ExecutionPolicy Bypass -File .\infra\bootstrap.ps1
 #>
 
+# GitHub repository (owner/name). Must match the casing on GitHub exactly.
+$githubRepository = "LMS-Grupp-1/LMS"
+
 # The resource providers (Azure services) the project uses.
 $providers = @(
     "Microsoft.App",                 # Container Apps
@@ -158,21 +161,114 @@ $outputs = az deployment sub create `
     --name "lms-bootstrap" `
     --location "swedencentral" `
     --template-file "$PSScriptRoot\bootstrap.bicep" `
-    --parameters adminPrincipalId=$adminPrincipalId `
+    --parameters adminPrincipalId=$adminPrincipalId githubRepository=$githubRepository `
     --query properties.outputs `
     --output json | ConvertFrom-Json
 
 if ($LASTEXITCODE -ne 0 -or -not $outputs) { Stop-Script "Deployment failed. See the error above." }
 
-# --- 5. Values for GitHub ---------------------------------------------------
+# --- 5. GitHub secrets ------------------------------------------------------
 
-Write-Step "5. Add these as repository secrets in GitHub"
-Write-Host "GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret"
-Write-Host ""
-Write-Host "  AZURE_CLIENT_ID        $($outputs.AZURE_CLIENT_ID.value)"
-Write-Host "  AZURE_TENANT_ID        $($outputs.AZURE_TENANT_ID.value)"
-Write-Host "  AZURE_SUBSCRIPTION_ID  $($outputs.AZURE_SUBSCRIPTION_ID.value)"
-Write-Host ""
-Write-Host "Key Vaults: $($outputs.keyVaultTest.value), $($outputs.keyVaultProd.value)"
+Write-Step "5. GitHub secrets for $githubRepository"
+
+$clientId = $outputs.AZURE_CLIENT_ID.value
+$tenantId = $outputs.AZURE_TENANT_ID.value
+$subscriptionId = $outputs.AZURE_SUBSCRIPTION_ID.value
+
+$answer = Read-Host "Set the GitHub secrets now? Requires admin on the repository (y/n)"
+if ($answer -ne "y") {
+    Write-Host ""
+    Write-Host "Add these manually: GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret"
+    Write-Host "  AZURE_CLIENT_ID        $clientId"
+    Write-Host "  AZURE_TENANT_ID        $tenantId"
+    Write-Host "  AZURE_SUBSCRIPTION_ID  $subscriptionId"
+    exit 0
+}
+
+# Install the GitHub CLI if it is missing.
+if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+    Write-Host "GitHub CLI not found. Installing with winget..."
+    winget install -e --id GitHub.cli --accept-source-agreements --accept-package-agreements
+    if ($LASTEXITCODE -ne 0) { Stop-Script "Failed to install the GitHub CLI. Install it from https://cli.github.com and run this script again." }
+    Update-SessionPath
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
+        Stop-Script "GitHub CLI was installed. Open a new terminal and run this script again."
+    }
+}
+
+# Log in to GitHub if needed (opens the browser).
+gh auth status --hostname github.com *> $null
+if ($LASTEXITCODE -ne 0) {
+    gh auth login --hostname github.com --web --git-protocol https
+    if ($LASTEXITCODE -ne 0) { Stop-Script "GitHub login failed." }
+}
+
+# Random string from a cryptographically secure generator. Letters and digits only,
+# so it is safe in connection strings and environment variables.
+function New-Secret([int]$length) {
+    $chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789".ToCharArray()
+    $bytes = New-Object byte[] $length
+    [System.Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+    return -join ($bytes | ForEach-Object { $chars[$_ % $chars.Length] })
+}
+
+# Names of the secrets that already exist (repository level, or in an environment).
+function Get-SecretNames([string]$environmentName) {
+    if ($environmentName) {
+        $names = gh secret list --repo $githubRepository --env $environmentName --json name --jq '.[].name'
+    }
+    else {
+        $names = gh secret list --repo $githubRepository --json name --jq '.[].name'
+    }
+    if ($LASTEXITCODE -ne 0) { Stop-Script "Could not read the secrets. Are you admin on $githubRepository, and does the environment '$environmentName' exist?" }
+    return @($names)
+}
+
+function Set-GitHubSecret([string]$name, [string]$value, [string]$environmentName) {
+    if ($environmentName) {
+        gh secret set $name --repo $githubRepository --env $environmentName --body $value
+    }
+    else {
+        gh secret set $name --repo $githubRepository --body $value
+    }
+    if ($LASTEXITCODE -ne 0) { Stop-Script "Failed to set $name." }
+}
+
+# Azure login values: always updated, because they change when moving to another subscription.
+Set-GitHubSecret "AZURE_CLIENT_ID" $clientId
+Set-GitHubSecret "AZURE_TENANT_ID" $tenantId
+Set-GitHubSecret "AZURE_SUBSCRIPTION_ID" $subscriptionId
+
+# Passwords: only created when missing, so running the script again never changes them.
+$repositorySecrets = Get-SecretNames ""
+if ($repositorySecrets -notcontains "SQL_ADMIN_PASSWORD") {
+    # Azure SQL requires 3 of 4 character types. The suffix guarantees that.
+    Set-GitHubSecret "SQL_ADMIN_PASSWORD" ((New-Secret 28) + "-Aa1")
+}
+else {
+    Write-Host "  SQL_ADMIN_PASSWORD - already set"
+}
+
+foreach ($environmentName in @("test", "prod")) {
+    $environmentSecrets = Get-SecretNames $environmentName
+
+    if ($environmentSecrets -notcontains "JWT_SECRET_KEY") {
+        Set-GitHubSecret "JWT_SECRET_KEY" (New-Secret 64) $environmentName
+    }
+    else {
+        Write-Host "  JWT_SECRET_KEY ($environmentName) - already set"
+    }
+
+    if ($environmentSecrets -notcontains "SEED_PASSWORD") {
+        $secure = Read-Host "Password for the seeded users in '$environmentName' (save it in a password manager)" -AsSecureString
+        $plain = (New-Object System.Net.NetworkCredential("", $secure)).Password
+        if ($plain.Length -lt 3) { Stop-Script "The password must be at least 3 characters." }
+        Set-GitHubSecret "SEED_PASSWORD" $plain $environmentName
+    }
+    else {
+        Write-Host "  SEED_PASSWORD ($environmentName) - already set"
+    }
+}
+
 Write-Host ""
 Write-Host "Done." -ForegroundColor Green
