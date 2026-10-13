@@ -162,6 +162,11 @@
 
     private void OpenEditCourseDialog()
     {
+        if (currentCourse == null)
+        {
+            ToastService.ShowError("Ingen tillgänglig kurs för redigering.");
+            return; // Safety check
+        }
         courseToEdit = new CourseCreateDto
         {
             Id = currentCourse.Id,
