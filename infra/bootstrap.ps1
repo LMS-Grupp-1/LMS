@@ -5,13 +5,17 @@
 .DESCRIPTION
     Run once per subscription by the subscription Owner. Windows only (uses winget).
 
-    1. Installs the Azure CLI and Bicep if they are missing.
+    1. Installs the Azure CLI, Bicep and the GitHub CLI if they are missing.
     2. Logs in to Azure and lets you choose the subscription.
-    3. Registers the resource providers used by the project.
+    3. Logs in to GitHub.
+    4. Registers the resource providers used by the project.
+    5. Deploys bootstrap.bicep (resource group, identities, Key Vaults, roles).
+    6. Sets the GitHub secrets.
 
     Safe to run more than once: steps that are already done are skipped.
 
 .EXAMPLE
+    Double-click infra\bootstrap.cmd, or run:
     powershell -ExecutionPolicy Bypass -File .\infra\bootstrap.ps1
 #>
 
@@ -45,28 +49,33 @@ function Update-SessionPath {
     $env:Path = "$machinePath;$userPath"
 }
 
+# Installs a tool with winget if the command is missing.
+function Install-Tool([string]$command, [string]$wingetId, [string]$manualUrl) {
+    if (Get-Command $command -ErrorAction SilentlyContinue) { return }
+
+    Write-Host "$command not found. Installing with winget..."
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        Stop-Script "winget not found. Install it manually from $manualUrl and run this script again."
+    }
+
+    winget install -e --id $wingetId --accept-source-agreements --accept-package-agreements
+    if ($LASTEXITCODE -ne 0) {
+        Stop-Script ("Installation failed. Close Visual Studio, VS Code and other terminals and try again, " +
+                     "or install manually from $manualUrl")
+    }
+
+    Update-SessionPath
+    if (-not (Get-Command $command -ErrorAction SilentlyContinue)) {
+        Stop-Script "$command was installed. Open a new terminal and run this script again."
+    }
+}
+
 # --- 1. Tools ---------------------------------------------------------------
 
 Write-Step "1. Checking tools"
 
-if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-    Write-Host "Azure CLI not found. Installing with winget..."
-
-    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
-        Stop-Script "winget not found. Install the Azure CLI manually from https://aka.ms/installazurecliwindowsx64 and run this script again."
-    }
-
-    winget install -e --id Microsoft.AzureCLI --accept-source-agreements --accept-package-agreements
-    if ($LASTEXITCODE -ne 0) {
-        Stop-Script ("Installation failed. Close Visual Studio, VS Code and other terminals and try again, " +
-                     "or install manually from https://aka.ms/installazurecliwindowsx64")
-    }
-
-    Update-SessionPath
-    if (-not (Get-Command az -ErrorAction SilentlyContinue)) {
-        Stop-Script "Azure CLI was installed. Open a new terminal and run this script again."
-    }
-}
+Install-Tool "az" "Microsoft.AzureCLI" "https://aka.ms/installazurecliwindowsx64"
+Install-Tool "gh" "GitHub.cli" "https://cli.github.com"
 
 $azVersion = (az version --output json | ConvertFrom-Json).'azure-cli'
 Write-Host "Azure CLI $azVersion"
@@ -78,12 +87,13 @@ if ($LASTEXITCODE -ne 0) {
     if ($LASTEXITCODE -ne 0) { Stop-Script "Failed to install Bicep." }
 }
 Write-Host (az bicep version --only-show-errors)
+Write-Host (gh --version | Select-Object -First 1)
 
-# --- 2. Login and subscription ----------------------------------------------
+# --- 2. Azure login and subscription ----------------------------------------
 
 Write-Step "2. Azure login"
 
-function Invoke-Login {
+function Invoke-AzureLogin {
     $tenant = Read-Host "Tenant id (Directory ID). Leave empty to use your default directory"
     if ([string]::IsNullOrWhiteSpace($tenant)) {
         az login --output none
@@ -96,7 +106,7 @@ function Invoke-Login {
 
 $account = az account show --output json 2>$null | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0 -or -not $account) {
-    Invoke-Login
+    Invoke-AzureLogin
 }
 
 while ($true) {
@@ -123,16 +133,32 @@ while ($true) {
             if ($LASTEXITCODE -ne 0) { Write-Host "Could not select that subscription." -ForegroundColor Yellow }
             continue
         }
-        "t" { Invoke-Login; continue }
+        "t" { Invoke-AzureLogin; continue }
         "q" { Write-Host "Aborted."; exit 0 }
         default { continue }
     }
     break
 }
 
-# --- 3. Resource providers --------------------------------------------------
+# --- 3. GitHub login --------------------------------------------------------
 
-Write-Step "3. Registering resource providers (can take a few minutes)"
+Write-Step "3. GitHub login"
+
+gh auth status --hostname github.com *> $null
+if ($LASTEXITCODE -ne 0) {
+    gh auth login --hostname github.com --web --git-protocol https
+    if ($LASTEXITCODE -ne 0) { Stop-Script "GitHub login failed." }
+}
+
+# The ids are part of the OIDC subject GitHub sends when a workflow logs in to Azure.
+$githubOwnerId = gh api "repos/$githubRepository" --jq '.owner.id'
+$githubRepositoryId = gh api "repos/$githubRepository" --jq '.id'
+if ($LASTEXITCODE -ne 0 -or -not $githubRepositoryId) { Stop-Script "Could not read $githubRepository from GitHub." }
+Write-Host "Repository: $githubRepository (owner id $githubOwnerId, repository id $githubRepositoryId)"
+
+# --- 4. Resource providers --------------------------------------------------
+
+Write-Step "4. Registering resource providers (can take a few minutes)"
 
 foreach ($provider in $providers) {
     $state = az provider show --namespace $provider --query registrationState --output tsv
@@ -149,9 +175,9 @@ foreach ($provider in $providers) {
     Write-Host "  $provider - registered" -ForegroundColor Green
 }
 
-# --- 4. Deploy bootstrap.bicep ----------------------------------------------
+# --- 5. Deploy bootstrap.bicep ----------------------------------------------
 
-Write-Step "4. Deploying bootstrap.bicep (resource group, identities, Key Vaults, roles)"
+Write-Step "5. Deploying bootstrap.bicep (resource group, identities, Key Vaults, roles)"
 
 # Your user's object id. Gives you access to the secrets in the Key Vaults.
 $adminPrincipalId = az ad signed-in-user show --query id --output tsv
@@ -161,47 +187,17 @@ $outputs = az deployment sub create `
     --name "lms-bootstrap" `
     --location "swedencentral" `
     --template-file "$PSScriptRoot\bootstrap.bicep" `
-    --parameters adminPrincipalId=$adminPrincipalId githubRepository=$githubRepository `
+    --parameters adminPrincipalId=$adminPrincipalId githubRepository=$githubRepository githubOwnerId=$githubOwnerId githubRepositoryId=$githubRepositoryId `
     --query properties.outputs `
     --output json | ConvertFrom-Json
 
 if ($LASTEXITCODE -ne 0 -or -not $outputs) { Stop-Script "Deployment failed. See the error above." }
 
-# --- 5. GitHub secrets ------------------------------------------------------
+Write-Host "Key Vaults: $($outputs.keyVaultTest.value), $($outputs.keyVaultProd.value)"
 
-Write-Step "5. GitHub secrets for $githubRepository"
+# --- 6. GitHub secrets ------------------------------------------------------
 
-$clientId = $outputs.AZURE_CLIENT_ID.value
-$tenantId = $outputs.AZURE_TENANT_ID.value
-$subscriptionId = $outputs.AZURE_SUBSCRIPTION_ID.value
-
-$answer = Read-Host "Set the GitHub secrets now? Requires admin on the repository (y/n)"
-if ($answer -ne "y") {
-    Write-Host ""
-    Write-Host "Add these manually: GitHub -> Settings -> Secrets and variables -> Actions -> New repository secret"
-    Write-Host "  AZURE_CLIENT_ID        $clientId"
-    Write-Host "  AZURE_TENANT_ID        $tenantId"
-    Write-Host "  AZURE_SUBSCRIPTION_ID  $subscriptionId"
-    exit 0
-}
-
-# Install the GitHub CLI if it is missing.
-if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-    Write-Host "GitHub CLI not found. Installing with winget..."
-    winget install -e --id GitHub.cli --accept-source-agreements --accept-package-agreements
-    if ($LASTEXITCODE -ne 0) { Stop-Script "Failed to install the GitHub CLI. Install it from https://cli.github.com and run this script again." }
-    Update-SessionPath
-    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-        Stop-Script "GitHub CLI was installed. Open a new terminal and run this script again."
-    }
-}
-
-# Log in to GitHub if needed (opens the browser).
-gh auth status --hostname github.com *> $null
-if ($LASTEXITCODE -ne 0) {
-    gh auth login --hostname github.com --web --git-protocol https
-    if ($LASTEXITCODE -ne 0) { Stop-Script "GitHub login failed." }
-}
+Write-Step "6. GitHub secrets for $githubRepository"
 
 # Random string from a cryptographically secure generator. Letters and digits only,
 # so it is safe in connection strings and environment variables.
@@ -235,9 +231,9 @@ function Set-GitHubSecret([string]$name, [string]$value, [string]$environmentNam
 }
 
 # Azure login values: always updated, because they change when moving to another subscription.
-Set-GitHubSecret "AZURE_CLIENT_ID" $clientId
-Set-GitHubSecret "AZURE_TENANT_ID" $tenantId
-Set-GitHubSecret "AZURE_SUBSCRIPTION_ID" $subscriptionId
+Set-GitHubSecret "AZURE_CLIENT_ID" $outputs.AZURE_CLIENT_ID.value
+Set-GitHubSecret "AZURE_TENANT_ID" $outputs.AZURE_TENANT_ID.value
+Set-GitHubSecret "AZURE_SUBSCRIPTION_ID" $outputs.AZURE_SUBSCRIPTION_ID.value
 
 # Passwords: only created when missing, so running the script again never changes them.
 $repositorySecrets = Get-SecretNames ""

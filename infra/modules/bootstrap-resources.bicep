@@ -2,6 +2,8 @@
 
 param location string
 param githubRepository string
+param githubOwnerId string
+param githubRepositoryId string
 param adminPrincipalId string
 
 // Short suffix that makes globally unique names (Key Vault names are global).
@@ -27,9 +29,15 @@ resource githubIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-0
   location: location
 }
 
-// Trust tokens from GitHub Actions jobs that run in the 'test' or 'prod' environment
-// of the repository. Federated credentials on one identity cannot be created in
-// parallel, so batchSize(1) creates them one at a time.
+// Trust tokens from GitHub Actions jobs that run in the 'test' or 'prod' environment.
+// GitHub sends the subject in one of two formats, so both are trusted:
+//   repo:Owner/Repo:environment:test                     (classic)
+//   repo:Owner@<ownerId>/Repo@<repoId>:environment:test  (with immutable ids)
+// Federated credentials on one identity cannot be created in parallel,
+// so batchSize(1) and dependsOn create them one at a time.
+var repositoryParts = split(githubRepository, '/')
+var subjectWithIds = 'repo:${repositoryParts[0]}@${githubOwnerId}/${repositoryParts[1]}@${githubRepositoryId}'
+
 @batchSize(1)
 resource githubFederatedCredentials 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = [
   for env in environments: {
@@ -42,6 +50,24 @@ resource githubFederatedCredentials 'Microsoft.ManagedIdentity/userAssignedIdent
         'api://AzureADTokenExchange'
       ]
     }
+  }
+]
+
+@batchSize(1)
+resource githubFederatedCredentialsWithIds 'Microsoft.ManagedIdentity/userAssignedIdentities/federatedIdentityCredentials@2023-01-31' = [
+  for env in environments: {
+    parent: githubIdentity
+    name: 'github-${env}-ids'
+    properties: {
+      issuer: 'https://token.actions.githubusercontent.com'
+      subject: '${subjectWithIds}:environment:${env}'
+      audiences: [
+        'api://AzureADTokenExchange'
+      ]
+    }
+    dependsOn: [
+      githubFederatedCredentials
+    ]
   }
 ]
 

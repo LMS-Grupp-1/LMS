@@ -22,6 +22,12 @@ param resourceGroupName string = 'rg-lms'
 @description('GitHub repository as owner/name. Must match the casing on GitHub exactly.')
 param githubRepository string = 'LMS-Grupp-1/LMS'
 
+@description('GitHub id of the repository owner (organization or user). Used in the OIDC subject.')
+param githubOwnerId string
+
+@description('GitHub id of the repository. Used in the OIDC subject.')
+param githubRepositoryId string
+
 @description('Object id of the person running the bootstrap. Gets access to read and manage Key Vault secrets.')
 param adminPrincipalId string
 
@@ -36,7 +42,9 @@ module resources 'modules/bootstrap-resources.bicep' = {
   scope: resourceGroup
   params: {
     location: location
-    githubRepository: githubRepository
+    githubRepository: githubRepository    
+    githubOwnerId: githubOwnerId
+    githubRepositoryId: githubRepositoryId
     adminPrincipalId: adminPrincipalId
   }
 }
