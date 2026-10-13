@@ -8,6 +8,7 @@
 @attribute [Authorize(Roles = "Teacher")]
 @inject ICourseService CourseService
 @inject NavigationManager navigationManager
+@inject ToastService ToastService
 
 <div class="container my-4">
     <div class="card shadow-sm p-4 mb-4 border-0 bg-light">
@@ -164,7 +165,7 @@
     {
         if (currentCourse == null)
         {
-            ToastService.ShowError("Ingen tillgänglig kurs för redigering.");
+            ToastService.ShowToast("Ingen tillgänglig kurs för redigering.", ToastType.Danger);
             return; // Safety check
         }
         courseToEdit = new CourseCreateDto
