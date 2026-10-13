@@ -25,7 +25,7 @@ public class Program
         builder.Services.AddScoped<IUsersService, UsersService>();
         builder.Services.AddScoped<ICourseService, CourseService>();
         builder.Services.AddScoped<IModuleService, ModuleService>();
-
+        
 		var app = builder.Build();
 
         // Load and validate persisted sessions before the first request arrives.

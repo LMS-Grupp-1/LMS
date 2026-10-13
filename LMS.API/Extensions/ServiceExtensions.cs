@@ -29,5 +29,8 @@ public static class ServiceExtensions
 
         services.AddScoped<IModuleService, ModuleService>();
         services.AddLazy<IModuleService>();
+
+        services.AddScoped<IActivityService, ActivityService>();
+        services.AddLazy<IActivityService>();
     }
 }
