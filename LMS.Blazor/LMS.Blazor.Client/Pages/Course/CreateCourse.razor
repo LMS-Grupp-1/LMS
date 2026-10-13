@@ -1,110 +1,95 @@
 ﻿@page "/teacher/courses/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.Logging
+@using LMS.Shared.Constants
 @using LMS.Shared.DTOs.CourseDtos
-@inject NavigationManager Navigation
+@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Components.Courses
+@attribute [Authorize(Roles = UserRoles.Teacher)]
+@inject NavigationManager NavManager
+@inject ICourseService CourseService
+@inject ILogger<TeacherCourseOverview> Logger
+@inject ToastService ToastService
 
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold text-dark">Kursadministration</h2>
-        <button class="btn btn-primary" @onclick="OpenModal">Skapa ny kurs</button>
-    </div>
-</div>
+<div class="container my-4">
+    <div class="col-lg-6">
+        <h3>Skapa ny kurs</h3>
+        <p class="text-muted mb-4">Fyll i uppgifterna nedan för att registrera en ny kurs.</p>
 
-@if (showModal)
-{
-    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(isEditing ? "Redigera kurs" : "Skapa ny kurs")</h5>
-                    <button type="button" class="btn-close" disabled="@isBusy" @onclick="CloseModal"></button>
-                </div>
-                <div class="modal-body">
-                    @if (!string.IsNullOrWhiteSpace(formError))
-                    {
-                        <div class="alert alert-danger" role="alert">
-                            @formError
-                        </div>
-                    }
-                    <div class="mb-3">
-                        <label class="form-label">Kursnamn</label>
-                        <input type="text" class="form-control" @bind="courseForm.Name" placeholder="T.ex. Lexicon LTU" />
+        <div class="card shadow-sm">
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(formError))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @formError
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Beskrivning</label>
-                        <textarea class="form-control" rows="3" @bind="courseForm.Description" placeholder="Beskrivning av kursen..."></textarea>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Startdatum</label>
-                            <input type="date" class="form-control" @bind="courseForm.StartDate" />
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Slutdatum</label>
-                            <input type="date" class="form-control" @bind="courseForm.EndDate" />
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" disabled="@isBusy" @onclick="CloseModal">Avbryt</button>
-                    <button type="button" class="btn btn-success" disabled="@isBusy" @onclick="SaveCourse">
-                        @(isEditing ? "Spara ändringar" : "Skapa kurs")
-                    </button>
-                </div>
+                }
+
+                <CourseForm Model="courseModel"
+                            OnSaveCourse="SaveCourse"
+                            OnCancel="Cancel"
+                            SubmitButtonText="Skapa kurs"
+                            IsBusy="isSubmitting" />
             </div>
         </div>
     </div>
-}
+</div>
 
 @code {
-    private bool showModal = true;
-    private bool isEditing = false;
-    private bool isBusy = false;
-    private string? formError;
+    private CourseCreateDto courseModel = new();
+    private bool isSubmitting = false;
+	private string? formError;
 
-    // Use a standard mutable class or initialize the record cleanly with default values
-    private CourseFormModel courseForm = new();
-
-    private void OpenModal()
+    void Cancel()
     {
-        courseForm = new();
-        formError = null;
-        showModal = true;
-    }
-
-    private void CloseModal()
-    {
-        showModal = false;
-        Navigation.NavigateTo("/teacher/courses");
+        NavManager.NavigateTo($"/teacher/courses");
     }
 
     private async Task SaveCourse()
     {
-        isBusy = true;
+        if (isSubmitting) return;
         formError = null;
 
+        if (string.IsNullOrWhiteSpace(courseModel.Name) ||
+            courseModel.Name.Trim().Length > 50)
+        {
+            formError = "Registrera ett kursnamn mellan 1-50 tecken.";
+            return;
+        }
+
+        if (courseModel.StartDate > courseModel.EndDate)
+        {
+            formError = "Startdatum får inte ligga efter slutdatum.";
+            return;
+        }
+
+        isSubmitting = true;
         try
         {
-            // Add your saving/service logic here
-            await Task.Delay(500); // Mock delay
-            showModal = false;
-            Navigation.NavigateTo("/teacher/courses");
+            courseModel.Name = courseModel.Name.Trim();
+            bool success = await CourseService.CreateCourseAsync(courseModel);
+
+            if (!success)
+            {
+                formError = "Kursen kunde inte skapas. Vänligen försök igen.";
+                return;
+            }
+            ToastService.ShowToast($"Kursen {courseModel.Name} har skapats.", ToastType.Success);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.LogWarning(ex, "The session expired while creating a course.");
+            formError = "Din session har gått ut. Logga in igen.";
         }
         catch (Exception ex)
         {
-            formError = $"Ett fel uppstod: {ex.Message}";
+            Logger.LogError(ex, "The course could not be created.");
+            formError = "Kursen kunde inte skapas. Vänligen försök igen.";
         }
         finally
         {
-            isBusy = false;
+            isSubmitting = false;
+            NavManager.NavigateTo($"/teacher/courses");
         }
-    }
-
-    // A helper class to handle data binding cleanly inside the modal inputs
-    private class CourseFormModel
-    {
-        public string Name { get; set; } = "Lexicon LTU";
-        public string Description { get; set; } = string.Empty;
-        public DateTime StartDate { get; set; } = DateTime.Today;
-        public DateTime EndDate { get; set; } = DateTime.Today.AddMonths(6);
     }
 }

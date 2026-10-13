@@ -1,12 +1,16 @@
 ﻿@page "/teacher/courses"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.Logging
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.CourseDtos
 @using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Components.Courses
+@using LMS.Blazor.Client.Components.Common
 @attribute [Authorize(Roles = UserRoles.Teacher)]
 @inject NavigationManager NavManager
 @inject ICourseService CourseService
 @inject ToastService ToastService
+@inject ILogger<CourseList> Logger
 
 <div class="container-fluid py-4">
     <!-- Header Section -->
@@ -15,7 +19,7 @@
             <h2 class="fw-bold text-dark mb-1">Alla kurser</h2>
             <p class="text-muted mb-0">En översikt över alla aktiva och kommande kurser</p>
         </div>
-        <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" @onclick="OpenCreateModal">
+        <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" @onclick="NavToCreateCourse">
             <i class="bi bi-plus-lg"></i> Ny kurs
         </button>
     </div>
@@ -105,10 +109,10 @@
                                             <button class="btn btn-outline-secondary" title="Visa detaljer" @onclick="() => ViewCourse(course.Id)">
                                                 <i class="bi bi-eye"></i>
                                             </button>
-                                            <button class="btn btn-outline-primary" title="Redigera kurs" @onclick="() => EditCourse(course)">
+                                            <button class="btn btn-outline-primary" title="Redigera kurs" @onclick="() => OpenEditCourseDialog(course)">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <button class="btn btn-outline-danger" title="Radera kurs" @onclick="() => DeleteCourse(course.Id)">
+                                            <button class="btn btn-outline-danger" title="Radera kurs" disabled="@isBusy" @onclick="() => PromptDeleteCourse(course.Id, course.Name)">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </div>
@@ -123,9 +127,37 @@
     </div>
 </div>
 
+<EditCourseDialog IsOpen="isModalOpen"
+    CourseEditModel="courseToEdit"
+    OnCourseUpdated="HandleCourseUpdated"
+    OnClose="CloseModal" />
+
+<ConfirmDialog IsOpen="showDeleteModal"
+               Title="@($"TA BORT KURS: {courseToDeleteName}")"
+               Message="Är du säker på att du vill ta bort denna kurs?
+Studenter som är registrerade på kursen kommer att avregistreras.
+Moduler som är kopplade till denna kurs kommer också att raderas. 
+Aktiviteter som är kopplade till modulerna kommer också att raderas.
+Dokument som är kopplade till kursen, moduler och aktiviteter kommer också att raderas.
+Denna åtgärd går inte att ångra."
+               ConfirmButtonText="Ta bort"
+               ConfirmButtonClass="btn-danger"
+               OnCancel="CloseDeleteModal"
+               OnConfirm="ConfirmDeleteAsync" />
+
 @code {
     private IEnumerable<CourseDto>? courses;
     private string searchTerm = string.Empty;
+
+    // For Edit Course Modal
+    private bool isModalOpen = false;
+    private CourseCreateDto? courseToEdit = null;
+
+    // For Delete Course Modal
+    private bool showDeleteModal = false;
+    private bool isBusy = false;
+    private int? courseToDeleteId = null;
+    private string? courseToDeleteName = null;
 
     // Filter logic based on search input
     private IEnumerable<CourseDto>? filteredCourses => string.IsNullOrWhiteSpace(searchTerm)
@@ -158,28 +190,83 @@
         NavManager.NavigateTo($"/teacher/courses/{id}");
     }
 
-    private void OpenCreateModal()
+    private void NavToCreateCourse()
     {
-        // Trigger your CourseFormDialog in Create Mode here
+        NavManager.NavigateTo("/teacher/courses/create");
     }
 
-    private void EditCourse(CourseDto course)
+    private void OpenEditCourseDialog(CourseDto course)
     {
-        // Trigger your CourseFormDialog in Edit Mode for this specific course
-    }
-
-    private async Task DeleteCourse(int id)
-    {
-        // Add confirmation modal or direct deletion logic
-        bool success = await CourseService.DeleteCourseAsync(id);
-        if (success)
+        courseToEdit = new CourseCreateDto
         {
-            ToastService.ShowToast("Kursen har raderats.", ToastType.Success);
-            await LoadCoursesAsync();
+            Id = course.Id,
+            Name = course.Name,
+            Description = course.Description,
+            StartDate = course.StartDate,
+            EndDate = course.EndDate
+        };
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+        courseToEdit = null;
+    }
+
+    private async Task HandleCourseUpdated()
+    {
+        CloseModal();
+        await LoadCoursesAsync(); // Refresh list after update
+    }
+
+    private void PromptDeleteCourse(int courseId, string courseName)
+    {
+        courseToDeleteId = courseId;
+        courseToDeleteName = courseName;
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        courseToDeleteId = null;
+        courseToDeleteName = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (isBusy || courseToDeleteId == null) return;
+        isBusy = true;
+
+        try
+        {
+            var success = await CourseService.DeleteCourseAsync(courseToDeleteId.Value);
+
+            if (success)
+            {
+                ToastService.ShowToast($"Kursen {courseToDeleteName} har raderats.", ToastType.Success);
+                CloseDeleteModal();
+                await LoadCoursesAsync();
+            }
+            else
+            {
+                ToastService.ShowToast("Kursen kunde inte raderas. Försök igen.", ToastType.Danger);
+            }
         }
-        else
+        catch (UnauthorizedAccessException ex)
         {
-            ToastService.ShowToast("Kunde inte radera kursen.", ToastType.Danger);
+            Logger.LogWarning(ex, $"The session expired while the course was deleted. {ex.Message}");
+            ToastService.ShowToast("Din session har gått ut. Vänligen logga in och försök igen.", ToastType.Danger);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, $"Course with id {courseToDeleteId} could not be deleted. {ex.Message}");
+            ToastService.ShowToast($"Kursen kunde inte raderas. {ex.Message}", ToastType.Danger);
+        }
+        finally
+        {
+            isBusy = false;
         }
     }
 }
