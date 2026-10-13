@@ -1,0 +1,110 @@
+# Builds container images for the API and the Blazor BFF, pushes them to
+# GitHub Container Registry (ghcr.io) and deploys them to Azure Container Apps.
+#
+#   push to Dev    -> test environment
+#   push to master -> prod environment
+name: Deploy
+
+on:
+  push:
+    branches:
+      - Dev
+      - master
+      - feature/9-azure-infrastructure # TEMPORARY: for testing the workflow. Remove before merging.
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+
+# One deployment per environment at a time. A newer push waits for the running one to finish.
+concurrency:
+  group: deploy-${{ github.ref_name == 'master' && 'prod' || 'test' }}
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-lms
+  IMAGE_PREFIX: ghcr.io/lms-grupp-1
+  # master deploys to prod, everything else to test.
+  TARGET_ENVIRONMENT: ${{ github.ref_name == 'master' && 'prod' || 'test' }}
+
+jobs:
+  build:
+    name: Build and push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write # push images to ghcr.io
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # dotnet publish builds a container image without a Dockerfile and pushes it.
+      # Two tags: the commit sha (unique per build) and the environment name (latest for that environment).
+      - name: Build and push API image
+        run: >
+          dotnet publish LMS.API/LMS.API.csproj
+          --configuration Release
+          -t:PublishContainer
+          -p:ContainerRegistry=ghcr.io
+          -p:ContainerRepository=lms-grupp-1/lms-api
+          -p:ContainerImageTags='"${{ github.sha }};${{ env.TARGET_ENVIRONMENT }}"'
+
+      # Runs as root because TokenStorageService writes App_Data/tokens.json in the app folder,
+      # which the default non-root user cannot write to.
+      - name: Build and push web image
+        run: >
+          dotnet publish LMS.Blazor/LMS.Blazor/LMS.Blazor.csproj
+          --configuration Release
+          -t:PublishContainer
+          -p:ContainerRegistry=ghcr.io
+          -p:ContainerRepository=lms-grupp-1/lms-web
+          -p:ContainerImageTags='"${{ github.sha }};${{ env.TARGET_ENVIRONMENT }}"'
+          -p:ContainerUser=root
+
+  deploy:
+    name: Deploy to Azure
+    needs: build
+    runs-on: ubuntu-latest
+    # Logs in to Azure through this environment's federated credential.
+    environment: ${{ github.ref_name == 'master' && 'prod' || 'test' }}
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the Azure login
+
+    steps:
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Allow Azure CLI extensions to install without prompting
+        run: az config set extension.use_dynamic_install=yes_without_prompt
+
+      # The sha tag gives every deployment a unique image, so Container Apps always creates a new revision.
+      - name: Deploy API
+        run: >
+          az containerapp update
+          --name lms-api-${{ env.TARGET_ENVIRONMENT }}
+          --resource-group ${{ env.RESOURCE_GROUP }}
+          --image ${{ env.IMAGE_PREFIX }}/lms-api:${{ github.sha }}
+          --output none
+
+      - name: Deploy web
+        run: >
+          az containerapp update
+          --name lms-web-${{ env.TARGET_ENVIRONMENT }}
+          --resource-group ${{ env.RESOURCE_GROUP }}
+          --image ${{ env.IMAGE_PREFIX }}/lms-web:${{ github.sha }}
+          --output none
