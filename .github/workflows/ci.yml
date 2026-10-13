@@ -1,10 +1,11 @@
-# Builds the solution and runs all tests on every pull request to Dev and master.
-# A failing build or test is shown on the pull request.
+# Builds the solution and runs all tests.
+# Runs on every pull request to Dev and master, and is reused by deploy.yml before deploying.
 name: CI
 
 on:
   pull_request:
     branches: [Dev, master]
+  workflow_call: # Called from deploy.yml
   workflow_dispatch: # "Run workflow" button in the Actions tab
 
 # Read-only access to the repository is enough to build and test.
@@ -12,8 +13,9 @@ permissions:
   contents: read
 
 # Cancel an older run for the same pull request when new commits are pushed.
+# github.workflow is the caller's name when called from deploy.yml, so deployments get their own group.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:

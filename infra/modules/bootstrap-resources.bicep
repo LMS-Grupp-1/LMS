@@ -6,7 +6,7 @@ param githubOwnerId string
 param githubRepositoryId string
 param adminPrincipalId string
 
-// Short suffix that makes globally unique names (Key Vault names are global).
+// Short suffix that makes globally unique names (Key Vault and registry names are global).
 // Same resource group in the same subscription always gives the same suffix.
 var suffix = take(uniqueString(resourceGroup().id), 8)
 
@@ -20,6 +20,8 @@ var roles = {
   contributor: 'b24988ac-6180-42a0-ab88-20f7382dd24c'
   keyVaultSecretsUser: '4633458b-17de-408a-b874-0445c86b69e6'
   keyVaultSecretsOfficer: 'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
+  acrPull: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+  acrPush: '8311e382-0749-4cb8-b61a-304f252e45ec'
 }
 
 // --- Identity for GitHub Actions --------------------------------------------
@@ -90,6 +92,45 @@ resource appIdentities 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01
   }
 ]
 
+// --- Container registry -----------------------------------------------------
+
+// Private registry for the API and web images. Basic is the cheapest tier.
+// No admin user: GitHub Actions and the apps log in with their managed identities.
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
+  name: 'acrlms${suffix}'
+  location: location
+  sku: {
+    name: 'Basic'
+  }
+  properties: {
+    adminUserEnabled: false
+  }
+}
+
+// GitHub Actions may push images.
+resource githubAcrPush 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(containerRegistry.id, githubIdentity.id, roles.acrPush)
+  scope: containerRegistry
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPush)
+    principalId: githubIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// The apps may pull images.
+resource appAcrPull 'Microsoft.Authorization/roleAssignments@2022-04-01' = [
+  for (env, i) in environments: {
+    name: guid(containerRegistry.id, appIdentities[i].id, roles.acrPull)
+    scope: containerRegistry
+    properties: {
+      roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', roles.acrPull)
+      principalId: appIdentities[i].properties.principalId
+      principalType: 'ServicePrincipal'
+    }
+  }
+]
+
 // --- Key Vaults ------------------------------------------------------------
 
 resource keyVaults 'Microsoft.KeyVault/vaults@2023-07-01' = [
@@ -137,5 +178,6 @@ resource adminSecretsOfficer 'Microsoft.Authorization/roleAssignments@2022-04-01
 ]
 
 output githubClientId string = githubIdentity.properties.clientId
+output containerRegistryName string = containerRegistry.name
 output keyVaultTestName string = keyVaults[0].name
 output keyVaultProdName string = keyVaults[1].name

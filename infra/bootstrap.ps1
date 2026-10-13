@@ -28,8 +28,9 @@ $providers = @(
     "Microsoft.OperationalInsights", # Log Analytics
     "Microsoft.Sql",                 # Azure SQL
     "Microsoft.Storage",             # Blob Storage
-    "Microsoft.KeyVault",            # Key Vault
-    "Microsoft.ManagedIdentity"      # User-assigned managed identities
+    "Microsoft.KeyVault",            # Key Vault    
+    "Microsoft.ManagedIdentity",     # User-assigned managed identities
+    "Microsoft.ContainerRegistry"    # Container registry for the images
 )
 
 function Write-Step([string]$text) {
@@ -234,6 +235,9 @@ function Set-GitHubSecret([string]$name, [string]$value, [string]$environmentNam
 Set-GitHubSecret "AZURE_CLIENT_ID" $outputs.AZURE_CLIENT_ID.value
 Set-GitHubSecret "AZURE_TENANT_ID" $outputs.AZURE_TENANT_ID.value
 Set-GitHubSecret "AZURE_SUBSCRIPTION_ID" $outputs.AZURE_SUBSCRIPTION_ID.value
+# Registry name: not secret, so it is stored as a variable. Used by deploy.yml.
+gh variable set AZURE_CONTAINER_REGISTRY --repo $githubRepository --body $outputs.AZURE_CONTAINER_REGISTRY.value
+if ($LASTEXITCODE -ne 0) { Stop-Script "Failed to set AZURE_CONTAINER_REGISTRY." }
 
 # Passwords: only created when missing, so running the script again never changes them.
 $repositorySecrets = Get-SecretNames ""

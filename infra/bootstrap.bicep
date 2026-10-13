@@ -5,6 +5,7 @@
 // - the resource group
 // - the identity GitHub Actions logs in with (OIDC, no passwords)
 // - one identity per environment for the container apps
+// - the container registry for the images
 // - one Key Vault per environment
 // - all role assignments
 //
@@ -42,7 +43,7 @@ module resources 'modules/bootstrap-resources.bicep' = {
   scope: resourceGroup
   params: {
     location: location
-    githubRepository: githubRepository    
+    githubRepository: githubRepository
     githubOwnerId: githubOwnerId
     githubRepositoryId: githubRepositoryId
     adminPrincipalId: adminPrincipalId
@@ -53,6 +54,9 @@ module resources 'modules/bootstrap-resources.bicep' = {
 output AZURE_CLIENT_ID string = resources.outputs.githubClientId
 output AZURE_TENANT_ID string = tenant().tenantId
 output AZURE_SUBSCRIPTION_ID string = subscription().subscriptionId
+
+// Value to store as a repository variable in GitHub.
+output AZURE_CONTAINER_REGISTRY string = resources.outputs.containerRegistryName
 
 output keyVaultTest string = resources.outputs.keyVaultTestName
 output keyVaultProd string = resources.outputs.keyVaultProdName

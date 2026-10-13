@@ -35,9 +35,6 @@ param seedPassword string
 @description('Use Microsoft\'s test image instead of our own. Only for the first deployment, before any image exists.')
 param useQuickstartImage bool = false
 
-@description('Container registry path for our images (lowercase).')
-param imageRepository string = 'ghcr.io/lms-grupp-1'
-
 // Same suffix as in bootstrap.bicep and shared.bicep.
 var suffix = take(uniqueString(resourceGroup().id), 8)
 
@@ -46,8 +43,8 @@ var aspNetCoreEnvironment = environmentName == 'test' ? 'Staging' : 'Production'
 
 // The quickstart image listens on port 80, .NET images on port 8080.
 var quickstartImage = 'mcr.microsoft.com/k8se/quickstart:latest'
-var apiImage = useQuickstartImage ? quickstartImage : '${imageRepository}/lms-api:${environmentName}'
-var webImage = useQuickstartImage ? quickstartImage : '${imageRepository}/lms-web:${environmentName}'
+var apiImage = useQuickstartImage ? quickstartImage : '${containerRegistry.properties.loginServer}/lms-api:${environmentName}'
+var webImage = useQuickstartImage ? quickstartImage : '${containerRegistry.properties.loginServer}/lms-web:${environmentName}'
 var targetPort = useQuickstartImage ? 80 : 8080
 
 // --- Existing resources from bootstrap.bicep and shared.bicep ---------------
@@ -76,6 +73,18 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
 resource appIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
   name: 'id-lms-app-${environmentName}'
 }
+
+resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+  name: 'acrlms${suffix}'
+}
+
+// Both apps pull their images from the container registry with the app identity (AcrPull role).
+var registries = [
+  {
+    server: containerRegistry.properties.loginServer
+    identity: appIdentity.id
+  }
+]
 
 // --- App URLs ---------------------------------------------------------------
 // Calculated from the environment's domain, so the API and the web app do not
@@ -167,6 +176,7 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: targetPort
         transport: 'auto'
       }
+      registries: registries
       // Read from Key Vault with the app's identity. Nothing secret is stored in the app itself.
       secrets: [
         {
@@ -226,6 +236,12 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
 resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: 'lms-web-${environmentName}'
   location: location
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: {
+      '${appIdentity.id}': {}
+    }
+  }
   properties: {
     environmentId: containerAppsEnvironment.id
     workloadProfileName: 'Consumption'
@@ -236,6 +252,7 @@ resource webApp 'Microsoft.App/containerApps@2024-03-01' = {
         targetPort: targetPort
         transport: 'auto'
       }
+      registries: registries
     }
     template: {
       containers: [
