@@ -1,0 +1,39 @@
+# Builds the solution and runs all tests on every pull request to Dev and master.
+# A failing build or test is shown on the pull request.
+name: CI
+
+on:
+  pull_request:
+    branches: [Dev, master]
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+
+# Read-only access to the repository is enough to build and test.
+permissions:
+  contents: read
+
+# Cancel an older run for the same pull request when new commits are pushed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore LMS.slnx
+
+      - name: Build
+        run: dotnet build LMS.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test LMS.slnx --configuration Release --no-build --verbosity normal
