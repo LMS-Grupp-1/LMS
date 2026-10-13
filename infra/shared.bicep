@@ -1,3 +1,4 @@
+// Deployed by .github/workflows/infra.yml, or locally with az deployment group create.
 // Resources shared by the test and prod environments.
 // Deployed to the resource group created by bootstrap.bicep. Needs the Contributor role.
 //
