@@ -11,8 +11,6 @@ public class ActivityRepository(ApplicationDbContext context) : IActivityReposit
     
     public async Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId)
     {
-   //     return null;
-        
         return await _context.Activities
             .Where(m => m.ModuleId == moduleId)
             .OrderBy(m => m.StartDate)
@@ -30,13 +28,13 @@ public class ActivityRepository(ApplicationDbContext context) : IActivityReposit
         await _context.AddAsync(activity);
     }
 
-    public async void Update(Activity activity)
+    public void Update(Activity activity)
     {
-        throw new NotImplementedException();
+        _context.Activities.Update(activity);
     }
 
-    public async void Delete(Activity activity)
+    public void Delete(Activity activity)
     {
-        throw new NotImplementedException();
+        _context.Activities.Remove(activity);
     }
 }
