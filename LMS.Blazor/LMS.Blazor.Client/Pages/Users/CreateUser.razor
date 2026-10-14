@@ -88,17 +88,16 @@
 
 @code {
     private string? returnUrl;
-    private int? defaultCourseId;
     private CreateUserDto model = new();
     private bool isSubmitting = false;
     private string? errorMessage;
-    private IEnumerable<CourseDto>? courses;
+    private IEnumerable<CourseLookupDto>? courses;
 
     protected override async Task OnInitializedAsync()
     {
         GetReturnUrlFromQuery();
 
-        await LoadCoursesAsync();
+        await LoadCourseLookupsAsync();
     }
 
     private void GetReturnUrlFromQuery()
@@ -137,9 +136,9 @@
         }
     }
 
-    private async Task LoadCoursesAsync()
+    private async Task LoadCourseLookupsAsync()
     {
-        courses = await CourseService.GetAllCoursesAsync();
+        courses = await CourseService.GetCourseLookupsAsync();
     }
 
     private async Task HandleValidSubmit()
@@ -153,7 +152,7 @@
 
             if (success)
             {
-                ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} skapad successfully.", ToastType.Success);
+                ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} har skapats.", ToastType.Success);
 
                 NavigateToReturnUrl();
             }
