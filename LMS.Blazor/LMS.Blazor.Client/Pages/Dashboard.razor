@@ -1,0 +1,29 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Shared.Constants
+@using LMS.Blazor.Client.Components.Dashboard
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthStateProvider
+
+<AuthorizeView>
+    <Authorized>
+        @if (context.User.IsInRole(UserRoles.Teacher))
+        {
+            <TeacherDashboard />
+        }
+        else if (context.User.IsInRole(UserRoles.Student))
+        {
+            // <StudentDashboard />
+            <p>StudentDashboard is not implemented yet, so we will show a placeholder message for now.</p>
+        }
+        else
+        {
+            <div class="alert alert-warning m-4">
+                Konto saknar tilldelad roll (Varken Lärare eller Student).
+            </div>
+        }
+    </Authorized>
+    <NotAuthorized>
+        <p class="p-4">Du måste logga in för att se din dashboard.</p>
+    </NotAuthorized>
+</AuthorizeView>
