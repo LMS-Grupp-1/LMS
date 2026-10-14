@@ -1,0 +1,33 @@
+﻿<div class="app-icon-box @GetThemeClasses() rounded-3 d-flex align-items-center justify-content-center" 
+     style="width: 48px; height: 48px; min-width: 48px;">
+    <i class="bi @GetIconClass() fs-4"></i>
+</div>
+
+@code {
+    [Parameter] 
+    public string Type { get; set; } = "module"; // course, module, activity, student, submission
+
+    [Parameter] 
+    public string? CustomIcon { get; set; }
+
+    private string GetIconClass() => CustomIcon ?? Type.ToLower() switch
+    {
+        "course" => "bi-book",
+        "module" => "bi-files",
+        "activity" => "bi-calendar-check",
+        "student" => "bi-people",
+        "submission" => "bi-file-earmark-arrow-up",
+        _ => "bi-folder"
+    };
+
+    private string GetThemeClasses() => Type.ToLower() switch
+    {
+        "course" => "bg-dark-subtle text-dark",
+        "module" => "bg-info-subtle text-info",
+        "activity" => "bg-success-subtle text-success",
+        "student" => "bg-purple-subtle text-purple", 
+        "submission" => "bg-warning-subtle text-warning",
+        
+        _ => "bg-light text-secondary"
+    };
+}

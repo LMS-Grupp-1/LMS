@@ -7,4 +7,5 @@ public class ModuleViewModel
     public string? Description { get; set; }
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
+    public int ActivityCount { get; set; } = 0;
 }
