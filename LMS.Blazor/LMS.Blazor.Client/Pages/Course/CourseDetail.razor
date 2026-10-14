@@ -8,6 +8,7 @@
 @attribute [Authorize(Roles = "Teacher")]
 @inject ICourseService CourseService
 @inject NavigationManager navigationManager
+@inject ToastService ToastService
 
 <div class="container my-4">
     <div class="card shadow-sm p-4 mb-4 border-0 bg-light">
@@ -28,7 +29,7 @@
                 }
             </div>
             
-            <button class="btn btn-outline-primary" @onclick="OpenEditCourse">
+            <button class="btn btn-outline-primary" @onclick="OpenEditCourseDialog">
                 <i class="bi bi-pencil me-1"></i> Redigera kurs
             </button>
         </div>
@@ -91,6 +92,11 @@
     </div>
 </div>
 
+<EditCourseDialog IsOpen="isModalOpen"
+    CourseEditModel="courseToEdit"
+    OnCourseUpdated="HandleCourseUpdated"
+    OnClose="CloseModal" />
+
 @code {
     [Parameter]
     public int CourseId { get; set; }
@@ -99,6 +105,10 @@
     private CourseDto? currentCourse;
     private bool isLoading = true;
     private string activeTab = "overview";
+
+    // For Edit Course Modal
+    private bool isModalOpen = false;
+    private CourseCreateDto? courseToEdit = null;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -151,8 +161,33 @@
         return activeTab == tabName ? "active fw-bold" : string.Empty;
     }
 
-    private void OpenEditCourse()
+    private void OpenEditCourseDialog()
     {
-        
+        if (currentCourse == null)
+        {
+            ToastService.ShowToast("Ingen tillgänglig kurs för redigering.", ToastType.Danger);
+            return; // Safety check
+        }
+        courseToEdit = new CourseCreateDto
+        {
+            Id = currentCourse.Id,
+            Name = currentCourse.Name,
+            Description = currentCourse.Description,
+            StartDate = currentCourse.StartDate,
+            EndDate = currentCourse.EndDate
+        };
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+        courseToEdit = null;
+    }
+
+    private async Task HandleCourseUpdated()
+    {
+        CloseModal();
+        await LoadCourseAsync(); // Refresh list after update
     }
 }

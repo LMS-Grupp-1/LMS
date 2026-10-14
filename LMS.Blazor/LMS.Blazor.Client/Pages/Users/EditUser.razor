@@ -94,7 +94,7 @@
     private bool isLoading = true;
     private bool isSubmitting = false;
     private string? errorMessage;
-    private IEnumerable<CourseDto>? courses;
+    private IEnumerable<CourseLookupDto>? courses;
 
     protected override async Task OnInitializedAsync()
     {
@@ -118,7 +118,7 @@
                 };
             }
 
-            await LoadCoursesAsync();
+            await LoadCourseLookupsAsync();
         }
         catch (Exception ex)
         {
@@ -142,9 +142,9 @@
         }
     }
 
-    private async Task LoadCoursesAsync()
+    private async Task LoadCourseLookupsAsync()
     {
-        courses = await CourseService.GetAllCoursesAsync();
+        courses = await CourseService.GetCourseLookupsAsync();
     }
 
     private async Task HandleValidSubmit()
