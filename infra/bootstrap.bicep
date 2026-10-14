@@ -35,6 +35,10 @@ param adminPrincipalId string
 resource resourceGroup 'Microsoft.Resources/resourceGroups@2024-03-01' = {
   name: resourceGroupName
   location: location
+  // teardown.ps1 only deletes a resource group with this tag.
+  tags: {
+    project: 'lexicon-lms'
+  }
 }
 
 // Resources inside the resource group must be deployed through a module.

@@ -5,6 +5,11 @@
 #   master -> shared resources + prod environment
 #
 # bootstrap.bicep is not run here. It needs Owner permissions and is run once with infra/bootstrap.ps1.
+#
+# Uses (set by infra/bootstrap.ps1):
+#   Repository secrets:  AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID, SQL_ADMIN_PASSWORD
+#   Environment secrets: JWT_SECRET_KEY, SEED_PASSWORD (test and prod)
+#   Repository variable: AZURE_CONTAINER_REGISTRY
 name: Infrastructure
 
 on:

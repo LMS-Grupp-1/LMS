@@ -3,6 +3,10 @@
 #
 #   push to Dev    -> test environment
 #   push to master -> prod environment
+#
+# Uses (set by infra/bootstrap.ps1):
+#   Repository secrets:  AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+#   Repository variable: AZURE_CONTAINER_REGISTRY
 name: Deploy
 
 on:
@@ -13,7 +17,8 @@ on:
       - feature/9-azure-infrastructure # TEMPORARY: for testing the workflow. Remove before merging.
   workflow_dispatch: # "Run workflow" button in the Actions tab
 
-# One deployment per environment at a time. A newer push waits for the running one to finish.
+# Same group as infra.yml: deployments and infrastructure changes to one environment never run at the same time.
+# A newer run waits for the running one to finish.
 concurrency:
   group: azure-${{ github.ref_name == 'master' && 'prod' || 'test' }}
   cancel-in-progress: false
@@ -28,7 +33,7 @@ env:
 jobs:
   # Same build and tests as on pull requests. Nothing is deployed if a test fails.
   test:
-    name: Build and test
+    name: Tests before deploy
     uses: ./.github/workflows/ci.yml
     permissions:
       contents: read

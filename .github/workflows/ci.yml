@@ -1,5 +1,8 @@
 # Builds the solution and runs all tests.
 # Runs on every pull request to Dev and master, and is reused by deploy.yml before deploying.
+#
+# Uses no secrets or variables.
+# The check name "Build and test" is required in the rulesets for Dev and master.
 name: CI
 
 on:
@@ -20,6 +23,7 @@ concurrency:
 
 jobs:
   build-and-test:
+    name: Build and test
     runs-on: ubuntu-latest
 
     steps:
