@@ -4,14 +4,14 @@
 @implements IDisposable
 
 <div class="page">
-    <div class="">
+    <div class="sidebar">
         <NavMenu />
     </div>
 
-    <main>
+    <main class="bg-light min-vh-100">
         <TopBar />
 
-        <article class="content px-4">
+        <article class="content px-4 py-3">
             @Body
         </article>
     </main>
