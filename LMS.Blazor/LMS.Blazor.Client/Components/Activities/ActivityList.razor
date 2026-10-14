@@ -1,0 +1,157 @@
+﻿@using System
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-bold">AKTIVITETER</h5>
+        <button class="btn btn-primary btn-sm" @onclick="AddActivity">
+            <i class="bi bi-plus-lg me-1"></i> Lägg till aktivitet
+        </button>
+    </div>
+
+    <div class="card-body bg-light">
+        @if (activities == null || !activities.Any())
+        {
+            <p class="text-muted mb-0">Inga aktiviteter tillgängliga.</p>
+        }
+        else
+        {
+            @foreach (var activity in activities)
+            {
+                <div class="card mb-3 shadow-sm border-0">
+                    <div class="card-header bg-white py-3">
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                            <div>
+                                <div class="d-flex align-items-center mb-2 flex-wrap gap-2">
+                                    <span class="badge rounded-pill px-3 py-2" style="background-color: #e0f2fe; color: #0369a1; font-weight: 600;">
+                                        @activity.Type
+                                    </span>
+                                    <h6 class="mb-0 fw-semibold text-dark">@activity.Name</h6>
+                                </div>
+
+                                <div class="text-muted small">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="bi bi-calendar3 me-1 text-primary"></i>
+                                        <span>@activity.StartDate.ToString("yyyy-MM-dd HH:mm") - @activity.EndDate.ToString("yyyy-MM-dd HH:mm")</span>
+                                    </div>
+                                    <p class="mb-0 text-secondary">@activity.Description</p>
+                                </div>
+                            </div>
+
+                            <div class="btn-group gap-2" role="group">
+                                <button class="btn btn-outline-primary btn-sm" @onclick="() => EditActivity(activity.Id)">
+                                    <i class="bi bi-pencil me-1"></i> Redigera aktivitet
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteActivity(activity.Id)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="card-body bg-white border-top">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <h6 class="text-secondary fw-bold mb-3" style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                Dokument
+                            </h6>
+                            <button class="btn btn-primary btn-sm" @onclick="() => AddDocument(activity.Id)">
+                                <i class="bi bi-plus-circle"></i> Lägg till dokument
+                            </button>
+                        </div>
+
+                        @if (activity.Documents != null && activity.Documents.Any())
+                        {
+                            <div class="list-group list-group-flush mb-3">
+                                @foreach (var doc in activity.Documents)
+                                {
+                                    <div class="list-group-item d-flex justify-content-between align-items-center px-0 py-2 border-0">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-file-earmark-pdf text-danger fs-5 me-2"></i>
+                                            <span class="fw-medium text-dark">@doc.Name</span>
+                                            <span class="text-muted small ms-2">(@doc.Size)</span>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-link text-decoration-none p-0 text-muted" @onclick="() => DownloadDocument(doc.Name)">
+                                                <i class="bi bi-download"></i>
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted small mb-3">Inga dokument tillagda.</p>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<ActivityModel> activities = new();
+
+    protected override void OnInitialized()
+    {
+        // Mock Data for frontend UI development
+        activities = new List<ActivityModel>
+        {
+            new ActivityModel
+            {
+                Id = 1,
+                Type = "Föreläsning",
+                Name = "Introduktion till HTML",
+                StartDate = DateTime.Now.AddDays(1).Date.AddHours(9),
+                EndDate = DateTime.Now.AddDays(1).Date.AddHours(12),
+                Description = "Grundläggande genomgång av HTML-taggar, struktur och semantik för webbsidor.",
+                Documents = new List<DocumentModel>
+                {
+                    new DocumentModel { Name = "HTML Grunderna.pdf", Size = "1.5MB" }
+                }
+            },
+            new ActivityModel
+            {
+                Id = 2,
+                Type = "Workshop",
+                Name = "CSS Layout och Flexbox",
+                StartDate = DateTime.Now.AddDays(3).Date.AddHours(13),
+                EndDate = DateTime.Now.AddDays(3).Date.AddHours(16),
+                Description = "Praktisk övning i hur man bygger moderna, responsiva layouter med CSS Flexbox.",
+                Documents = new List<DocumentModel>
+                {
+                    new DocumentModel { Name = "Flexbox_CheatSheet.pdf", Size = "850KB" },
+                    new DocumentModel { Name = "Uppgift_Instruktioner.pdf", Size = "2.1MB" }
+                }
+            }
+        };
+    }
+
+    private void AddActivity() { /* Mock action */ }
+    private void EditActivity(int id) { /* Mock action */ }
+    private void DeleteActivity(int id) { /* Mock action */ }
+    private void AddDocument(int activityId) { /* Mock action */ }
+    private void DownloadDocument(string docName) { /* Mock action */ }
+
+    // Models for mock data
+    public class ActivityModel
+    {
+        public int Id { get; set; }
+        public string Type { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string Description { get; set; } = string.Empty;
+        public List<DocumentModel> Documents { get; set; } = new();
+    }
+
+    public class DocumentModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Size { get; set; } = string.Empty;
+    }
+}

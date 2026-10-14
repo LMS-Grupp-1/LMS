@@ -51,6 +51,35 @@ namespace LMS.Blazor.Client.Services
 		public async Task<StudentCourseDto?> GetMyCourseAsync(CancellationToken cancellationToken = default)
 		{
 			return await _apiProxy.GetAsync<StudentCourseDto>("courses/my", cancellationToken);
+        }
+
+        public async Task<CourseDto?> GetCourseByIdAsync(int id)
+        {
+            return await _apiProxy.SendAsync<CourseDto>(HttpMethod.Get, $"courses/{id}");
+        }
+
+        public async Task<IEnumerable<CourseDto>> GetCoursesWithCountsAsync()
+        {
+            try
+            {
+                var result = await _apiProxy.SendAsync<IEnumerable<CourseDto>>(
+					HttpMethod.Get, "courses/with-counts");
+
+                return result ?? Enumerable.Empty<CourseDto>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching courses with counts: {ex.Message}");
+                return Enumerable.Empty<CourseDto>();
+            }
+        }
+
+		public async Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync()
+		{
+            var result = await _apiProxy.SendAsync<IEnumerable<CourseLookupDto>>(
+                HttpMethod.Get, "courses/lookups");
+
+            return result ?? Enumerable.Empty<CourseLookupDto>();
 		}
-	}
+    }
 }

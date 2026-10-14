@@ -1,0 +1,129 @@
+# Tests the code, builds container images for the API and the Blazor BFF,
+# pushes them to Azure Container Registry and deploys them to Azure Container Apps.
+#
+#   push to Dev    -> test environment
+#   push to master -> prod environment
+#
+# Uses (set by infra/bootstrap.ps1):
+#   Repository secrets:  AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID
+#   Repository variable: AZURE_CONTAINER_REGISTRY
+name: Deploy
+
+on:
+  push:
+    branches:
+      - Dev
+      - master      
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+
+# Same group as infra.yml: deployments and infrastructure changes to one environment never run at the same time.
+# A newer run waits for the running one to finish.
+concurrency:
+  group: azure-${{ github.ref_name == 'master' && 'prod' || 'test' }}
+  cancel-in-progress: false
+
+env:
+  RESOURCE_GROUP: rg-lms
+  # Registry name from bootstrap.bicep, stored as a repository variable by bootstrap.ps1.
+  REGISTRY: ${{ vars.AZURE_CONTAINER_REGISTRY }}.azurecr.io
+  # master deploys to prod, everything else to test.
+  TARGET_ENVIRONMENT: ${{ github.ref_name == 'master' && 'prod' || 'test' }}
+
+jobs:
+  # Same build and tests as on pull requests. Nothing is deployed if a test fails.
+  test:
+    name: Tests before deploy
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  deploy:
+    name: Build images and deploy
+    needs: test
+    runs-on: ubuntu-latest
+    # Logs in to Azure through this environment's federated credential.
+    environment: ${{ github.ref_name == 'master' && 'prod' || 'test' }}
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the Azure login
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Gives docker (and dotnet publish) credentials for the registry, using the Azure login above.
+      - name: Log in to the container registry
+        run: az acr login --name ${{ vars.AZURE_CONTAINER_REGISTRY }}
+
+      # dotnet publish builds a container image without a Dockerfile and pushes it.
+      # Two tags: the commit sha (unique per build) and the environment name (latest for that environment).
+      - name: Build and push API image
+        run: >
+          dotnet publish LMS.API/LMS.API.csproj
+          --configuration Release
+          -t:PublishContainer
+          -p:ContainerRegistry=${{ env.REGISTRY }}
+          -p:ContainerRepository=lms-api
+          -p:ContainerImageTags='"${{ github.sha }};${{ env.TARGET_ENVIRONMENT }}"'
+
+      # Runs as root because TokenStorageService writes App_Data/tokens.json in the app folder,
+      # which the default non-root user cannot write to.
+      - name: Build and push web image
+        run: >
+          dotnet publish LMS.Blazor/LMS.Blazor/LMS.Blazor.csproj
+          --configuration Release
+          -t:PublishContainer
+          -p:ContainerRegistry=${{ env.REGISTRY }}
+          -p:ContainerRepository=lms-web
+          -p:ContainerImageTags='"${{ github.sha }};${{ env.TARGET_ENVIRONMENT }}"'
+          -p:ContainerUser=root
+
+      - name: Allow Azure CLI extensions to install without prompting
+        run: az config set extension.use_dynamic_install=yes_without_prompt
+
+      # The sha tag gives every deployment a unique image, so Container Apps always creates a new revision.
+      - name: Deploy API
+        run: >
+          az containerapp update
+          --name lms-api-${{ env.TARGET_ENVIRONMENT }}
+          --resource-group ${{ env.RESOURCE_GROUP }}
+          --image ${{ env.REGISTRY }}/lms-api:${{ github.sha }}
+          --output none
+
+      - name: Deploy web
+        run: >
+          az containerapp update
+          --name lms-web-${{ env.TARGET_ENVIRONMENT }}
+          --resource-group ${{ env.RESOURCE_GROUP }}
+          --image ${{ env.REGISTRY }}/lms-web:${{ github.sha }}
+          --output none
+
+      # .NET images listen on port 8080. The first deployment replaces the quickstart image (port 80),
+      # so the port is set here. Later deployments leave it unchanged.
+      - name: Set API port
+        run: >
+          az containerapp ingress update
+          --name lms-api-${{ env.TARGET_ENVIRONMENT }}
+          --resource-group ${{ env.RESOURCE_GROUP }}
+          --target-port 8080
+          --output none
+
+      - name: Set web port
+        run: >
+          az containerapp ingress update
+          --name lms-web-${{ env.TARGET_ENVIRONMENT }}
+          --resource-group ${{ env.RESOURCE_GROUP }}
+          --target-port 8080
+          --output none

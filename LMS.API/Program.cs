@@ -12,9 +12,11 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         var connectionString = builder.Configuration.GetConnectionString("ApplicationDbContext") ?? throw new InvalidOperationException("Connection string 'ApplicationDbContext' not found.");
-        builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(connectionString));
+		// Retries automatically on transient errors, which Azure SQL can have during maintenance.
+		builder.Services.AddDbContext<ApplicationDbContext>(options =>
+			options.UseSqlServer(connectionString, sql => sql.EnableRetryOnFailure()));
 
-        builder.Services.AddControllers(opt =>
+		builder.Services.AddControllers(opt =>
         {
             opt.ReturnHttpNotAcceptable = true;
             opt.Filters.Add(new ProducesAttribute("application/json"));

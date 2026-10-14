@@ -43,4 +43,35 @@ public class ModulesController : ControllerBase
         // Returning Ok(true) to match your standard API response pattern
         return Ok(true);
     }
+
+    [HttpPut("{moduleId:int}")]
+    public async Task<IActionResult> UpdateModule(int courseId, int moduleId, [FromBody] CreateModuleDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var (success, errorMessage) = await _service.ModuleService.UpdateModuleAsync(courseId, moduleId, dto);
+
+        if (!success)
+        {
+            return BadRequest(new { message = errorMessage });
+        }
+
+        return Ok(true);
+    }
+
+    [HttpDelete("{moduleId:int}")]
+    public async Task<IActionResult> DeleteModule(int courseId, int moduleId)
+    {
+        var (success, errorMessage) = await _service.ModuleService.DeleteModuleAsync(courseId, moduleId);
+
+        if (!success)
+        {
+            return BadRequest(new { message = errorMessage });
+        }
+
+        return Ok(true);
+    }
 }

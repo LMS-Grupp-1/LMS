@@ -31,7 +31,7 @@
                                autocomplete="username"
                                aria-required="true"
                                placeholder="name@example.com" />
-                    <label for="Input.Email" class="form-label">Email</label>
+                    <label for="Input.Email" class="form-label">E-postadress</label>
                     <ValidationMessage For="() => Input.Email" class="text-danger" />
                 </div>
                 <div class="form-floating mb-3">
@@ -42,17 +42,17 @@
                                autocomplete="current-password"
                                aria-required="true"
                                placeholder="password" />
-                    <label for="Input.Password" class="form-label">Password</label>
+                    <label for="Input.Password" class="form-label">Lösenord</label>
                     <ValidationMessage For="() => Input.Password" class="text-danger" />
                 </div>
                 <div class="checkbox mb-3">
                     <label class="form-label">
                         <InputCheckbox @bind-Value="Input.RememberMe"
                                        class="darker-border-checkbox form-check-input" />
-                        Remember me
+                        Kom ihåg mig
                     </label>
                 </div>
-                <button type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
+                <button type="submit" class="w-100 btn btn-lg btn-primary">Logga in</button>
             </EditForm>
         </section>
     </div>
@@ -103,11 +103,11 @@
                 break;
 
             case RemoteLoginStatus.InvalidCredentials:
-                errorMessage = "Error: Invalid email or password.";
+                errorMessage = "Error: Fel E-post adress eller lösenord.";
                 break;
 
             default:
-                errorMessage = "Error: The login service is unavailable. Please try again.";
+                errorMessage = "Error: login tjänsten är inte tillgänlig. Försök igen.";
                 break;
         }
     }
@@ -122,7 +122,7 @@
         [DataType(DataType.Password)]
         public string Password { get; set; } = "";
 
-        [Display(Name = "Remember me?")]
+        [Display(Name = "Kom ihåg mig?")]
         public bool RememberMe { get; set; }
     }
 }

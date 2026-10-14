@@ -1,0 +1,45 @@
+# Builds the solution and runs all tests.
+# Runs on every pull request to Dev and master, and is reused by deploy.yml before deploying.
+#
+# Uses no secrets or variables.
+# The check name "Build and test" is required in the rulesets for Dev and master.
+name: CI
+
+on:
+  pull_request:
+    branches: [Dev, master]
+  workflow_call: # Called from deploy.yml
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+
+# Read-only access to the repository is enough to build and test.
+permissions:
+  contents: read
+
+# Cancel an older run for the same pull request when new commits are pushed.
+# github.workflow is the caller's name when called from deploy.yml, so deployments get their own group.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Install .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore LMS.slnx
+
+      - name: Build
+        run: dotnet build LMS.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --solution LMS.slnx --configuration Release --no-build --verbosity normal

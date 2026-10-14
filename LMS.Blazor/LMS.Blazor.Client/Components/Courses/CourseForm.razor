@@ -1,0 +1,35 @@
+﻿@using LMS.Shared.DTOs.CourseDtos
+
+<div class="mb-3">
+    <label class="form-label">Kursnamn</label>
+    <input class="form-control" placeholder="T.ex. Lexicon LTU" @bind="Model.Name" />
+</div>
+
+<div class="mb-3">
+    <label class="form-label">Kursbeskrivning</label>
+    <textarea class="form-control" rows="4" @bind="Model.Description"></textarea>
+</div>
+
+<div class="row mb-3">
+    <div class="col">
+        <label class="form-label">Startdatum</label>
+        <input type="date" class="form-control" @bind="Model.StartDate" />
+    </div>
+    <div class="col">
+        <label class="form-label">Slutdatum</label>
+        <input type="date" class="form-control" @bind="Model.EndDate" />
+    </div>
+</div>
+
+<div class="d-flex justify-content-end gap-2">
+    <button class="btn btn-secondary" disabled="@IsBusy" @onclick="OnCancel">Avbryt</button>
+    <button class="btn btn-primary" disabled="@IsBusy" @onclick="OnSaveCourse">@SubmitButtonText</button>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public CourseCreateDto Model { get; set; } = new CourseCreateDto();
+    [Parameter, EditorRequired] public EventCallback OnSaveCourse { get; set; }
+    [Parameter, EditorRequired] public EventCallback OnCancel { get; set; }
+    [Parameter] public string SubmitButtonText { get; set; } = "Spara kurs";
+    [Parameter] public bool IsBusy { get; set; } = false;
+}
