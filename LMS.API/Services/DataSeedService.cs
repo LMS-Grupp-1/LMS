@@ -29,11 +29,13 @@ internal class DataSeedService : IHostedService
 	{
 		using var scope = serviceProvider.CreateScope();
 
-		var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
-		if (!env.IsDevelopment()) return;
-
 		ApplicationDbContext context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-				
+
+		// Creates the database if needed and applies pending migrations.
+		// In Azure this is how the tables are created. Locally it replaces Update-Database.
+		await context.Database.MigrateAsync(cancellationToken);
+
+		// Seed only an empty database, so existing data is never changed.
 		if (await context.Users.AnyAsync(cancellationToken)) return;
 
 		userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();

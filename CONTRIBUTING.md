@@ -8,14 +8,14 @@ All code, including names and comments, is written in English.
 
 | Branch | Purpose |
 |---|---|
-| `main` | Stable, released code. Updated at the end of each sprint. |
+| `master` | Stable, released code. Updated at the end of each sprint. |
 | `Dev` | Integration branch. All features are merged here. |
 | `feature/<issue>-<short-name>` | New functionality, e.g. `feature/us04-modules` |
 | `bugfix/<short-name>` | Bug fixes, e.g. `bugfix/submission-deadline` |
 
 `Dev` is the repository's default branch, so new pull requests target `Dev` automatically and `Closes #<number>` closes issues when a pull request is merged.
 
-Direct pushes to `main` and `Dev` are blocked. All changes go through a pull request.
+Direct pushes to `master` and `Dev` are blocked. All changes go through a pull request.
 
 ```mermaid
 %%{init: {'gitGraph': {'mainBranchName': 'master'}}}%%
