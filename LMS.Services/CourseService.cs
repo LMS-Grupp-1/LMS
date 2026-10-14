@@ -116,12 +116,6 @@ namespace LMS.Services
 
 			var today = DateTime.Today;
 
-			/* if (startDate.Date < today || endDate.Date < today)
-			{
-				throw new ArgumentException(
-					"Course dates can't be before today's date.");
-			} */
-
 			if (startDate > endDate)
 			{
 				throw new ArgumentException(

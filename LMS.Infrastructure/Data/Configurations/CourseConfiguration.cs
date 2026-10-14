@@ -20,7 +20,7 @@ namespace LMS.Infrastructure.Data.Configurations
 
 			// Extra safety net in the database. The service layer validates this first
 			builder.ToTable(t => t.HasCheckConstraint(
-				"CK_Course_StartBeforeEnd", "[StartDate] < [EndDate]"));
+				"CK_Course_StartBeforeEnd", "[StartDate] <= [EndDate]"));
 
             // A course has many students, a student belongs to at most one course.
             // NOT Restrict: a course with students cannot be deleted by accident
@@ -29,6 +29,9 @@ namespace LMS.Infrastructure.Data.Configurations
 				   .WithOne(u => u.Course)
 				   .HasForeignKey(u => u.CourseId)
 				   .OnDelete(DeleteBehavior.SetNull);
+
+			builder.HasIndex(c => c.Name)
+				.IsUnique();
 		}
 	}
 }

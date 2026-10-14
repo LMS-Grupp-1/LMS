@@ -116,21 +116,29 @@ namespace LMS.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Courses");
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Courses", t =>
+                        {
+                            t.HasCheckConstraint("CK_Course_StartBeforeEnd", "[StartDate] <= [EndDate]");
+                        });
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Module", b =>
@@ -302,7 +310,8 @@ namespace LMS.Infrastructure.Migrations
                 {
                     b.HasOne("Domain.Models.Entities.Course", "Course")
                         .WithMany("Students")
-                        .HasForeignKey("CourseId");
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Course");
                 });
