@@ -13,8 +13,7 @@ on:
   push:
     branches:
       - Dev
-      - master
-      - feature/9-azure-infrastructure # TEMPORARY: for testing the workflow. Remove before merging.
+      - master      
   workflow_dispatch: # "Run workflow" button in the Actions tab
 
 # Same group as infra.yml: deployments and infrastructure changes to one environment never run at the same time.

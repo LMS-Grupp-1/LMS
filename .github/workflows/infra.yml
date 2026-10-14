@@ -16,8 +16,7 @@ on:
   push:
     branches:
       - Dev
-      - master
-      - feature/9-azure-infrastructure # TEMPORARY: for testing the workflow. Remove before merging.
+      - master      
     paths:
       - 'infra/**'
   workflow_dispatch: # "Run workflow" button in the Actions tab
