@@ -189,7 +189,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.ToTable("Courses", t =>
                         {
-                            t.HasCheckConstraint("CK_Course_StartBeforeEnd", "[StartDate] < [EndDate]");
+                            t.HasCheckConstraint("CK_Course_StartBeforeEnd", "[StartDate] <= [EndDate]");
                         });
                 });
 

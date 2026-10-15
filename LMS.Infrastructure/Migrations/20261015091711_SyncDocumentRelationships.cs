@@ -78,10 +78,23 @@ namespace LMS.Infrastructure.Migrations
                 oldClrType: typeof(string),
                 oldType: "nvarchar(max)");
 
+            migrationBuilder.Sql("""
+                IF EXISTS (
+                    SELECT 1
+                    FROM sys.check_constraints
+                    WHERE name = N'CK_Course_StartBeforeEnd'
+                        AND parent_object_id = OBJECT_ID(N'dbo.Courses')
+                )
+                 BEGIN
+                    ALTER TABLE [dbo].[Courses]
+                    DROP CONSTRAINT [CK_Course_StartBeforeEnd];
+                END;
+                """);
+
             migrationBuilder.AddCheckConstraint(
                 name: "CK_Course_StartBeforeEnd",
                 table: "Courses",
-                sql: "[StartDate] < [EndDate]");
+                sql: "[StartDate] <= [EndDate]");
 
             migrationBuilder.AddForeignKey(
                 name: "FK_AspNetUsers_Courses_CourseId",

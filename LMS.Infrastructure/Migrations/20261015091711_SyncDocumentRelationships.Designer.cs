@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LMS.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261015085758_SyncDocumentRelationships")]
+    [Migration("20261015091711_SyncDocumentRelationships")]
     partial class SyncDocumentRelationships
     {
         /// <inheritdoc />
@@ -192,7 +192,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.ToTable("Courses", t =>
                         {
-                            t.HasCheckConstraint("CK_Course_StartBeforeEnd", "[StartDate] < [EndDate]");
+                            t.HasCheckConstraint("CK_Course_StartBeforeEnd", "[StartDate] <= [EndDate]");
                         });
                 });
 
