@@ -25,5 +25,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 
         builder.ApplyConfiguration(
             new Configurations.ActivityConfiguration());
+        builder.ApplyConfiguration(
+            new LMS.Infrastructure.Data.Configurations.CourseConfiguration());
     }
 }

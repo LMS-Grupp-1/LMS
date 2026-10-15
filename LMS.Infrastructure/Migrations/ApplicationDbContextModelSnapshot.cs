@@ -265,6 +265,12 @@ namespace LMS.Infrastructure.Migrations
                     b.ToTable("Documents", t =>
                         {
                             t.HasCheckConstraint("CK_Documents_Size", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760");
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Courses", t =>
+                        {
+                            t.HasCheckConstraint("CK_Course_StartBeforeEnd", "[StartDate] <= [EndDate]");
                         });
                 });
 

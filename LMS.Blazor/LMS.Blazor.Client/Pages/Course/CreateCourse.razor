@@ -38,7 +38,7 @@
 @code {
     private CourseCreateDto courseModel = new();
     private bool isSubmitting = false;
-	private string? formError;
+    private string? formError;
 
     void Cancel()
     {
@@ -63,6 +63,13 @@
             return;
         }
 
+        if ((courseModel.Description?.Length ?? 00) > 1000)
+        {
+            formError = "Beskrivningen får innehålla högst 1000 tecken.";
+            return;
+        }
+
+
         isSubmitting = true;
         try
         {
@@ -81,6 +88,10 @@
             Logger.LogWarning(ex, "The session expired while creating a course.");
             formError = "Din session har gått ut. Logga in igen.";
         }
+        catch (ArgumentException ex)
+        {
+            formError = ex.Message;
+        }
         catch (Exception ex)
         {
             Logger.LogError(ex, "The course could not be created.");
@@ -89,7 +100,6 @@
         finally
         {
             isSubmitting = false;
-            NavManager.NavigateTo($"/teacher/courses");
         }
     }
 }

@@ -29,6 +29,9 @@ namespace LMS.Infrastructure.Data.Configurations
 				   .WithOne(u => u.Course)
 				   .HasForeignKey(u => u.CourseId)
 				   .OnDelete(DeleteBehavior.SetNull);
+
+			builder.HasIndex(c => c.Name)
+				.IsUnique();
 		}
 	}
 }
