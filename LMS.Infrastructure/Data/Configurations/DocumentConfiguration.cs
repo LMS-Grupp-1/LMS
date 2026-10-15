@@ -19,16 +19,18 @@ namespace LMS.Infrastructure.Data.Configurations
                 .HasMaxLength(150)
                 .IsRequired();
 
-            builder.Property(document => document.StorageKey)
-                .HasMaxLength(64)
-                .IsRequired();
-
-            builder.HasIndex(document => document.StorageKey)
+            builder.HasIndex(document => document.Name)
                 .IsUnique();
 
-            builder.Property(document => document.UploadedByName)
-                .HasMaxLength(300)
+            builder.HasIndex(document => document.Description)
+                .IsUnique();
+
+            builder.Property(document => document.BlobPath)
+                .HasMaxLength(450)
                 .IsRequired();
+
+            builder.HasIndex(document => document.BlobPath)
+                .IsUnique();
 
             builder.HasOne(document => document.UploadedBy)
                 .WithMany()
@@ -52,19 +54,9 @@ namespace LMS.Infrastructure.Data.Configurations
 
             builder.ToTable(table =>
             {
-                table.HasCheckConstraint( // Ensures that each doc belongs to at least 1 course, module or activity.
-                    "CK_Documents_OneTarget",
-                    """
-                    (
-                        CASE WHEN [CourseId] IS NULL THEN 0 ELSE 1 END +
-                        CASE WHEN [ModuleId] IS NULL THEN 0 ELSE 1 END +
-                        CASE WHEN [ActivityId] IS NULL THEN 0 ELSE 1 END
-                    ) = 1
-                    """);
-
                 table.HasCheckConstraint(
-                    "CK_Documents_Size",
-                    "[SizeBytes] > 0 AND [SizeBytes] <= 10485760");
+                    "CK_Documents_OneTarget",
+                    "[SizeBytes] > 0 AND [SizeBytes] <= 10458760");
 
             });
         }

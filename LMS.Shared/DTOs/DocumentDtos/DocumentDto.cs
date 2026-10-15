@@ -6,6 +6,8 @@ namespace LMS.Shared.DTOs.DocumentDtos
 {
     public record DocumentDto( //Information needed to show a document
         int Id,
+        string Name,
+        string Description,
         string FileName,
         string ContentType,
         long SizeBytes,

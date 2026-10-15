@@ -196,6 +196,11 @@ namespace LMS.Infrastructure.Migrations
                     b.Property<int?>("ActivityId")
                         .HasColumnType("int");
 
+                    b.Property<string>("BlobPath")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("ContentType")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -203,6 +208,10 @@ namespace LMS.Infrastructure.Migrations
 
                     b.Property<int?>("CourseId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -212,13 +221,12 @@ namespace LMS.Infrastructure.Migrations
                     b.Property<int?>("ModuleId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint");
-
-                    b.Property<string>("StorageKey")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("nvarchar(64)");
 
                     b.Property<DateTimeOffset>("UploadedAt")
                         .HasColumnType("datetimeoffset");
@@ -227,29 +235,28 @@ namespace LMS.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(450)");
 
-                    b.Property<string>("UploadedByName")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
                     b.HasKey("Id");
 
                     b.HasIndex("ActivityId");
 
+                    b.HasIndex("BlobPath")
+                        .IsUnique();
+
                     b.HasIndex("CourseId");
+
+                    b.HasIndex("Description")
+                        .IsUnique();
 
                     b.HasIndex("ModuleId");
 
-                    b.HasIndex("StorageKey")
+                    b.HasIndex("Name")
                         .IsUnique();
 
                     b.HasIndex("UploadedById");
 
                     b.ToTable("Documents", t =>
                         {
-                            t.HasCheckConstraint("CK_Documents_OneTarget", "(\r\n    CASE WHEN [CourseId] IS NULL THEN 0 ELSE 1 END +\r\n    CASE WHEN [ModuleId] IS NULL THEN 0 ELSE 1 END +\r\n    CASE WHEN [ActivityId] IS NULL THEN 0 ELSE 1 END\r\n) = 1");
-
-                            t.HasCheckConstraint("CK_Documents_Size", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760");
+                            t.HasCheckConstraint("CK_Documents_OneTarget", "[SizeBytes] > 0 AND [SizeBytes] <= 10458760");
                         });
                 });
 
