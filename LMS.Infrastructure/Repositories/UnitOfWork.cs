@@ -9,14 +9,17 @@ public class UnitOfWork : IUnitOfWork
 
     public ICourseRepository Courses { get; }
     public IModuleRepository Modules { get; }
+    public IActivityRepository Activities { get; }
 
     public UnitOfWork(ApplicationDbContext context,
                       ICourseRepository courseRepository,
-                      IModuleRepository moduleRepository)
+                      IModuleRepository moduleRepository,
+                      IActivityRepository activityRepository)
     {
         _context = context;
         Courses = courseRepository;
         Modules = moduleRepository;
+        Activities = activityRepository;
     }
 
     public async Task<int> CompleteAsync()
