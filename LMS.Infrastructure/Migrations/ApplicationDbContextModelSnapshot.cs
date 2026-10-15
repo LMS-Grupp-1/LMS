@@ -179,8 +179,8 @@ namespace LMS.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime2");
@@ -264,7 +264,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.ToTable("Documents", t =>
                         {
-                            t.HasCheckConstraint("CK_Documents_OneTarget", "[SizeBytes] > 0 AND [SizeBytes] <= 10458760");
+                            t.HasCheckConstraint("CK_Documents_Size", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760");
                         });
                 });
 

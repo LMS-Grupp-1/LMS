@@ -9,6 +9,9 @@ namespace LMS.Shared.Constants
         public const long MaxFileSize = 10 * 1024 * 1024;
         public const long MaxRequestSize = MaxFileSize + 1024 * 1024;
         public const int MaxFileNameLength = 255;
+        public const int MaxContentTypeLength = 150;
+        public const int MaxBlopPathLength = 450;
+
         public static readonly IReadOnlyDictionary<string, string> ContentTypes =
             new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {

@@ -1,9 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Domain.Models.Entities;
+﻿using Domain.Models.Entities;
+using LMS.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace LMS.Infrastructure.Data.Configurations
 {
@@ -12,11 +13,11 @@ namespace LMS.Infrastructure.Data.Configurations
         public void Configure(EntityTypeBuilder<Document> builder)
         {
             builder.Property(document => document.FileName)
-                .HasMaxLength(255)
+                .HasMaxLength(DocumentConstraints.MaxFileNameLength)
                 .IsRequired();
 
             builder.Property(document => document.ContentType)
-                .HasMaxLength(150)
+                .HasMaxLength(DocumentConstraints.MaxContentTypeLength)
                 .IsRequired();
 
             builder.HasIndex(document => document.Name)
@@ -26,7 +27,7 @@ namespace LMS.Infrastructure.Data.Configurations
                 .IsUnique();
 
             builder.Property(document => document.BlobPath)
-                .HasMaxLength(450)
+                .HasMaxLength(DocumentConstraints.MaxBlopPathLength)
                 .IsRequired();
 
             builder.HasIndex(document => document.BlobPath)
@@ -55,8 +56,9 @@ namespace LMS.Infrastructure.Data.Configurations
             builder.ToTable(table =>
             {
                 table.HasCheckConstraint(
-                    "CK_Documents_OneTarget",
-                    "[SizeBytes] > 0 AND [SizeBytes] <= 10458760");
+                    "CK_Documents_Size",
+                    FormattableString.Invariant(
+                    $"[SizeBytes] > 0 AND [SizeBytes] <= {DocumentConstraints.MaxFileSize}"));
 
             });
         }
