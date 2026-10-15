@@ -62,6 +62,17 @@ public sealed class ApiProxyClient(HttpClient httpClient) : IApiProxyClient
             try
             {
                 var errorObj = await response.Content.ReadFromJsonAsync<ErrorResponseDto>(cancellationToken: cancellationToken);
+
+                var message = errorObj?.Message; 
+
+                if (string.IsNullOrWhiteSpace(message) &&
+                    errorObj?.Errors is { Count: > 0} errors)
+                {
+                    message = string.Join(
+                        " ",
+                        errors.Values.SelectMany(messages => messages));
+                }
+                
                 return (default, errorObj?.Message ?? "Valideringsfel uppstod.");
             }
             catch

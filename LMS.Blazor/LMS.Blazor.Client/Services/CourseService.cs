@@ -25,8 +25,12 @@ namespace LMS.Blazor.Client.Services
 		{
 			using var content = JsonContent.Create(dto);
 
-			await _apiProxy.SendAsync<CourseDto>(
-				HttpMethod.Post, "courses", content);
+			var (_, errorMessage) =
+				await _apiProxy.SendAndHandleErrorAsync<CourseDto>(
+					HttpMethod.Post, "courses", content);
+
+			if (!string.IsNullOrWhiteSpace(errorMessage))
+				throw new ArgumentException(errorMessage);
 
 			return true;
 		}
@@ -35,9 +39,14 @@ namespace LMS.Blazor.Client.Services
 		{
 			using var content = JsonContent.Create(dto);
 
-			await _apiProxy.SendAsync<object>(
-			HttpMethod.Put, $"courses/{id}", content);
-			return true;
+            var (_, errorMessage) =
+				await _apiProxy.SendAndHandleErrorAsync<object>(
+					HttpMethod.Put, $"courses/{id}", content);
+
+            if (!string.IsNullOrWhiteSpace(errorMessage))
+                throw new ArgumentException(errorMessage);
+
+            return true;
 		}
 
 		public async Task<bool> DeleteCourseAsync(int id)

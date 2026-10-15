@@ -11,4 +11,12 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Course> Courses { get; set; }
 
     public DbSet<Module> Modules => Set<Module>();
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        builder.ApplyConfiguration(
+            new LMS.Infrastructure.Data.Configurations.CourseConfiguration());
+    }
 }
