@@ -1,4 +1,5 @@
 ﻿using global::LMS.Shared.DTOs.ModulesDtos;
+using LMS.Shared.Constants;
 using LMS.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,7 +7,7 @@ using Service.Contracts;
 
 namespace LMS.Presentation.Controllers;
 
-[Authorize(Roles = "Teacher")]
+[Authorize]
 [ApiController]
 [Route("api/teacher/courses/{courseId:int}/[controller]")]
 public class ModulesController : ControllerBase
@@ -26,6 +27,7 @@ public class ModulesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> CreateModule(int courseId, [FromBody] CreateModuleDto dto)
     {
         if (!ModelState.IsValid)
@@ -45,6 +47,7 @@ public class ModulesController : ControllerBase
     }
 
     [HttpPut("{moduleId:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> UpdateModule(int courseId, int moduleId, [FromBody] CreateModuleDto dto)
     {
         if (!ModelState.IsValid)
@@ -63,6 +66,7 @@ public class ModulesController : ControllerBase
     }
 
     [HttpDelete("{moduleId:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> DeleteModule(int courseId, int moduleId)
     {
         var (success, errorMessage) = await _service.ModuleService.DeleteModuleAsync(courseId, moduleId);
