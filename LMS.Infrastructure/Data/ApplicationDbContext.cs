@@ -14,4 +14,19 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<ActivityType> ActivityTypes => Set<ActivityType>();
+    public DbSet<Document> Documents => Set<Document>();
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        builder.ApplyConfiguration(
+            new Configurations.DocumentConfiguration());
+
+        builder.Entity<Activity>()
+            .HasOne(activity => activity.Module)
+            .WithMany()
+            .HasForeignKey(activity => activity.ModuleId)
+            .OnDelete(DeleteBehavior.Restrict);
+    }
 }

@@ -52,6 +52,8 @@ namespace LMS.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ModuleId");
+
                     b.ToTable("Activities");
                 });
 
@@ -181,6 +183,74 @@ namespace LMS.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Courses");
+                });
+
+            modelBuilder.Entity("Domain.Models.Entities.Document", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ActivityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int?>("CourseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int?>("ModuleId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UploadedById")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UploadedByName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActivityId");
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("ModuleId");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
+                    b.HasIndex("UploadedById");
+
+                    b.ToTable("Documents", t =>
+                        {
+                            t.HasCheckConstraint("CK_Documents_OneTarget", "(\r\n    CASE WHEN [CourseId] IS NULL THEN 0 ELSE 1 END +\r\n    CASE WHEN [ModuleId] IS NULL THEN 0 ELSE 1 END +\r\n    CASE WHEN [ActivityId] IS NULL THEN 0 ELSE 1 END\r\n) = 1");
+
+                            t.HasCheckConstraint("CK_Documents_Size", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760");
+                        });
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Module", b =>
@@ -348,6 +418,17 @@ namespace LMS.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Models.Entities.Activity", b =>
+                {
+                    b.HasOne("Domain.Models.Entities.Module", "Module")
+                        .WithMany()
+                        .HasForeignKey("ModuleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Module");
+                });
+
             modelBuilder.Entity("Domain.Models.Entities.ApplicationUser", b =>
                 {
                     b.HasOne("Domain.Models.Entities.Course", "Course")
@@ -355,6 +436,38 @@ namespace LMS.Infrastructure.Migrations
                         .HasForeignKey("CourseId");
 
                     b.Navigation("Course");
+                });
+
+            modelBuilder.Entity("Domain.Models.Entities.Document", b =>
+                {
+                    b.HasOne("Domain.Models.Entities.Activity", "Activity")
+                        .WithMany()
+                        .HasForeignKey("ActivityId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Models.Entities.Course", "Course")
+                        .WithMany()
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Models.Entities.Module", "Module")
+                        .WithMany()
+                        .HasForeignKey("ModuleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Domain.Models.Entities.ApplicationUser", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Activity");
+
+                    b.Navigation("Course");
+
+                    b.Navigation("Module");
+
+                    b.Navigation("UploadedBy");
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Module", b =>
