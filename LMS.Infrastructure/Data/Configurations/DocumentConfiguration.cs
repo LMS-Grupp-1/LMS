@@ -38,17 +38,17 @@ namespace LMS.Infrastructure.Data.Configurations
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(document => document.Course)
-                .WithMany()
+                .WithMany(course => course.Documents)
                 .HasForeignKey(document => document.CourseId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(document => document.Module)
-                .WithMany()
+                .WithMany(module => module.Documents)
                 .HasForeignKey(document => document.ModuleId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(document => document.Activity)
-                .WithMany()
+                .WithMany(activity => activity.Documents)
                 .HasForeignKey(document => document.ActivityId)
                 .OnDelete(DeleteBehavior.Restrict);
 

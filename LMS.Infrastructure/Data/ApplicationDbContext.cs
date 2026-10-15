@@ -20,13 +20,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
 
-        builder.ApplyConfiguration(
-            new Configurations.DocumentConfiguration());
+        builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext)
+            .Assembly);
 
-        builder.Entity<Activity>()
-            .HasOne(activity => activity.Module)
-            .WithMany()
-            .HasForeignKey(activity => activity.ModuleId)
-            .OnDelete(DeleteBehavior.Restrict);
+        builder.ApplyConfiguration(
+            new Configurations.ActivityConfiguration());
     }
 }
