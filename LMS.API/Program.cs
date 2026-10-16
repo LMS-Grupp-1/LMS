@@ -1,3 +1,4 @@
+using Azure.Storage.Blobs;
 using LMS.API.Extensions;
 using LMS.API.Services;
 using LMS.Infrastructure.Data;
@@ -40,6 +41,10 @@ public class Program
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
+            // Local development only: Azurite starts empty. In Azure the container is created by Bicep.
+            using var scope = app.Services.CreateScope();
+            scope.ServiceProvider.GetRequiredService<BlobContainerClient>().CreateIfNotExists();
+
             app.UseSwagger();
 
             app.UseSwaggerUI();
