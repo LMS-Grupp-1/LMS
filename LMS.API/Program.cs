@@ -27,6 +27,9 @@ public class Program
         builder.Services.ConfigureSwagger();
         builder.Services.AddRepositories();
         builder.Services.AddServiceLayer();
+        builder.Services.AddRepositories();
+        builder.Services.AddServiceLayer();
+        builder.Services.AddDocumentStorage(builder.Configuration);
         builder.Services.ConfigureAuthentication(builder.Configuration);
         builder.Services.ConfigureIdentity();
         builder.Services.ConfigurePolicys();

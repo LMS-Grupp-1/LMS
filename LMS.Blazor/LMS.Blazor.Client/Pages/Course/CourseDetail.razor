@@ -5,6 +5,7 @@
 @using LMS.Blazor.Client.Components.Courses
 @using LMS.Blazor.Client.Components.Modules
 @using LMS.Blazor.Client.Components.Users
+@using LMS.Blazor.Client.Pages.Course
 @attribute [Authorize(Roles = "Teacher")]
 @inject ICourseService CourseService
 @inject NavigationManager navigationManager
@@ -85,7 +86,7 @@
                     <StudentList CourseId="CourseId" />
                     break;
                 case "documents":
-                    <div class="alert alert-info">Dokument kommer snart...</div>
+                    <TeacherDocuments CourseId="@CourseId" />
                     break;
             }
         }
