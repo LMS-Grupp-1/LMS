@@ -25,8 +25,10 @@ public class Program
         builder.Services.AddScoped<IUsersService, UsersService>();
         builder.Services.AddScoped<ICourseService, CourseService>();
         builder.Services.AddScoped<IModuleService, ModuleService>();
+        builder.Services.AddScoped<ToastService>();
+        builder.Services.AddScoped<LMS.Blazor.Client.Services.DocumentService>();
 
-		var app = builder.Build();
+        var app = builder.Build();
 
         // Load and validate persisted sessions before the first request arrives.
         // Forces it to get an instance before app starts

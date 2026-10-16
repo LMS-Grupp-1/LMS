@@ -1,0 +1,109 @@
+﻿@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Blazor.Client.Services
+@inject ICourseService CourseService
+@inject ToastService ToastService
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Redigera kurs</h5>
+                    <button type="button" class="btn-close" disabled="@isSubmitting" @onclick="CloseAsync"></button>
+                </div>
+
+                <div class="modal-body">
+                    @if (!string.IsNullOrWhiteSpace(formError))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @formError
+                        </div>
+                    }
+
+                    <CourseForm Model="CourseEditModel"
+                                OnSaveCourse="SaveCourse"
+                                OnCancel="CloseAsync"
+                                SubmitButtonText="Spara kurs"
+                                IsBusy="isSubmitting" />
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public CourseCreateDto? CourseEditModel { get; set; }
+    [Parameter] public EventCallback OnCourseUpdated { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private bool isSubmitting = false;
+    private string? formError;
+
+    private async Task SaveCourse()
+    {
+        if (isSubmitting || CourseEditModel == null) return;
+        formError = null;
+
+        if (string.IsNullOrWhiteSpace(CourseEditModel.Name) ||
+            CourseEditModel.Name.Trim().Length > 50)
+        {
+            formError = "Registrera ett kursnamn mellan 1-50 tecken.";
+            return;
+        }
+
+        if (CourseEditModel.StartDate > CourseEditModel.EndDate)
+        {
+            formError = "Startdatum får inte ligga efter slutdatum.";
+            return;
+        }
+
+        if ((CourseEditModel.Description?.Length ?? 0) > 1000)
+        {
+            formError = "Beskrivningen får innehålla högst 1000 tecken.";
+            return;
+        }
+
+        isSubmitting = true;
+        try
+        {
+            CourseEditModel.Name = CourseEditModel.Name.Trim();
+            CourseUpdateDto updateDto = new CourseUpdateDto(
+                CourseEditModel.Name,
+                CourseEditModel.Description,
+                CourseEditModel.StartDate,
+                CourseEditModel.EndDate);
+
+            bool success = await CourseService.UpdateCourseAsync(CourseEditModel.Id, updateDto);
+
+            if (!success)
+            {
+                formError = "Kursen kunde inte sparas. Vänligen försök igen.";
+                return;
+            }
+            ToastService.ShowToast($"Kursen {CourseEditModel.Name} har sparat.", ToastType.Success);
+
+            await OnCourseUpdated.InvokeAsync(); // Notify parent to refresh list
+            await CloseAsync();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            formError = $"Din session har gått ut. Logga in igen. {ex.Message}";
+        }
+        catch (ArgumentException ex)
+        {
+            formError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            formError = $"Kursen kunde inte sparas. Vänligen försök igen. {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task CloseAsync() => await OnClose.InvokeAsync();
+}

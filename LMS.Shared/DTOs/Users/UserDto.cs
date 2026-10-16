@@ -13,5 +13,6 @@ public class UserDto
     public string Role { get; set; } = string.Empty;	
 	public string FirstName { get; set; } = string.Empty;
 	public string LastName { get; set; } = string.Empty;
-	public string? Course { get; set; }
+    public int? CourseId { get; set; } = null;
+    public string? CourseName { get; set; } = null;
 }

@@ -1,0 +1,105 @@
+﻿@page "/teacher/courses/create"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.Extensions.Logging
+@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Components.Courses
+@attribute [Authorize(Roles = UserRoles.Teacher)]
+@inject NavigationManager NavManager
+@inject ICourseService CourseService
+@inject ILogger<TeacherCourseOverview> Logger
+@inject ToastService ToastService
+
+<div class="container my-4">
+    <div class="col-lg-6">
+        <h3>Skapa ny kurs</h3>
+        <p class="text-muted mb-4">Fyll i uppgifterna nedan för att registrera en ny kurs.</p>
+
+        <div class="card shadow-sm">
+            <div class="card-body">
+                @if (!string.IsNullOrWhiteSpace(formError))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @formError
+                    </div>
+                }
+
+                <CourseForm Model="courseModel"
+                            OnSaveCourse="SaveCourse"
+                            OnCancel="Cancel"
+                            SubmitButtonText="Skapa kurs"
+                            IsBusy="isSubmitting" />
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private CourseCreateDto courseModel = new();
+    private bool isSubmitting = false;
+    private string? formError;
+
+    void Cancel()
+    {
+        NavManager.NavigateTo($"/teacher/courses");
+    }
+
+    private async Task SaveCourse()
+    {
+        if (isSubmitting) return;
+        formError = null;
+
+        if (string.IsNullOrWhiteSpace(courseModel.Name) ||
+            courseModel.Name.Trim().Length > 50)
+        {
+            formError = "Registrera ett kursnamn mellan 1-50 tecken.";
+            return;
+        }
+
+        if (courseModel.StartDate > courseModel.EndDate)
+        {
+            formError = "Startdatum får inte ligga efter slutdatum.";
+            return;
+        }
+
+        if ((courseModel.Description?.Length ?? 00) > 1000)
+        {
+            formError = "Beskrivningen får innehålla högst 1000 tecken.";
+            return;
+        }
+
+
+        isSubmitting = true;
+        try
+        {
+            courseModel.Name = courseModel.Name.Trim();
+            bool success = await CourseService.CreateCourseAsync(courseModel);
+
+            if (!success)
+            {
+                formError = "Kursen kunde inte skapas. Vänligen försök igen.";
+                return;
+            }
+            ToastService.ShowToast($"Kursen {courseModel.Name} har skapats.", ToastType.Success);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.LogWarning(ex, "The session expired while creating a course.");
+            formError = "Din session har gått ut. Logga in igen.";
+        }
+        catch (ArgumentException ex)
+        {
+            formError = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The course could not be created.");
+            formError = "Kursen kunde inte skapas. Vänligen försök igen.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

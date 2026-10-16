@@ -10,4 +10,6 @@ public interface ICourseService
 	Task UpdateCourseAsync(int id, CourseUpdateDto courseUpdateDto);
 	Task DeleteCourseAsync(int id);
 	Task<StudentCourseDto> GetMyCourseAsync(string userId);
+    Task<IEnumerable<CourseDto>> GetCoursesWithCountsAsync();
+	Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync();
 }

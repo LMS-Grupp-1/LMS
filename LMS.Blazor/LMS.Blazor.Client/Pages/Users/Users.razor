@@ -2,9 +2,11 @@
 @using Microsoft.AspNetCore.Authorization
 @using LMS.Blazor.Client.Services
 @using LMS.Shared.DTOs.Users
+@using LMS.Blazor.Client.Components.Common
 @attribute [Authorize(Roles = "Teacher")]
 @inject NavigationManager Navigation
 @inject IUsersService UsersService
+@inject ToastService ToastService
 
 <PageTitle>Användarhantering</PageTitle>
 
@@ -47,9 +49,25 @@ else
                     <td>@user.LastName</td>
                     <td>@user.Email</td>
                     <td>@user.Role</td>
-                    <td>@user.Course</td>
                     <td>
-                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => EditUser(user.Id)">Redigera</button>
+                        @if (user.CourseId != null)
+                        {
+                            <NavLink href="@($"/teacher/courses/{user.CourseId}")">
+                                @user.CourseName
+                            </NavLink>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Ingen kurs</span>
+                        }
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditUser(user.Id)">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PromptDeleteUser(user.Id, user.FirstName, user.LastName)">
+                            <i class="bi bi-trash"></i>
+                        </button>
                     </td>
                 </tr>
             }
@@ -58,12 +76,29 @@ else
 }
 </div>
 
+<ConfirmDialog IsOpen="showDeleteModal"
+               Title="@($"Ta bort användare: {deleteUserName}")"
+               Message="Är du säker på att du vill ta bort denna användare? Denna åtgärd går inte att ångra."
+               ConfirmButtonText="Ta bort"
+               ConfirmButtonClass="btn-danger"
+               OnCancel="CloseDeleteModal"
+               OnConfirm="ConfirmDeleteUserAsync" />
+
 @code {
     private IEnumerable<UserDto>? users;
+    private bool showDeleteModal = false;
+    private string? userToDeleteId = null;
+    private string? deleteUserName = null;
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadUsersAsync();
+    }
+
+    private async Task LoadUsersAsync()
+    {
         users = await UsersService.GetUsersAsync();
+        StateHasChanged();
     }
 
     private void NavigeraToCreateUser()
@@ -74,5 +109,39 @@ else
     private void EditUser(string id)
     {
         Navigation.NavigateTo($"/users/edit/{id}");
+    }
+
+    private void PromptDeleteUser(string userId, string firstName, string lastName)
+    {
+        userToDeleteId = userId;
+        deleteUserName = $"{firstName} {lastName}";
+        showDeleteModal = true;
+    }
+
+    private void CloseDeleteModal()
+    {
+        showDeleteModal = false;
+        userToDeleteId = null;
+        deleteUserName = null;
+    }
+
+    private async Task ConfirmDeleteUserAsync()
+    {
+        if (string.IsNullOrEmpty(userToDeleteId)) return;
+
+        var success = false;
+        // await UsersService.DeleteUserAsync(userToDeleteId);
+        
+        if (success)
+        {
+            CloseDeleteModal();
+            ToastService.ShowToast("Användaren har tagits bort framgångsrikt.", ToastType.Success);
+            await LoadUsersAsync(); 
+        }
+        else
+        {
+            CloseDeleteModal();
+            ToastService.ShowToast("Kunde inte ta bort användaren. Försök igen senare.", ToastType.Danger);
+        }
     }
 }

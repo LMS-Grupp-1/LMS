@@ -1,17 +1,33 @@
-﻿@inherits LayoutComponentBase
+﻿@using LMS.Blazor.Client.Services
+@inherits LayoutComponentBase
+@inject ToastService ToastService
+@implements IDisposable
 
 <div class="page">
-    <div class="">
+    <div class="sidebar">
         <NavMenu />
     </div>
 
-    <main>
+    <main class="bg-light min-vh-100">
         <TopBar />
 
-        <article class="content px-4">
+        <article class="content px-4 py-3">
             @Body
         </article>
     </main>
+</div>
+
+<!-- Global Floating Toast Container -->
+<div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 1100;">
+    @if (!string.IsNullOrEmpty(currentMessage))
+    {
+        <div class="toast show @(isSuccess ? "bg-success text-white" : "bg-danger text-white")" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-body d-flex justify-content-between align-items-center">
+                <span>@currentMessage</span>
+                <button type="button" class="btn-close btn-close-white" @onclick="() => currentMessage = null" aria-label="Close"></button>
+            </div>
+        </div>
+    }
 </div>
 
 <div id="blazor-error-ui" data-nosnippet>
@@ -19,3 +35,32 @@
     <a href="." class="reload">Reload</a>
     <span class="dismiss">🗙</span>
 </div>
+
+@code {
+    private string? currentMessage;
+    private bool isSuccess;
+
+    protected override void OnInitialized()
+    {
+        ToastService.OnShow += ShowToastHandler;
+    }
+
+    private void ShowToastHandler(string message, ToastType type)
+    {
+        currentMessage = message;
+        isSuccess = type == ToastType.Success;
+        StateHasChanged();
+
+        // Auto-hide after 4 seconds
+        _ = Task.Delay(4000).ContinueWith(_ => 
+        {
+            currentMessage = null;
+            InvokeAsync(StateHasChanged);
+        });
+    }
+
+    public void Dispose()
+    {
+        ToastService.OnShow -= ShowToastHandler;
+    }
+}

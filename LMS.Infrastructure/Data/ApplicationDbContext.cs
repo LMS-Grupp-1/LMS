@@ -11,4 +11,21 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Course> Courses { get; set; }
 
     public DbSet<Module> Modules => Set<Module>();
+    
+    public DbSet<Activity> Activities => Set<Activity>();
+    public DbSet<ActivityType> ActivityTypes => Set<ActivityType>();
+    public DbSet<Document> Documents => Set<Document>();
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+
+        builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext)
+            .Assembly);
+
+        builder.ApplyConfiguration(
+            new Configurations.ActivityConfiguration());
+        builder.ApplyConfiguration(
+            new LMS.Infrastructure.Data.Configurations.CourseConfiguration());
+    }
 }

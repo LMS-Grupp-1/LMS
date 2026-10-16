@@ -1,4 +1,5 @@
 ﻿using global::LMS.Shared.DTOs.ModulesDtos;
+using LMS.Shared.Constants;
 using LMS.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -6,9 +7,9 @@ using Service.Contracts;
 
 namespace LMS.Presentation.Controllers;
 
-[Authorize(Roles = "Teacher")]
+[Authorize]
 [ApiController]
-[Route("api/teacher/courses/{courseId:int}/[controller]")]
+[Route("api/teacher/courses/{courseId:int}/Modules")]
 public class ModulesController : ControllerBase
 {
     private readonly IServiceManager _service;
@@ -26,6 +27,7 @@ public class ModulesController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> CreateModule(int courseId, [FromBody] CreateModuleDto dto)
     {
         if (!ModelState.IsValid)
@@ -41,6 +43,39 @@ public class ModulesController : ControllerBase
         }
 
         // Returning Ok(true) to match your standard API response pattern
+        return Ok(true);
+    }
+
+    [HttpPut("{moduleId:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public async Task<IActionResult> UpdateModule(int courseId, int moduleId, [FromBody] CreateModuleDto dto)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(ModelState);
+        }
+
+        var (success, errorMessage) = await _service.ModuleService.UpdateModuleAsync(courseId, moduleId, dto);
+
+        if (!success)
+        {
+            return BadRequest(new { message = errorMessage });
+        }
+
+        return Ok(true);
+    }
+
+    [HttpDelete("{moduleId:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public async Task<IActionResult> DeleteModule(int courseId, int moduleId)
+    {
+        var (success, errorMessage) = await _service.ModuleService.DeleteModuleAsync(courseId, moduleId);
+
+        if (!success)
+        {
+            return BadRequest(new { message = errorMessage });
+        }
+
         return Ok(true);
     }
 }

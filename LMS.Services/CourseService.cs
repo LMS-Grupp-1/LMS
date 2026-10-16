@@ -17,7 +17,31 @@ namespace LMS.Services
 			return courses.Select(c => new CourseDto(c.Id, c.Name, c.Description, c.StartDate, c.EndDate));
 		}
 
-		public async Task<CourseDto?> GetCourseByIdAsync(int id)
+        public async Task<IEnumerable<CourseDto>> GetCoursesWithCountsAsync()
+        {
+            var courseDtos = await _uow.Courses.GetAllWithCountsAsync(trackChanges: false);
+
+            if (courseDtos == null || !courseDtos.Any())
+            {
+                return Enumerable.Empty<CourseDto>();
+            }
+
+            return courseDtos;
+        }
+
+        public async Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync()
+        {
+            var courseLookupDtos = await _uow.Courses.GetCourseLookupsAsync(trackChanges: false);
+
+            if (courseLookupDtos == null || !courseLookupDtos.Any())
+            {
+                return Enumerable.Empty<CourseLookupDto>();
+            }
+
+            return courseLookupDtos;
+        }
+
+        public async Task<CourseDto?> GetCourseByIdAsync(int id)
 		{
 			var course = await _uow.Courses.GetByIdAsync(id, trackChanges: false);
 			if (course is null) return null;
@@ -71,10 +95,10 @@ namespace LMS.Services
 		public async Task DeleteCourseAsync(int id)
 		{
 			var course = await _uow.Courses.GetByIdAsync(id, trackChanges: true);
-			if (course is null)
+            if (course is null)
 				throw new KeyNotFoundException($"Course with id {id} was not found.");
 
-			_uow.Courses.DeleteCourse(course);
+            _uow.Courses.DeleteCourse(course);
 			await _uow.CompleteAsync();
 		}
 
@@ -91,12 +115,6 @@ namespace LMS.Services
 			}
 
 			var today = DateTime.Today;
-
-			if (startDate.Date < today || endDate.Date < today)
-			{
-				throw new ArgumentException(
-					"Course dates can't be before today's date.");
-			}
 
 			if (startDate > endDate)
 			{

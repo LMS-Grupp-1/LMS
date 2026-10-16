@@ -1,0 +1,193 @@
+﻿@page "/teacher/courses/{CourseId:int}"
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Components.Courses
+@using LMS.Blazor.Client.Components.Modules
+@using LMS.Blazor.Client.Components.Users
+@attribute [Authorize(Roles = "Teacher")]
+@inject ICourseService CourseService
+@inject NavigationManager navigationManager
+@inject ToastService ToastService
+
+<div class="container my-4">
+    <div class="card shadow-sm p-4 mb-4 border-0 bg-light">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h5 class="fw-bold mb-2">@(currentCourse?.Name ?? "Laddar kurs...")</h5>
+                <p class="text-secondary">@(currentCourse?.Description ?? string.Empty)</p>
+                
+                @if (currentCourse != null)
+                {
+                    <div class="d-flex align-items-center text-muted small gap-3">
+                        <div>
+                            <i class="bi bi-calendar-event me-1 text-primary"></i>
+                            <span>@currentCourse.StartDate.ToShortDateString()</span>
+                            <span> - @currentCourse.EndDate.ToShortDateString()</span>
+                        </div>
+                    </div>
+                }
+            </div>
+            
+            <button class="btn btn-outline-primary" @onclick="OpenEditCourseDialog">
+                <i class="bi bi-pencil me-1"></i> Redigera kurs
+            </button>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <button class="nav-link @GetActiveTabClass("overview")" @onclick='() => SetActiveTab("overview")'>
+                Översikt
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @GetActiveTabClass("modules")" @onclick='() => SetActiveTab("modules")'>
+                Moduler
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @GetActiveTabClass("submissions")" @onclick='() => SetActiveTab("submissions")'>
+                Inlämningar
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @GetActiveTabClass("students")" @onclick='() => SetActiveTab("students")'>
+                Studenter
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link @GetActiveTabClass("documents")" @onclick='() => SetActiveTab("documents")'>
+                Dokument
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+       @if (isLoading || currentCourse == null)
+        {
+            <div class="alert alert-info">Laddar kursdetaljer...</div>
+        }
+        else
+        {
+            @switch (activeTab)
+            {
+                case "overview":
+                    <CourseOverview Course="currentCourse" />
+                    break;
+                case "modules":
+                    <ModuleList CourseId="CourseId" CurrentCourse="currentCourse" />
+                    break;
+                case "submissions":
+                    <div class="alert alert-info">Inlämningar kommer snart...</div>
+                    break;
+                case "students":
+                    <StudentList CourseId="CourseId" />
+                    break;
+                case "documents":
+                    <TeacherDocuments CourseId="@CourseId" />
+                    break;
+            }
+        }
+    </div>
+</div>
+
+<EditCourseDialog IsOpen="isModalOpen"
+    CourseEditModel="courseToEdit"
+    OnCourseUpdated="HandleCourseUpdated"
+    OnClose="CloseModal" />
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private int _loadedCourseId;
+    private CourseDto? currentCourse;
+    private bool isLoading = true;
+    private string activeTab = "overview";
+
+    // For Edit Course Modal
+    private bool isModalOpen = false;
+    private CourseCreateDto? courseToEdit = null;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        CheckTabQueryParam();
+
+        // Only fetch from API if the CourseId has actually changed!
+        if (CourseId != _loadedCourseId)
+        {
+            _loadedCourseId = CourseId;
+            await LoadCourseAsync();
+        }
+    }
+
+    private void CheckTabQueryParam()
+    {
+        var uri = navigationManager.ToAbsoluteUri(navigationManager.Uri);
+        if (uri.Query.Contains("tab=students"))
+        {
+            activeTab = "students";
+        }
+    }
+
+    private async Task LoadCourseAsync()
+    {
+        isLoading = true;
+        StateHasChanged(); // Tell UI we are loading
+        try
+        {
+            currentCourse = await CourseService.GetCourseByIdAsync(CourseId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+            currentCourse = null;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged(); // Tell UI loading is done and currentCourse is ready
+        }
+    }
+
+    private void SetActiveTab(string tabName)
+    {
+        activeTab = tabName;
+    }
+
+    private string GetActiveTabClass(string tabName)
+    {
+        return activeTab == tabName ? "active fw-bold" : string.Empty;
+    }
+
+    private void OpenEditCourseDialog()
+    {
+        if (currentCourse == null)
+        {
+            ToastService.ShowToast("Ingen tillgänglig kurs för redigering.", ToastType.Danger);
+            return; // Safety check
+        }
+        courseToEdit = new CourseCreateDto
+        {
+            Id = currentCourse.Id,
+            Name = currentCourse.Name,
+            Description = currentCourse.Description,
+            StartDate = currentCourse.StartDate,
+            EndDate = currentCourse.EndDate
+        };
+        isModalOpen = true;
+    }
+
+    private void CloseModal()
+    {
+        isModalOpen = false;
+        courseToEdit = null;
+    }
+
+    private async Task HandleCourseUpdated()
+    {
+        CloseModal();
+        await LoadCourseAsync(); // Refresh list after update
+    }
+}

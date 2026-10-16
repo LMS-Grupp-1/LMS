@@ -1,4 +1,5 @@
 ﻿@page "/my-course"
+@using LMS.Blazor.Client.Components.Modules
 @attribute [Authorize(Roles = UserRoles.Student)]
 @implements IDisposable
 
@@ -30,17 +31,13 @@ else if (course is not null)
         <h1 class="h3 fw-bold mb-1">@course.Name</h1>
         <p class="text-muted mb-1">@course.Description</p>
         <small class="text-muted">
-            <i class="bi bi-calendar"></i>
+            <i class="bi bi-calendar-range"></i>
             @course.StartDate.ToString("yyyy-MM-dd") – @course.EndDate.ToString("yyyy-MM-dd")
         </small>
     </div>
 
-    <h2 class="h5 fw-semibold mb-3">Moduler</h2>
-    <div class="card">
-        <div class="card-body text-muted">
-            Kursens moduler visas här.
-        </div>
-    </div>
+    <h2 class="h5 fw-semibold mb-3">MODULER</h2>
+    <StudentModuleList CourseId="course.Id" />
 }
 
 @code {
