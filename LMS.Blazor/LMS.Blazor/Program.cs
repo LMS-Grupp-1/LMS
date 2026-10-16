@@ -26,6 +26,7 @@ public class Program
         builder.Services.AddScoped<ICourseService, CourseService>();
         builder.Services.AddScoped<IModuleService, ModuleService>();
         builder.Services.AddScoped<ToastService>();
+        builder.Services.AddScoped<LMS.Blazor.Client.Services.DocumentService>();
 
         var app = builder.Build();
 

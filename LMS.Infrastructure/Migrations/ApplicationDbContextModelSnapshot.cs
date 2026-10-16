@@ -222,6 +222,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("FileName")
@@ -234,7 +235,8 @@ namespace LMS.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<long>("SizeBytes")
                         .HasColumnType("bigint");
@@ -255,13 +257,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.HasIndex("CourseId");
 
-                    b.HasIndex("Description")
-                        .IsUnique();
-
                     b.HasIndex("ModuleId");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
 
                     b.HasIndex("UploadedById");
 

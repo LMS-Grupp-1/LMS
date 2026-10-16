@@ -20,11 +20,13 @@ namespace LMS.Infrastructure.Data.Configurations
                 .HasMaxLength(DocumentConstraints.MaxContentTypeLength)
                 .IsRequired();
 
-            builder.HasIndex(document => document.Name)
-                .IsUnique();
+            builder.Property(document => document.Name)
+                .HasMaxLength(DocumentConstraints.MaxNameLength)
+                .IsRequired();
 
-            builder.HasIndex(document => document.Description)
-                .IsUnique();
+            builder.Property(document => document.Description)
+                .HasMaxLength(DocumentConstraints.MaxDescriptionLength)
+                .IsRequired();
 
             builder.Property(document => document.BlobPath)
                 .HasMaxLength(DocumentConstraints.MaxBlopPathLength)

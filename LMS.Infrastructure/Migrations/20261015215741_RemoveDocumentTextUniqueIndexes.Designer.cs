@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LMS.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20261015135504_VerifyDocumentModel")]
-    partial class VerifyDocumentModel
+    [Migration("20261015215741_RemoveDocumentTextUniqueIndexes")]
+    partial class RemoveDocumentTextUniqueIndexes
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -225,6 +225,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.Property<string>("Description")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<string>("FileName")
@@ -237,6 +238,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<long>("SizeBytes")
@@ -258,13 +260,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.HasIndex("CourseId");
 
-                    b.HasIndex("Description")
-                        .IsUnique();
-
                     b.HasIndex("ModuleId");
-
-                    b.HasIndex("Name")
-                        .IsUnique();
 
                     b.HasIndex("UploadedById");
 
