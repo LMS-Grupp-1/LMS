@@ -197,7 +197,7 @@ public sealed class DocumentsController(IServiceManager serviceManager)
         {
             return NotFound(new
             {
-                message = "Filen kunde inte hittas i lagringen."
+                message = "Filen kunde inte hittas."
             });
         }
     }
