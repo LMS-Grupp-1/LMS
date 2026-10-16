@@ -1,4 +1,3 @@
-using Azure.Storage.Blobs;
 using LMS.API.Extensions;
 using LMS.API.Services;
 using LMS.Infrastructure.Data;
@@ -8,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 public class Program
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -36,17 +35,16 @@ public class Program
 
         var app = builder.Build();
 
-        app.ConfigureExceptionHandler();
+		// Local development only (checked inside the method): starts Azurite before
+		// DataSeedService creates and clears the blob container. Does nothing in Azure.
+		await app.EnsureAzuriteRunningAsync();
+
+		app.ConfigureExceptionHandler();
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
-            // Local development only: Azurite starts empty. In Azure the container is created by Bicep.
-            using var scope = app.Services.CreateScope();
-            scope.ServiceProvider.GetRequiredService<BlobContainerClient>().CreateIfNotExists();
-
             app.UseSwagger();
-
             app.UseSwaggerUI();
         }
 
@@ -60,6 +58,6 @@ public class Program
         app.MapControllers()
             .RequireAuthorization("Default");
 
-        app.Run();
+        await app.RunAsync();
     }
 }
