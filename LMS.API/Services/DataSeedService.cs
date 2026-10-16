@@ -1,4 +1,5 @@
-﻿using LMS.Infrastructure.Data;
+﻿using Azure.Storage.Blobs;
+using LMS.Infrastructure.Data;
 using LMS.Shared.Constants;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -11,18 +12,20 @@ internal class DataSeedService : IHostedService
     private readonly IServiceProvider serviceProvider;
     private readonly IConfiguration configuration;
     private readonly ILogger<DataSeedService> logger;
-    private UserManager<ApplicationUser> userManager = null!;
+	private readonly IHostEnvironment environment;
+	private UserManager<ApplicationUser> userManager = null!;
     private RoleManager<IdentityRole> roleManager = null!;
     private string _password = null!;
 	    
 	private const string DefaultUserEmail = "admin@lms.com";
     
 
-    public DataSeedService(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DataSeedService> logger)
+    public DataSeedService(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DataSeedService> logger, IHostEnvironment environment)
     {
         this.serviceProvider = serviceProvider;
         this.configuration = configuration;
         this.logger = logger;
+        this.environment = environment;
     }
 
 	public async Task StartAsync(CancellationToken cancellationToken)
@@ -35,8 +38,22 @@ internal class DataSeedService : IHostedService
 		// In Azure this is how the tables are created. Locally it replaces Update-Database.
 		await context.Database.MigrateAsync(cancellationToken);
 
+		// Local development only: Azurite starts empty. In Azure the container is created by Bicep.
+		BlobContainerClient? container = null;
+		if (environment.IsDevelopment())
+		{
+			container = scope.ServiceProvider.GetRequiredService<BlobContainerClient>();
+			await container.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
+		}
+
 		// Seed only an empty database, so existing data is never changed.
 		if (await context.Users.AnyAsync(cancellationToken)) return;
+
+		// A new database means the old blobs have no matching rows, so start with an empty container.
+		if (container is not null)
+		{
+			await ClearContainerAsync(container, cancellationToken);
+		}
 
 		userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
 		roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
@@ -83,6 +100,18 @@ internal class DataSeedService : IHostedService
 			logger.LogError($"Data seed fail with message: {ex.Message}. Exception: {ex.InnerException}");
 			throw;
 		}
+	}
+
+	private async Task ClearContainerAsync(BlobContainerClient container, CancellationToken cancellationToken)
+	{
+		var deleted = 0;
+		await foreach (var blob in container.GetBlobsAsync(cancellationToken: cancellationToken))
+		{
+			await container.DeleteBlobIfExistsAsync(blob.Name, cancellationToken: cancellationToken);
+			deleted++;
+		}
+
+		logger.LogInformation("Cleared {Count} blobs from {Container}", deleted, container.Name);
 	}
 
 	private async Task CreateRolesAsync(string[] rolenames)
