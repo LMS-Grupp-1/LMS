@@ -82,7 +82,7 @@ public class ActivityService : IActivityService
         }
 
         if (startDate.Date < module.StartDate.Date ||
-            endDate > module.EndDate.Date)
+            endDate.Date > module.EndDate.Date)
         {
             throw new ActivityValidationException(
                 ActivityValidationError.OutsideModulePeriod,
