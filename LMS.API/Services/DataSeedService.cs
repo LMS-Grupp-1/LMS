@@ -221,7 +221,7 @@ internal class DataSeedService : IHostedService
 			addedCount);
 	}
 
-    private async Task SeedTestActivityAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    private async Task SeedTestActivitiesAsync(ApplicationDbContext context, CancellationToken cancellationToken)
     {
         string[] seedCourseNames =
             [
