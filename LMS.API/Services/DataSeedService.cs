@@ -1,8 +1,12 @@
 ﻿using Azure.Storage.Blobs;
+using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using LMS.Shared.Constants;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Identity.Client;
 
 namespace LMS.API.Services;
 
@@ -46,8 +50,20 @@ internal class DataSeedService : IHostedService
 			await container.CreateIfNotExistsAsync(cancellationToken: cancellationToken);
 		}
 
-		// Seed only an empty database, so existing data is never changed.
-		if (await context.Users.AnyAsync(cancellationToken)) return;
+		// Reference data must also be seeded in existing databases
+		await SeedActivityTypesAsync(context, cancellationToken);
+
+		//Existing databases keep their users and courses
+		if (await context.Users.AnyAsync(cancellationToken))
+		{
+			if (environment.IsDevelopment())
+			{
+				await SeedTestModulesAsync(context, cancellationToken);
+                await SeedTestActivitiesAsync(context, cancellationToken);
+            }
+
+            return;
+        }
 
 		// A new database means the old blobs have no matching rows, so start with an empty container.
 		if (container is not null)
@@ -93,6 +109,12 @@ internal class DataSeedService : IHostedService
 					("sara.lindberg@lms.com", "Sara", "Lindberg")
 				]);
 
+			if (environment.IsDevelopment())
+			{
+				await SeedTestModulesAsync(context, cancellationToken);
+                await SeedTestActivitiesAsync(context, cancellationToken);
+            }
+
 			logger.LogInformation("Seed complete");
 		}
 		catch (Exception ex)
@@ -102,7 +124,203 @@ internal class DataSeedService : IHostedService
 		}
 	}
 
-	private async Task ClearContainerAsync(BlobContainerClient container, CancellationToken cancellationToken)
+	private async Task SeedActivityTypesAsync(
+		ApplicationDbContext context,
+		CancellationToken cancellationToken)
+	{
+		string[] requiredNames =
+			[
+			"Lecture",
+			"E-Learning",
+			"Exercise",
+			"Assignment",
+			"Other"
+			];
+
+		var existingNames = await context.ActivityTypes
+				.AsNoTracking()
+				.Select(type => type.Name)
+				.ToListAsync(cancellationToken);
+
+        var existingNameSet = existingNames
+                .Select(name => name.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+		var missingTypes = requiredNames
+				.Where(name => !existingNameSet.Contains(name))
+				.Select(name => new ActivityType
+				{
+					Name = name
+				})
+				.ToList();
+
+		if (missingTypes.Count == 0)
+			return;
+
+		context.ActivityTypes.AddRange(missingTypes);
+
+		await context.SaveChangesAsync(cancellationToken);
+
+		logger.LogInformation(
+			"Seeded {Count} activity types.",
+			missingTypes.Count);
+    }
+
+    private async Task SeedTestModulesAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+	{
+		string[] seedCourseNames =
+			[
+				"Lexicon LTU",
+				"Lexicon GBG"
+			];
+
+		var courses = await context.Courses
+			.AsNoTracking()
+			.Where(course => seedCourseNames.Contains(course.Name))
+			.ToListAsync(cancellationToken);
+
+		int addedCount = 0;
+
+		foreach (var course in courses)
+		{
+			bool hasModules = await context.Modules.AnyAsync(
+				module => module.CourseId == course.Id,
+				cancellationToken);
+
+			if (hasModules)
+				continue;
+
+			if (course.StartDate >= course.EndDate)
+			{
+				logger.LogWarning(
+					"Skipped test module for course {CourseId}: " +
+					"the course period is too short or invalid.",
+					course.Id);
+
+				continue;
+			}
+
+			context.Modules.Add(new Domain.Models.Entities.Module
+			{
+				CourseId = course.Id,
+				Name = "Testmodul aktiviteter",
+				Description = "Modul för att testa aktiviteter och tidsvalidering.",
+				StartDate = course.StartDate,
+				EndDate = course.EndDate,
+			});
+
+			addedCount++;
+		}
+		if (addedCount == 0)
+			return;
+
+		await context.SaveChangesAsync(cancellationToken);
+
+		logger.LogInformation(
+			"Seeded {Count} test modules.",
+			addedCount);
+	}
+
+    private async Task SeedTestActivityAsync(ApplicationDbContext context, CancellationToken cancellationToken)
+    {
+        string[] seedCourseNames =
+            [
+                "Lexicon LTU",
+                "Lexicon GBG"
+            ];
+
+        var modules = await context.Modules
+            .AsNoTracking()
+            .Where(module => module.Name == "Testmodul aktiviteter" && 
+			seedCourseNames.Contains(module.Course.Name))
+            .ToListAsync(cancellationToken);
+
+		var activityTypes = await context.ActivityTypes
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+		var lectureType = activityTypes.FirstOrDefault(type => string.Equals(
+			type.Name.Trim(),
+			"Lecture",
+			StringComparison.OrdinalIgnoreCase));
+
+        var exerciseType = activityTypes.FirstOrDefault(type => string.Equals(
+            type.Name.Trim(),
+            "Exercise",
+            StringComparison.OrdinalIgnoreCase));
+
+		if (lectureType is null || exerciseType is null)
+		{
+			throw new InvalidOperationException(
+				"Lecture and Exercise activity types must be seeded " +
+				"before test activities.");
+		}
+
+        int addedCount = 0;
+
+        foreach (var module in modules)
+        {
+            bool hasActivities = await context.Activities.AnyAsync(
+                activity => activity.ModuleId == module.Id,
+                cancellationToken);
+
+            if (hasActivities)
+                continue;
+
+			DateTime firstStart = module.StartDate.Date.AddHours(9);
+
+            if (firstStart < module.StartDate)
+            {
+                firstStart = module.StartDate;
+            }
+			 
+			DateTime firstEnd = firstStart.AddHours(1);
+			DateTime secondStart = firstEnd.AddHours(1);
+			DateTime secondEnd = secondStart.AddHours(1);
+
+			if (firstStart.Date < module.StartDate.Date ||
+				secondEnd.Date > module.EndDate.Date)
+			{
+				logger.LogWarning(
+					"Skipped test activities for module {ModuleId}: " +
+					"the module period cannot contain the test schedule.",
+					module.Id);
+
+				continue;
+			}
+
+            context.Activities.AddRange(new Activity
+            {
+                ModuleId = module.Id,
+				ActivityTypeId = lectureType.Id,
+                Name = "Introduktionsföreläsning",
+                Description = "Genomgång av modulens innehåll och mål.",
+                StartDate = firstStart,
+                EndDate = firstEnd
+            },
+			new Activity
+			{
+                ModuleId = module.Id,
+                ActivityTypeId = exerciseType.Id,
+                Name = "Praktisk övning",
+                Description = "Övning kopplad till introduktionsföreläsningen.",
+                StartDate = secondStart,
+                EndDate = secondEnd
+            });
+
+			addedCount += 2;
+        }
+        if (addedCount == 0)
+            return;
+
+        await context.SaveChangesAsync(cancellationToken);
+
+        logger.LogInformation(
+            "Seeded {Count} test activities.",
+            addedCount);
+    }
+
+    private async Task ClearContainerAsync(BlobContainerClient container, CancellationToken cancellationToken)
 	{
 		var deleted = 0;
 		await foreach (var blob in container.GetBlobsAsync(cancellationToken: cancellationToken))
