@@ -1,16 +1,7 @@
 ﻿using LMS.Shared.DTOs.DocumentDtos;
+using Domain.Models.Documents;
 
 namespace Service.Contracts;
-
-public record DocumentActor(
-    string UserId,
-    bool IsTeacher,
-    bool IsStudent);
-
-public record DocumentDownload(
-    Stream Content,
-    string ContentType,
-    string FileName);
 
 public interface IDocumentService
 {

@@ -3,6 +3,7 @@ using LMS.Presentation.Models;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using Domain.Models.Exceptions;
+using Domain.Models.Documents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -47,7 +48,8 @@ public sealed class DocumentsController(IServiceManager serviceManager)
         return ExecuteAsync(async actor =>
         {
             if (courseId <= 0)
-                return BadRequest(new { message = "Välj en giltig kurs." });
+                throw new DocumentValidationException(
+                    "The course ID must be greater than zero.");
 
             var targets = await _documents.TargetsAsync(
                 courseId, actor, cancellationToken);
