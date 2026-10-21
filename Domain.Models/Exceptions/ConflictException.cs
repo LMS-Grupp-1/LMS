@@ -5,10 +5,7 @@ using System.Text;
 namespace Domain.Models.Exceptions;
 public abstract class ConflictException : Exception
 {
-    public string Code { get; }
-
-    protected ConflictException(string message, string code) : base(message)
+    protected ConflictException(string message) : base(message)
     {
-        Code = code;
     }
 }

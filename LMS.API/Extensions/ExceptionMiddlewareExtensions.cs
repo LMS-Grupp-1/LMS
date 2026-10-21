@@ -14,26 +14,26 @@ public static class ExceptionMiddlewareExtensions
 
             ExceptionHandler = async context =>
             {
-                var feature = context.Features.Get<IExceptionHandlerFeature>();
+                var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
 
-                if (feature is null)
+                if (contextFeature is null)
                     return;
       
-                    var exception = feature.Error;
+                    var exception = contextFeature.Error;
 
-                    var (statusCode, title, code) = exception switch
+                    var (statusCode, title) = exception switch
                     {
-                        BadRequestException ex => (StatusCodes.Status400BadRequest, "Bad Request", ex.Code),
-                        NotFoundException ex => (StatusCodes.Status404NotFound, ex.Title, ex.Code),
-                        ConflictException ex => (StatusCodes.Status409Conflict, "Conflict", ex.Code),
-                        TokenValidationException ex => (StatusCodes.Status401Unauthorized, "Unauthorized", "Unauthorized"),
-                        _ => (StatusCodes.Status500InternalServerError, "Internal Server Error", "InternalServerError")
+                        BadRequestException ex => (StatusCodes.Status400BadRequest, "Bad Request"),
+                        NotFoundException ex => (StatusCodes.Status404NotFound, ex.Title),
+                        ConflictException ex => (StatusCodes.Status409Conflict, "Conflict"),
+                        TokenValidationException ex => (StatusCodes.Status401Unauthorized, "Unauthorized"),
+                        _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
                     };
 
-                var factory = context.RequestServices
+                var problemDetailsFactory = context.RequestServices
                     .GetRequiredService<ProblemDetailsFactory>();
 
-                    var problem = factory.CreateProblemDetails(
+                    var problemDetails = problemDetailsFactory.CreateProblemDetails(
                         context,
                         statusCode: statusCode,
                         title: title,
@@ -41,10 +41,8 @@ public static class ExceptionMiddlewareExtensions
                         "An unexpected error occured." : exception.Message,
                         instance: context.Request.Path);
 
-                problem.Extensions["code"] = code;
-
                     context.Response.StatusCode = statusCode;
-                    await context.Response.WriteAsJsonAsync(problem);
+                    await context.Response.WriteAsJsonAsync(problemDetails);
                 }
 
             });

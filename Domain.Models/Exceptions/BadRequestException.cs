@@ -5,10 +5,7 @@ using System.Text;
 namespace Domain.Models.Exceptions;
     public abstract class BadRequestException : Exception
     {
-        public string Code { get; }
-
-        protected BadRequestException(string message, string code) : base(message) 
+        protected BadRequestException(string message) : base(message) 
         {
-            Code = code;
         }
     }

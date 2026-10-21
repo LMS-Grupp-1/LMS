@@ -6,6 +6,6 @@ namespace Domain.Models.Exceptions;
 
 public sealed class ActivityNameRequiredException : BadRequestException
 {
-    public ActivityNameRequiredException() : base("Activity name is required.", "ActivityNameRequired")
+    public ActivityNameRequiredException() : base("Activity name is required.")
     { }
 }
