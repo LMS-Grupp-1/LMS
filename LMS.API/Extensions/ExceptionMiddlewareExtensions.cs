@@ -37,8 +37,7 @@ public static class ExceptionMiddlewareExtensions
                         context,
                         statusCode: statusCode,
                         title: title,
-                        detail: statusCode == StatusCodes.Status500InternalServerError ?
-                        "An unexpected error occured." : exception.Message,
+                        detail: exception.Message,
                         instance: context.Request.Path);
 
                     context.Response.StatusCode = statusCode;
