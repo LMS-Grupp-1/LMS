@@ -56,11 +56,13 @@ public sealed class DocumentService(IApiProxyClient apiProxy)
 
         form.Add(fileContent, "File", file.Name);
 
-        return await apiProxy.SendAndHandleErrorAsync<DocumentDto>(
+        var document = await apiProxy.SendAsync<DocumentDto>(
             HttpMethod.Post,
             "documents",
             form,
             cancellationToken);
+
+        return (document, null);
     }
 
     private static void AddId(
