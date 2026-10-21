@@ -203,7 +203,8 @@ internal class DataSeedService : IHostedService
 			context.Modules.Add(new Domain.Models.Entities.Module
 			{
 				CourseId = course.Id,
-				Name = "Testmodul aktiviteter",
+				Name = course.Name == "Lexicon LTU"
+					? "Grundläggande C#" : "HTML och CSS",
 				Description = "Modul för att testa aktiviteter och tidsvalidering.",
 				StartDate = course.StartDate,
 				EndDate = course.EndDate,
@@ -223,16 +224,12 @@ internal class DataSeedService : IHostedService
 
     private async Task SeedTestActivitiesAsync(ApplicationDbContext context, CancellationToken cancellationToken)
     {
-        string[] seedCourseNames =
-            [
-                "Lexicon LTU",
-                "Lexicon GBG"
-            ];
-
         var modules = await context.Modules
             .AsNoTracking()
-            .Where(module => module.Name == "Testmodul aktiviteter" && 
-			seedCourseNames.Contains(module.Course.Name))
+            .Where(module => (module.Course.Name == "Lexicon LTU" && 
+				module.Name == "Grundläggande C#") || 
+				(module.Course.Name == "Lexicon GBG" && 
+				module.Name == "HTML och CSS"))
             .ToListAsync(cancellationToken);
 
 		var activityTypes = await context.ActivityTypes
