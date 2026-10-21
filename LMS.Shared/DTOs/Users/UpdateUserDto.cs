@@ -19,9 +19,9 @@ public class UpdateUserDto
     public string Role { get; set; } = null!;
 
 	[StringLength(UserConstraints.FirstNameMaxLength, ErrorMessage = "Förnamnet får inte överskrida {1} tecken.")]
-	public string? FirstName { get; set; } = string.Empty;
+	public string FirstName { get; set; } = string.Empty;
 	[StringLength(UserConstraints.LastNameMaxLength, ErrorMessage = "Efternamnet får inte överskrida {1} tecken.")]
-	public string? LastName { get; set; } = string.Empty;
+	public string LastName { get; set; } = string.Empty;
 
 	public int? CourseId { get; set; } = null;
 }

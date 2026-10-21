@@ -1,11 +1,17 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Shared.DTOs.Users
 @using LMS.Blazor.Client.ViewModels
-@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @inject NavigationManager Navigation
-@inject IUsersService UsersService
+@inject IApiProxyClient ApiProxy
 
 <div class="container-fluid px-0">
+@if (!string.IsNullOrEmpty(errorMsg))
+{
+    <div class="text-danger my-2">
+        <i class="bi bi-exclamation-circle me-1"></i> @errorMsg
+    </div>
+}
 @if (users == null)
 {
     <h3 class="mb-3">Registrerade studenter</h3>
@@ -60,6 +66,7 @@ else
     [Parameter] public int CourseId { get; set; }
 
     private IEnumerable<UserDto>? users;
+    private string? errorMsg = null;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -68,7 +75,17 @@ else
 
     private async Task LoadUsersByCourseIdAsync()
     {
-        users = await UsersService.GetUsersByCourseIdAsync(CourseId);
+        try
+        {
+            users = await ApiProxy.GetAsync<IEnumerable<UserDto>>($"users/students/{CourseId}") ?? Enumerable.Empty<UserDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Kunde inte ladda studenter: {ex.Message}";
+            users = null;
+        }
+
+
         StateHasChanged();
     }
 

@@ -1,15 +1,18 @@
 ﻿
 @page "/users/create"
 @using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.Users
 @using LMS.Shared.DTOs.CourseDtos
 @using Microsoft.AspNetCore.Authorization
+@using System.Net
+@using System.Net.Http.Json
 @attribute [Authorize(Roles = UserRoles.Teacher)]
-@inject IUsersService UsersService
 @inject ICourseService CourseService
 @inject NavigationManager navigationManager
 @inject ToastService ToastService
+@inject IApiProxyClient ApiProxy
 
 <div class="container mt-4">
     <div class="col-md-6">
@@ -148,9 +151,14 @@
 
         try
         {
-            bool success = await UsersService.CreateUserAsync(model);
+            using var content = JsonContent.Create(model);
+            var (data, responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                    HttpMethod.Post,
+                    "users",
+                    content
+            );
 
-            if (success)
+            if (string.IsNullOrEmpty(responseErrorMessage))
             {
                 ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} har skapats.", ToastType.Success);
 
@@ -158,7 +166,7 @@
             }
             else
             {
-                errorMessage = $"Det gick inte att skapa användaren.";
+                errorMessage = responseErrorMessage ?? "Det gick inte att skapa användaren.";
             }
         }
         catch (Exception ex)
