@@ -29,7 +29,7 @@ namespace LMS.Services.Tests
 		{
 			// The service reaches the repository through the unit of work
 			_uow.Setup(u => u.Courses).Returns(_courseRepository.Object);
-
+			
 			// System under test
 			_sut = new CourseService(_uow.Object);
 		}
@@ -136,6 +136,37 @@ namespace LMS.Services.Tests
 				r => r.GetForStudentAsync("student-1", false),
 				Times.Once);
 		}
+		
+		[Fact]
+		public async Task GetByIdAsync_GetCourse()
+		{
+			// Arrange: return a course for any arguments, so only Verify decides the outcome
+			_courseRepository
+				.Setup(r => r.GetByIdAsync(1, false))
+				.ReturnsAsync(CreateCourse());
+
+			// Act
+			var Course = await _sut.GetCourseByIdAsync(1);
+						
+			// Assert: 
+			Assert.Equal(Course.Name,"Lexicon LTU");
+		}
+		
+		[Fact]
+		public async Task GetByIdAsync_EmptyCourseOnNull()
+		{
+			// Arrange: return a course for any arguments, so only Verify decides the outcome
+			_courseRepository
+				.Setup(r => r.GetByIdAsync(1, false))
+				.ReturnsAsync(CreateCourse());
+
+			// Act
+			var Course = await _sut.GetCourseByIdAsync(432);
+						
+			// Assert: 
+			Assert.Null(Course);
+		}
+
 
 		/// <summary>
 		/// Creates a course with three students, already sorted by last name
