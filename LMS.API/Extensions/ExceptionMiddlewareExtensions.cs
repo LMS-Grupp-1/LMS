@@ -10,18 +10,22 @@ public static class ExceptionMiddlewareExtensions
     {
         app.UseExceptionHandler(builder =>
         {
-            
-            builder.Run(async context =>
+            AllowStatusCode404Response = true,
+
+            ExceptionHandler = async context =>
             {
                 var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
-                if (contextFeature != null)
-                {
-                    var problemDetailsFactory = app.Services.GetRequiredService<ProblemDetailsFactory>();
+
+                if (contextFeature is null)
+                    return;
+      
                     var exception = contextFeature.Error;
 
                     var (statusCode, title) = exception switch
                     {
+                        BadRequestException ex => (StatusCodes.Status400BadRequest, "Bad Request"),
                         NotFoundException ex => (StatusCodes.Status404NotFound, ex.Title),
+                        ConflictException ex => (StatusCodes.Status409Conflict, "Conflict"),
                         TokenValidationException ex => (StatusCodes.Status401Unauthorized, "Unauthorized"),
                         KeyNotFoundException ex =>  (StatusCodes.Status404NotFound, "Key not found"),
                         InvalidOperationException ex => (StatusCodes.Status400BadRequest, "Invalid Operation"),
@@ -31,14 +35,17 @@ public static class ExceptionMiddlewareExtensions
                         _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
                     };
 
+                var problemDetailsFactory = context.RequestServices
+                    .GetRequiredService<ProblemDetailsFactory>();
+
                     var problemDetails = problemDetailsFactory.CreateProblemDetails(
                         context,
-                        statusCode,
-                        title,
+                        statusCode: statusCode,
+                        title: title,
                         detail: exception.Message,
                         instance: context.Request.Path);
 
-                    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    context.Response.StatusCode = statusCode;
                     await context.Response.WriteAsJsonAsync(problemDetails);
                 }
 
