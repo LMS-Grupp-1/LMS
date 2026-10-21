@@ -17,13 +17,4 @@ namespace LMS.Shared.DTOs.DocumentDtos
         int? ModuleId,
         int? ActivityId,
         string Location);
-
-    public record DocumentTarget( //Connections for the document
-        int? CourseId = null,
-        int? ModuleId = null,
-        int? ActivityId = null);
-
-    public record DocumentTargetDto( //Ensures a readble label
-        DocumentTarget Target,
-        string Label);
 }
