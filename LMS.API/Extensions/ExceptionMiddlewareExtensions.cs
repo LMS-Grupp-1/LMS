@@ -8,35 +8,45 @@ public static class ExceptionMiddlewareExtensions
 {
     public static void ConfigureExceptionHandler(this WebApplication app)
     {
-        app.UseExceptionHandler(builder =>
+        app.UseExceptionHandler(new ExceptionHandlerOptions
         {
-            builder.Run(async context =>
-            {
-                var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
-                if (contextFeature != null)
-                {
-                    var problemDetailsFactory = app.Services.GetRequiredService<ProblemDetailsFactory>();
-                    var exception = contextFeature.Error;
+            AllowStatusCode404Response = true,
 
-                    var (statusCode, title) = exception switch
+            ExceptionHandler = async context =>
+            {
+                var feature = context.Features.Get<IExceptionHandlerFeature>();
+
+                if (feature is null)
+                    return;
+      
+                    var exception = feature.Error;
+
+                    var (statusCode, title, code) = exception switch
                     {
-                        NotFoundException ex => (StatusCodes.Status404NotFound, ex.Title),
-                        TokenValidationException ex => (StatusCodes.Status401Unauthorized, "Unauthorized"),
-                        _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
+                        BadRequestException ex => (StatusCodes.Status400BadRequest, "Bad Request", ex.Code),
+                        NotFoundException ex => (StatusCodes.Status404NotFound, ex.Title, ex.Code),
+                        ConflictException ex => (StatusCodes.Status409Conflict, "Conflict", ex.Code),
+                        TokenValidationException ex => (StatusCodes.Status401Unauthorized, "Unauthorized", "Unauthorized"),
+                        _ => (StatusCodes.Status500InternalServerError, "Internal Server Error", "InternalServerError")
                     };
 
-                    var problemDetails = problemDetailsFactory.CreateProblemDetails(
+                var factory = context.RequestServices
+                    .GetRequiredService<ProblemDetailsFactory>();
+
+                    var problem = factory.CreateProblemDetails(
                         context,
-                        statusCode,
-                        title,
-                        detail: exception.Message,
+                        statusCode: statusCode,
+                        title: title,
+                        detail: statusCode == StatusCodes.Status500InternalServerError ?
+                        "An unexpected error occured." : exception.Message,
                         instance: context.Request.Path);
 
+                problem.Extensions["code"] = code;
+
                     context.Response.StatusCode = statusCode;
-                    await context.Response.WriteAsJsonAsync(problemDetails);
+                    await context.Response.WriteAsJsonAsync(problem);
                 }
 
             });
-        });
     }
 }

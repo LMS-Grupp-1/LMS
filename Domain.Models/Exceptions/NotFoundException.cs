@@ -3,8 +3,10 @@
 public abstract class NotFoundException : Exception
 {
     public string Title { get; }
-    protected NotFoundException(string message, string title = "Not Found") : base(message)
+    public string Code { get; }
+    protected NotFoundException(string message, string title = "Not Found", string code = "NotFound") : base(message)
     {
         Title = title;
+        Code = code;
     }
 }

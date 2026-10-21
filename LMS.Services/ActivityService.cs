@@ -57,36 +57,28 @@ public class ActivityService : IActivityService
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new ActivityValidationException(
-                ActivityValidationError.InvalidName,
-                "Activity name is required.");
+            throw new ActivityNameRequiredException();
         }
 
         if (startDate == default ||
             endDate == default ||
             startDate >= endDate)
         {
-            throw new ActivityValidationException(
-                ActivityValidationError.InvalidTimeRange,
-                "Activity start and end times are required, " +
-                "and the start must be earlier than the end.");
+            throw new InvalidActivityTimeRangeException();
         }
 
         var module = await _unitOfWork.Modules.GetByIdAsync(moduleId);
 
         if (module is null)
         {
-            throw new ActivityValidationException(
-                ActivityValidationError.ModuleNotFound,
-                "The selected module does not exist.");
+            throw new ModuleNotFoundException(moduleId);
+
         }
 
         if (startDate.Date < module.StartDate.Date ||
             endDate.Date > module.EndDate.Date)
         {
-            throw new ActivityValidationException(
-                ActivityValidationError.OutsideModulePeriod,
-                "The activity mus be within the module's range.");
+            throw new ActivityOutsideModulePeriodException();
         }
 
         bool overlaps = await _unitOfWork.Activities.HasOverlapAsync(
@@ -97,9 +89,7 @@ public class ActivityService : IActivityService
 
         if (overlaps)
         {
-            throw new ActivityValidationException(
-                ActivityValidationError.Overlap,
-                "The activity overlaps another activity in the same module.");
+            throw new ActivityOverlapException();
         }
     }
 }
