@@ -30,7 +30,6 @@ public static class ExceptionMiddlewareExtensions
                     KeyNotFoundException ex =>  (StatusCodes.Status404NotFound, "Key not found"),
                     InvalidOperationException ex => (StatusCodes.Status400BadRequest, "Invalid Operation"),
                     DocumentAccessException ex => (StatusCodes.Status403Forbidden, "You don't have permission to access this resource"),
-                    DocumentValidationException ex => (StatusCodes.Status400BadRequest, "Bad Request"),
                     ForbiddenException ex => (StatusCodes.Status403Forbidden,"Forbidden"),
                     _ => (StatusCodes.Status500InternalServerError, "Internal Server Error")
                 };
