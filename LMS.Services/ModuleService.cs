@@ -1,5 +1,6 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
+using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.ModulesDtos;
 using Service.Contracts;
 
@@ -16,6 +17,9 @@ public class ModuleService : IModuleService
 
     public async Task<IEnumerable<ModuleDto>> GetModulesByCourseIdAsync(int courseId)
     {
+        var course = await _unitOfWork.Courses.GetByIdAsync(courseId,false);
+        if (course == null)  
+            throw new KeyNotFoundException("The selected course does not exist.");
         var modules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
 
         return modules.Select(m => new ModuleDto
