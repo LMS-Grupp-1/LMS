@@ -1,5 +1,7 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
+using Domain.Models.Exceptions;
+using Domain.Models.Documents;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using Microsoft.Extensions.Logging;
@@ -57,7 +59,6 @@ public sealed class DocumentService(
             name.Length > DocumentConstraints.MaxNameLength)
         {
             throw new DocumentValidationException(
-                "InvalidName",
                 $"Name must contain between 1 and " +
                 $"{DocumentConstraints.MaxNameLength} characters.");
         }
@@ -66,7 +67,6 @@ public sealed class DocumentService(
             DocumentConstraints.MaxDescriptionLength)
         {
             throw new DocumentValidationException(
-                "DescriptionTooLong",
                 $"Description cannot exceed " +
                 $"{DocumentConstraints.MaxDescriptionLength} characters.");
         }
@@ -81,7 +81,6 @@ public sealed class DocumentService(
             fileName.Any(char.IsControl))
         {
             throw new DocumentValidationException(
-                "InvalidFileName",
                 "The file name is invalid or too long.");
         }
 
@@ -91,7 +90,6 @@ public sealed class DocumentService(
                 extension, out var contentType))
         {
             throw new DocumentValidationException(
-                "FileTypeNotAllowed",
                 "This file type is not allowed.");
         }
 
@@ -100,7 +98,7 @@ public sealed class DocumentService(
 
         if (courseId is null)
         {
-            throw new KeyNotFoundException(
+            throw new DocumentNotFoundException(
                 "The selected course, module or activity does not exist.");
         }
 
@@ -121,7 +119,7 @@ public sealed class DocumentService(
 
         if (selectedTarget is null)
         {
-            throw new KeyNotFoundException(
+            throw new DocumentNotFoundException(
                 "The selected document location does not exist.");
         }
 
@@ -202,7 +200,7 @@ public sealed class DocumentService(
 
         if (document is null)
         {
-            throw new KeyNotFoundException(
+            throw new DocumentNotFoundException(
                 "The document does not exist.");
         }
 
@@ -269,7 +267,7 @@ public sealed class DocumentService(
 
         if (existingCourseId is null)
         {
-            throw new KeyNotFoundException(
+            throw new DocumentNotFoundException(
                 "The course does not exist.");
         }
     }
@@ -307,7 +305,6 @@ public sealed class DocumentService(
             target.ActivityId is <= 0)
         {
             throw new DocumentValidationException(
-                "InvalidTarget",
                 "Select one course, module or activity.");
         }
     }
@@ -330,7 +327,6 @@ public sealed class DocumentService(
                     DocumentConstraints.MaxFileSize)
                 {
                     throw new DocumentValidationException(
-                        "FileTooLarge",
                         $"The file cannot exceed {DocumentConstraints.MaxFileSize} bytes.");
                 }
 
@@ -342,7 +338,6 @@ public sealed class DocumentService(
             if (result.Length == 0)
             {
                 throw new DocumentValidationException(
-                    "EmptyFile",
                     "The file cannot be empty.");
             }
 

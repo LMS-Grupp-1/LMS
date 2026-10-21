@@ -1,16 +1,7 @@
 ﻿using LMS.Shared.DTOs.DocumentDtos;
+using Domain.Models.Documents;
 
 namespace Service.Contracts;
-
-public record DocumentActor(
-    string UserId,
-    bool IsTeacher,
-    bool IsStudent);
-
-public record DocumentDownload(
-    Stream Content,
-    string ContentType,
-    string FileName);
 
 public interface IDocumentService
 {
@@ -37,23 +28,4 @@ public interface IDocumentService
         int id,
         DocumentActor actor,
         CancellationToken cancellationToken);
-}
-
-public sealed class DocumentAccessException : Exception
-{
-    public DocumentAccessException()
-        : base("You do not have permission to access this material.")
-    {
-    }
-}
-
-public sealed class DocumentValidationException : Exception
-{
-    public string ErrorCode { get; }
-    public DocumentValidationException(
-        string errorCode,
-        string message) : base(message)
-    {
-        ErrorCode = errorCode;
-    }
 }
