@@ -18,7 +18,15 @@ public class ActivityService : IActivityService
 
     public async Task<IEnumerable<ActivityDto>> GetActivitesByModuleIdAsync(int moduleId)
     {
+        var module = await _unitOfWork.Modules.GetByIdAsync(moduleId);
+
+        if (module is null)
+        {
+            throw new ModuleNotFoundException(moduleId);
+        }
+
         var result = await _unitOfWork.Activities.GetActivityByModuleIdAsync(moduleId);
+
         return result.Select(a => new ActivityDto(a.Id,
             "Unimplemented",
             a.Name,
