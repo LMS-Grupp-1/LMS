@@ -74,7 +74,7 @@ namespace LMS.Services
 				EndDate = courseCreateDto.EndDate
 			};
 
-			_uow.Courses.CreateCourse(course);
+			await _uow.Courses.AddAsync(course);
 			await _uow.CompleteAsync();
 
 			return new CourseDto(course.Id, course.Name, course.Description, course.StartDate, course.EndDate);
@@ -112,7 +112,7 @@ namespace LMS.Services
                 throw new CourseNotFoundException(id);
             }     
 
-            _uow.Courses.DeleteCourse(course);
+            _uow.Courses.Delete(course);
 			await _uow.CompleteAsync();
 		}
 

@@ -5,9 +5,12 @@ using LMS.Shared.DTOs.CourseDtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories;
-public class CourseRepository(ApplicationDbContext context) : ICourseRepository
+
+public class CourseRepository : BaseRepository<Course>, ICourseRepository
 {
-    private readonly ApplicationDbContext _context = context;
+    public CourseRepository(ApplicationDbContext context) : base(context)
+    {
+    }
 
     public async Task<IEnumerable<Course>> GetAllAsync(bool trackChanges) =>
         !trackChanges
@@ -52,23 +55,35 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
             .ToListAsync();
     }
 
-    public async Task<Course?> GetByIdAsync(int id, bool trackChanges = false) =>
-        !trackChanges
-            ? await _context.Courses.AsNoTracking().FirstOrDefaultAsync(c => c.Id == id)
-            : await _context.Courses.FirstOrDefaultAsync(c => c.Id == id);
+    public override Task<Course?> GetByIdAsync(int id)
+    {
+        return GetByIdAsync(id, trackChanges: false);
+    }
 
-	public async Task<Course?> GetForStudentAsync(string userId, bool trackChanges)
-	{
-		var query = _context.Courses			
-			.Include(c => c.Students
-				.OrderBy(s => s.LastName)
-				.ThenBy(s => s.FirstName))			
-			.Where(c => c.Students.Any(s => s.Id == userId));
+    public Task<Course?> GetByIdAsync(int id, bool trackChanges)
+    {
+        if (trackChanges)
+        {
+            return _context.Courses
+                .FirstOrDefaultAsync(course => course.Id == id);
+        }
+        return _context.Courses
+            .AsNoTracking()
+            .FirstOrDefaultAsync(course => course.Id == id);
+    }
 
-		return !trackChanges
-			? await query.AsNoTracking().FirstOrDefaultAsync()
-			: await query.FirstOrDefaultAsync();
-	}
+    public async Task<Course?> GetForStudentAsync(string userId, bool trackChanges)
+    {
+        var query = _context.Courses
+            .Include(c => c.Students
+                .OrderBy(s => s.LastName)
+                .ThenBy(s => s.FirstName))
+            .Where(c => c.Students.Any(s => s.Id == userId));
+
+        return !trackChanges
+            ? await query.AsNoTracking().FirstOrDefaultAsync()
+            : await query.FirstOrDefaultAsync();
+    }
 
     public async Task<bool> NameExistsAsync(
         string name,
@@ -85,10 +100,4 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
 
         return await query.AnyAsync(course => course.Name == trimmedName);
     }
-
-	public void CreateCourse(Course course) => _context.Courses.Add(course);
-
-    public void UpdateCourse(Course course) => _context.Courses.Update(course);
-
-    public void DeleteCourse(Course course) => _context.Courses.Remove(course);
 }

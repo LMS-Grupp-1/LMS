@@ -9,13 +9,10 @@ using Module = Domain.Models.Entities.Module;
 
 namespace LMS.Infrastructure.Repositories;
 
-public class ModuleRepository : IModuleRepository
+public class ModuleRepository : BaseRepository<Module>, IModuleRepository
 {
-    private readonly ApplicationDbContext _context;
-
-    public ModuleRepository(ApplicationDbContext context)
+    public ModuleRepository(ApplicationDbContext context) : base(context)
     {
-        _context = context;
     }
 
     public async Task<IEnumerable<Module>> GetModulesByCourseIdAsync(int courseId)
@@ -31,20 +28,5 @@ public class ModuleRepository : IModuleRepository
         return await _context.Modules
             .Include(m => m.Course)
             .FirstOrDefaultAsync(m => m.Id == id);
-    }
-
-    public async Task AddAsync(Module module)
-    {
-        await _context.Modules.AddAsync(module);
-    }
-
-    public void Update(Module module)
-    {
-        _context.Modules.Update(module);
-    }
-
-    public void Delete(Module module)
-    {
-        _context.Modules.Remove(module);
     }
 }
