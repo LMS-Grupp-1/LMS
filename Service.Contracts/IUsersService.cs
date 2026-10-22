@@ -5,9 +5,9 @@ namespace Service.Contracts;
 
 public interface IUsersService
 {
-    Task<IdentityResult> CreateUserAsync(CreateUserDto dto);
+    Task<(bool Succeeded, IEnumerable<string> Errors)> CreateUserAsync(CreateUserDto dto);
+    Task<(bool Succeeded, IEnumerable<string> Errors)> UpdateUserAsync(UpdateUserDto dto);
     Task<IEnumerable<UserDto>?> GetUsersAsync();
-    Task<IEnumerable<UserDto>?> GetUsersByCourseIdAsync(int courseId);
-    Task<IdentityResult> UpdateUserAsync(UpdateUserDto dto);
+    Task<IEnumerable<UserDto>?> GetStudentsByCourseIdAsync(int courseId);
     Task<UserDto?> GetUserByIdAsync(string id);
 }

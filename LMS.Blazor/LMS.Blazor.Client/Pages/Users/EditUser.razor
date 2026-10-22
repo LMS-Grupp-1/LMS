@@ -48,9 +48,11 @@
                 <label class="form-label">Roll:</label>
                 <InputSelect @bind-Value="model.Role" class="form-control">
                     <option value="">Välj roll...</option>
-                    <option value="Student">Student</option>
-                    <option value="Teacher">Teacher</option>
-                 </InputSelect>
+                    @foreach (var role in UserRoles.All)
+                    {
+                        <option value="@role">@role</option>
+                    }
+                </InputSelect>
                  <ValidationMessage For="@(() => model.Role)" />
               </div>
 
@@ -158,6 +160,12 @@
 
         try
         {
+            if (model.Role == UserRoles.Student && (!model.CourseId.HasValue || model.CourseId.Value <= 0))
+            {
+                errorMessage = "Student måste tilldelas en kurs.";
+                return;
+            }
+
             using var content = JsonContent.Create(model);
             var (data, responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
                     HttpMethod.Put,
