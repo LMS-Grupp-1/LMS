@@ -1,10 +1,10 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Shared.DTOs.ModulesDtos
-@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Blazor.Client.ViewModels.Modules
 @using LMS.Blazor.Client.Components.Common
 @using LMS.Blazor.Client.Components.Activities
-@inject IModuleService ModuleService
+@inject IApiProxyClient ApiProxy
 
 <div class="container-fluid px-0">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -16,6 +16,12 @@
             <i class="bi bi-plus-circle me-1"></i> Lägg till modul
         </button>
     </div>
+    @if (!string.IsNullOrEmpty(moduleListErrorMsg))
+    {
+        <div class="text-danger my-2">
+            <i class="bi bi-exclamation-circle me-1"></i> @moduleListErrorMsg
+        </div>
+    }
 
     @if (isLoading)
     {
@@ -47,7 +53,7 @@
                                 <span>@mod.StartDate.ToShortDateString() - @mod.EndDate.ToShortDateString()</span>
                             </div>
 
-                            @if (deleteErrors.TryGetValue(mod.Id, out var errorMsg) && !string.IsNullOrEmpty(errorMsg))
+                            @if (moduleErrorMsgs.TryGetValue(mod.Id, out var errorMsg) && !string.IsNullOrEmpty(errorMsg))
                             {
                                 <div class="text-danger small mt-2">
                                     <i class="bi bi-exclamation-circle me-1"></i> @errorMsg
@@ -91,7 +97,6 @@
 <ModuleFormDialog IsOpen="isModalOpen"
                  CourseId="CourseId"
                  CurrentCourse="CurrentCourse"
-                 ModuleService="ModuleService"
                  ModuleToEdit="selectedModule"
                  OnClose="CloseModal"
                  OnModuleSaved="HandleModuleSaved" />
@@ -114,9 +119,10 @@
     private bool showDeleteModal = false;
     private ModuleDto? selectedModule = null; // null = Add mode, Has value = Edit mode
     private HashSet<int> expandedModuleIds = new();
-    private Dictionary<int, string> deleteErrors = new();
+    private Dictionary<int, string> moduleErrorMsgs = new();
     private int? moduleToDeleteId = null;
     private string? deleteModuleName = null;
+    private string? moduleListErrorMsg = null;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -126,9 +132,12 @@
     private async Task LoadModulesAsync()
     {
         isLoading = true;
+        moduleListErrorMsg = null;
         try
         {
-            var serviceModules = await ModuleService.GetModulesByCourseIdAsync(CourseId);
+            var serviceModules = await ApiProxy.GetAsync<IEnumerable<ModuleDto>>(
+                $"teacher/courses/{CourseId}/modules"
+            ) ?? Enumerable.Empty<ModuleDto>();
             
             modules = serviceModules.Select(m => new ModuleViewModel
             {
@@ -138,6 +147,10 @@
                 StartDate = m.StartDate,
                 EndDate = m.EndDate
             }).ToList();
+        }
+        catch (HttpRequestException ex)
+        {
+            moduleListErrorMsg = $"Misslyckades med att ladda moduler: {ex.Message}";
         }
         finally
         {
@@ -210,25 +223,28 @@
         int moduleId = moduleToDeleteId.Value;
         CloseDeleteModal();
         
-        deleteErrors[moduleId] = string.Empty;
+        moduleErrorMsgs[moduleId] = string.Empty;
 
         try
         {
-            var (success, responseErrorMessage) = await ModuleService.DeleteModuleAsync(CourseId, moduleId);
+            var (success, responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                HttpMethod.Delete,
+                $"teacher/courses/{CourseId}/modules/{moduleId}"
+            );
 
-            if (success)
+            if (!string.IsNullOrEmpty(responseErrorMessage))
             {
-                deleteErrors.Remove(moduleId);
+                moduleErrorMsgs.Remove(moduleId);
                 await LoadModulesAsync();
             }
             else
             {
-                deleteErrors[moduleId] = responseErrorMessage ?? "Det gick inte att ta bort modulen. Försök igen.";
+                moduleErrorMsgs[moduleId] = responseErrorMessage ?? "Det gick inte att ta bort modulen. Försök igen.";
             }
         }
         catch (Exception ex)
         {
-            deleteErrors[moduleId] = $"Ett fel uppstod: {ex.Message}";
+            moduleErrorMsgs[moduleId] = $"Ett fel uppstod: {ex.Message}";
         }
     }
 }

@@ -21,15 +21,17 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
-        if (dto == null)
-        {
-            return BadRequest(new { message = "Request body is empty or invalid." });
-        }
+        var (succeeded, errors) = await _service.UsersService.CreateUserAsync(dto);
 
-        var result = await _service.UsersService.CreateUserAsync(dto);
-        if (!result.Succeeded)
+        if (!succeeded)
         {
-            return BadRequest(result.Errors);
+            // Add errors to ModelState so ASP.NET Core formats them into a standard ValidationProblemDetails
+            foreach (var error in errors)
+            {
+                ModelState.AddModelError("UserCreation", error);
+            }
+
+            return ValidationProblem(ModelState); // Automatically returns ValidationProblemDetails (400)
         }
 
         return Ok(true);
@@ -45,7 +47,7 @@ public class UsersController : ControllerBase
     [HttpGet("students/{courseId}")]
     public async Task<IActionResult> GetUsersByCourseId(int courseId)
     {
-        var users = await _service.UsersService.GetUsersByCourseIdAsync(courseId);
+        var users = await _service.UsersService.GetStudentsByCourseIdAsync(courseId);
         return Ok(users);
     }
 

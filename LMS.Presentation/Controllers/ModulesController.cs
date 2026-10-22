@@ -2,6 +2,7 @@
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Service.Contracts;
 
@@ -30,19 +31,11 @@ public class ModulesController : ControllerBase
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> CreateModule(int courseId, [FromBody] CreateModuleDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
+        // If something goes wrong, the service/database throws an exception 
+        // (e.g., NotFoundException, ConflictException, or a general exception).
+        // The teacher's ExceptionMiddleware automatically catches it and assigns the right status code (404, 409, 500)
+        await _service.ModuleService.CreateModuleAsync(courseId, dto);
 
-        var (success, errorMessage) = await _service.ModuleService.CreateModuleAsync(courseId, dto);
-
-        if (!success)
-        {
-            return BadRequest(new { message = errorMessage });
-        }
-
-        // Returning Ok(true) to match your standard API response pattern
         return Ok(true);
     }
 
@@ -50,17 +43,7 @@ public class ModulesController : ControllerBase
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> UpdateModule(int courseId, int moduleId, [FromBody] CreateModuleDto dto)
     {
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
-        var (success, errorMessage) = await _service.ModuleService.UpdateModuleAsync(courseId, moduleId, dto);
-
-        if (!success)
-        {
-            return BadRequest(new { message = errorMessage });
-        }
+        await _service.ModuleService.UpdateModuleAsync(courseId, moduleId, dto);
 
         return Ok(true);
     }
@@ -69,12 +52,7 @@ public class ModulesController : ControllerBase
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> DeleteModule(int courseId, int moduleId)
     {
-        var (success, errorMessage) = await _service.ModuleService.DeleteModuleAsync(courseId, moduleId);
-
-        if (!success)
-        {
-            return BadRequest(new { message = errorMessage });
-        }
+        await _service.ModuleService.DeleteModuleAsync(courseId, moduleId);
 
         return Ok(true);
     }
