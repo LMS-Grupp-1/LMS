@@ -93,9 +93,18 @@
                     "The API rejected course creation: {ErrorMessage}",
                     errorMessage);
 
-                formError = "Kursen kunde inte skapas. Kontrollera uppgifterna och försök igen.";
+                formError = errorMessage switch
+                {
+                    "A course with this name already exists." =>
+                    "Det finns redan en kurs med det namnet.",
+
+                    _ =>
+                    "Kursen kunde inte skapas. Kontrollera uppgifterna och försök igen."
+                };
+
                 return;
             }
+
 
             if (createdCourse is null)
             {

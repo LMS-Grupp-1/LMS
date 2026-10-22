@@ -70,7 +70,7 @@
                                 </td>
                             </tr>
                         }
-                        else if (filteredCourses is null)
+                        else if (filteredCourses is not { } loadedCourses)
                         {
                             <tr>
                                 <td colspan="5" class="text-center py-5 text-muted">
@@ -80,7 +80,7 @@
                                 </td>
                             </tr>
                         }
-                        else if (filteredCourses?.Any() == false)
+                        else if (!loadedCourses.Any())
                         {
                             <tr>
                                 <td colspan="5" class="text-center py-5 text-muted">
@@ -90,7 +90,7 @@
                         }
                         else
                         {
-                            @foreach (var course in filteredCourses)
+                            @foreach (var course in loadedCourses)
                             {
                                 <tr>
                                     <td class="ps-4 fw-semibold text-dark">

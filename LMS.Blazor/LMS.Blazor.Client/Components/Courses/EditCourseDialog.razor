@@ -85,10 +85,18 @@
 
             if (!string.IsNullOrWhiteSpace(errorMessage))
             {
-                formError = "Kursen kunde inte sparas. Kontrollera uppgifterna och försök igen.";
+                formError = errorMessage switch
+                {
+                    "A course with this name already exists." =>
+                    "Det finns redan en kurs med det namnet.",
+
+                    _ =>
+                        "Kursen kunde inte sparas. Kontrollera uppgifterna och försök igen."
+                };
+
                 return;
             }
-            ToastService.ShowToast($"Kursen {CourseEditModel.Name} har sparast.", ToastType.Success);
+            ToastService.ShowToast($"Kursen {CourseEditModel.Name} har sparats.", ToastType.Success);
 
             await OnCourseUpdated.InvokeAsync(); // Notify parent to refresh list
             await CloseAsync();
