@@ -59,7 +59,7 @@ else
                             <div>
                                 <small class="text-muted">
                                     @(assignment.Deadline is { } deadline
-                                        ? $"Deadline {deadline.ToString("ddd d MMM HH:mm", SwedishCulture)}"
+                                        ? $"Deadline {deadline.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)}"
                                         : "Ingen deadline")
                                 </small>
                             </div>
@@ -80,7 +80,7 @@ else
                         {
                             <small class="text-muted d-block">
                                 <i class="bi bi-check2-circle"></i>
-                                Inlämnad @submittedAt.ToLocalTime().ToString("d MMM yyyy HH:mm", SwedishCulture)
+                                Inlämnad @submittedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
                             </small>
                         }
 
@@ -99,8 +99,6 @@ else
 }
 
 @code {
-    private static readonly CultureInfo SwedishCulture = new("sv-SE");
-
     private IReadOnlyList<StudentAssignmentDto> assignments = [];
     private bool isLoading = true;
     private string? errorMessage;
