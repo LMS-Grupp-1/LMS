@@ -2,6 +2,7 @@
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.CourseDtos;
+using LMS.Shared.Constants;
 using Service.Contracts;
 
 namespace LMS.Services
@@ -41,12 +42,21 @@ namespace LMS.Services
             return courseLookupDtos;
         }
 
-        public async Task<CourseDto?> GetCourseByIdAsync(int id)
+        public async Task<CourseDto> GetCourseByIdAsync(int id)
 		{
 			var course = await _uow.Courses.GetByIdAsync(id, trackChanges: false);
-			if (course is null) return null;
 
-			return new CourseDto(course.Id, course.Name, course.Description, course.StartDate, course.EndDate);
+			if (course is null)
+			{
+				throw new CourseNotFoundException(id);
+			}
+
+			return new CourseDto(
+				course.Id, 
+				course.Name, 
+				course.Description, 
+				course.StartDate, 
+				course.EndDate);
 		}
 
 		public async Task<CourseDto> CreateCourseAsync(CourseCreateDto courseCreateDto)
@@ -73,9 +83,10 @@ namespace LMS.Services
 		public async Task UpdateCourseAsync(int id, CourseUpdateDto courseUpdateDto)
 		{
 			var course = await _uow.Courses.GetByIdAsync(id, trackChanges: true);
+
 			if (course is null)
 			{
-				throw new KeyNotFoundException($"Course with ID {id} was not found.");
+				throw new CourseNotFoundException(id);
 			}
 
 			await ValidateCourseAsync(
@@ -95,8 +106,11 @@ namespace LMS.Services
 		public async Task DeleteCourseAsync(int id)
 		{
 			var course = await _uow.Courses.GetByIdAsync(id, trackChanges: true);
+
             if (course is null)
-				throw new KeyNotFoundException($"Course with id {id} was not found.");
+			{
+                throw new CourseNotFoundException(id);
+            }     
 
             _uow.Courses.DeleteCourse(course);
 			await _uow.CompleteAsync();
@@ -108,32 +122,25 @@ namespace LMS.Services
 			DateTime endDate,
 			int? excludedId = null)
 		{
-			if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > 50)
+			if (string.IsNullOrWhiteSpace(name) || name.Trim().Length > CourseConstraints.NameMaxLength)
 			{
-				throw new ArgumentException(
-					"Course name needs to contain 1-50 characters.");
+				throw new CourseValidationException(
+					$"Course name must contain between 1 and " +
+					$"{CourseConstraints.NameMaxLength} characters.");
 			}
-
-			var today = DateTime.Today;
 
 			if (startDate > endDate)
 			{
-				throw new ArgumentException(
+				throw new CourseValidationException(
 					"End date can't be before the start date.");
 			}
 
-			var existingCourses =
-				await _uow.Courses.GetAllAsync(trackChanges: false);
+			bool nameExists = await _uow.Courses.NameExistsAsync(
+				name, excludedId);
 
-			if (existingCourses.Any(course =>
-				course.Id != excludedId &&
-				string.Equals(
-					course.Name.Trim(),
-					name.Trim(),
-					StringComparison.OrdinalIgnoreCase)))
+			if (nameExists)
 			{
-				throw new ArgumentException(
-					"A course with this name already exists.");
+				throw new CourseNameAlreadyExistsException();
 			}
 		}
 

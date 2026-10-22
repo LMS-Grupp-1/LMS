@@ -70,11 +70,25 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
 			: await query.FirstOrDefaultAsync();
 	}
 
+    public async Task<bool> NameExistsAsync(
+        string name,
+        int? excludedId = null)
+    {
+        var query = _context.Courses.AsQueryable();
+
+        if (excludedId.HasValue)
+        {
+            int id = excludedId.Value;
+            query = query.Where(course => course.Id != id);
+        }
+        string trimmedName = name.Trim();
+
+        return await query.AnyAsync(course => course.Name == trimmedName);
+    }
+
 	public void CreateCourse(Course course) => _context.Courses.Add(course);
 
     public void UpdateCourse(Course course) => _context.Courses.Update(course);
 
     public void DeleteCourse(Course course) => _context.Courses.Remove(course);
-
-    public async Task SaveAsync() => await _context.SaveChangesAsync();
 }
