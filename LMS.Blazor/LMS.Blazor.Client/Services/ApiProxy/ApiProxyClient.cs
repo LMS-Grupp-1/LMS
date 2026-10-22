@@ -56,17 +56,35 @@ public sealed class ApiProxyClient(HttpClient httpClient) : IApiProxyClient
         using var response = await httpClient.SendAsync(request, cancellationToken);
         EnsureAuthenticated(response);
 
-        // If it's a 400 Bad Request, read the custom error message returned by your controller
-        if ((int)response.StatusCode == 400)
+        // If it's a 400 Bad Request (or any error status code), read the custom error message returned by your controller
+        if ((int)response.StatusCode == 400 || !response.IsSuccessStatusCode)
         {
             try
             {
-                var errorObj = await response.Content.ReadFromJsonAsync<ErrorResponseDto>(cancellationToken: cancellationToken);
-                return (default, errorObj?.Message ?? "Valideringsfel uppstod.");
+                // Deserialize into our clean ProblemDetails model
+                var problemDetails = await response.Content.ReadFromJsonAsync<ApiProblemDetails>(cancellationToken: cancellationToken);
+
+                // Check for field-level validation errors from [ApiController]
+                if (problemDetails?.Errors is { Count: > 0 } errors)
+                {
+                    var validationMessages = string.Join(" ", errors.Values.SelectMany(messages => messages));
+                    return (default, validationMessages);
+                }
+
+                // Check for standard ProblemDetails message from ExceptionMiddleware (Detail or Title)
+                var message = problemDetails?.Detail ?? problemDetails?.Title;
+                if (!string.IsNullOrEmpty(message))
+                {
+                    return (default, message);
+                }
+
+                return (default, $"Ett fel uppstod (Status: {(int)response.StatusCode}).");
             }
             catch
             {
-                return (default, "Ett valideringsfel uppstod.");
+                // Fallback if the response body isn't JSON
+                var rawError = await response.Content.ReadAsStringAsync(cancellationToken);
+                return (default, string.IsNullOrWhiteSpace(rawError) ? "Ett valideringsfel uppstod." : rawError);
             }
         }
 

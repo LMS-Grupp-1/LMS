@@ -1,0 +1,135 @@
+﻿@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.ModulesDtos
+@using LMS.Blazor.Client.ViewModels.Modules
+@using LMS.Blazor.Client.Components.Common
+@inject IApiProxyClient ApiProxy
+
+<div class="container-fluid p-0">
+    @if (!string.IsNullOrEmpty(moduleListErrorMsg))
+    {
+        <div class="text-danger my-2">
+            <i class="bi bi-exclamation-circle me-1"></i> @moduleListErrorMsg
+        </div>
+    }
+    else if (isLoading)
+    {
+        <p class="text-muted"><em>Laddar moduler...</em></p>
+    }
+    else if (!modules.Any())
+    {
+        <p class="text-muted">Inga moduler hittades för denna kurs.</p>
+    }
+    else
+    {
+        <div class="d-flex flex-column gap-3">
+            @foreach (var module in modules)
+            {
+                <div class="card shadow-sm border">
+                    <div class="card-body d-flex align-items-center justify-content-between py-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <AppIconBox Type="module" />
+
+                            <div>
+                                <h5 class="mb-1 fw-bold text-dark">@module.Name</h5>
+                                <div class="text-muted small d-flex align-items-center gap-1">
+                                    <i class="bi bi-calendar-week"></i>
+                                    <span>@module.StartDate.ToString("yyyy-MM-dd") - @module.EndDate.ToString("yyyy-MM-dd")</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-light text-dark border px-3 py-2">
+                                @module.ActivityCount Aktiviteter
+                            </span>
+                            
+                            <button class="btn btn-sm btn-outline-secondary rounded-circle p-2 d-flex align-items-center justify-content-center" 
+                                    style="width: 32px; height: 32px;"
+                                    @onclick="() => ToggleModule(module.Id)">
+                                <i class="bi @(IsExpanded(module.Id) ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (IsExpanded(module.Id))
+                    {
+                        <div class="card-footer bg-light border-top p-4">
+                            <div class="mb-3">
+                                <p class="text-muted mb-3">@module.Description</p>
+                            </div>
+
+                            <div class="mb-4">
+                                <a href="" class="text-primary text-decoration-none fw-semibold">
+                                    <i class="bi bi-folder2-open me-1"></i> Visa alla dokument i denna Module
+                                </a>
+                            </div>
+
+                            <div>
+                                <h6 class="fw-bold text-secondary mb-2">AKTIVITETER</h6>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private List<ModuleViewModel> modules = new();
+    private HashSet<int> expandedModuleIds = new();
+    private string? moduleListErrorMsg = null;
+    private bool isLoading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadModulesAsync();
+    }
+
+    private async Task LoadModulesAsync()
+    {
+        isLoading = true;
+        moduleListErrorMsg = null;
+        try
+        {
+            var serviceModules = await ApiProxy.GetAsync<IEnumerable<ModuleDto>>(
+                $"teacher/courses/{CourseId}/modules"
+            ) ?? Enumerable.Empty<ModuleDto>();
+            
+            modules = serviceModules.Select(m => new ModuleViewModel
+            {
+                Id = m.Id,
+                Name = m.Name,
+                Description = m.Description,
+                StartDate = m.StartDate,
+                EndDate = m.EndDate,
+                ActivityCount = m.ActivityCount
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            moduleListErrorMsg = $"Misslyckades med att ladda moduler: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleModule(int moduleId)
+    {
+        if (expandedModuleIds.Contains(moduleId))
+        {
+            expandedModuleIds.Remove(moduleId);
+        }
+        else
+        {
+            expandedModuleIds.Add(moduleId);
+        }
+    }
+
+    private bool IsExpanded(int moduleId) => expandedModuleIds.Contains(moduleId);
+}

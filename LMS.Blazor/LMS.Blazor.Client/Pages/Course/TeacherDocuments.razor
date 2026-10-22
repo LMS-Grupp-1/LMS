@@ -1,0 +1,517 @@
+﻿@page "/teacher/courses/{CourseId:int}/documents"
+@rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveWebAssemblyRenderMode(prerender: false))
+
+@using System.Globalization
+@using System.Net
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
+@using Microsoft.JSInterop
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.DocumentDtos
+
+@attribute [Authorize(Roles = UserRoles.Teacher)]
+@implements IAsyncDisposable
+
+@inject DocumentService Documents
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject ILogger<TeacherDocuments> Logger
+
+<PageTitle>Kursmaterial</PageTitle>
+
+<a href="/teacher/courses" class="d-inline-block mb-3">
+    Tillbaka till kurser
+</a>
+
+<h1 class="h3">Kursmaterial</h1>
+<p>
+    Ladda upp material till kursen, en modul eller en aktivitet.
+    Materialet blir tillgängligt för kursens studenter.
+</p>
+
+@if (isLoading)
+{
+    <p role="status">Kursmaterial laddas...</p>
+}
+else if (loadError is not null)
+{
+    <div class="alert alert-danger" role="alert">
+        @loadError
+    </div>
+
+    <button class="btn btn-outline-primary" @onclick="LoadAsync">
+        Försök igen
+    </button>
+}
+else
+{
+    @if (error is not null)
+    {
+        <div class="alert alert-danger" role="alert">
+            @error
+        </div>
+    }
+
+    @if (success is not null)
+    {
+        <div class="alert alert-success" role="status">
+            @success
+        </div>
+    }
+
+    <section class="border rounded p-3 my-4"
+             aria-labelledby="upload-heading">
+        <h2 id="upload-heading" class="h5">Ladda upp dokument</h2>
+
+        <form @onsubmit="UploadAsync" @onsubmit:preventDefault>
+            <fieldset disabled="@isBusy">
+                <legend class="visually-hidden">
+                    Uppgifter för dokumentet
+                </legend>
+
+                <div class="mb-3">
+                    <label for="document-name" class="form-label">
+                        Dokumentnamn
+                    </label>
+                    <input id="document-name"
+                           class="form-control"
+                           maxlength="@DocumentConstraints.MaxNameLength"
+                           @bind="name" />
+                    <div class="form-text">
+                        Högst @DocumentConstraints.MaxNameLength tecken.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="document-description" class="form-label">
+                        Beskrivning (valfritt)
+                    </label>
+                    <textarea id="document-description"
+                              class="form-control"
+                              rows="3"
+                              maxlength="@DocumentConstraints.MaxDescriptionLength"
+                              @bind="description"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="document-target" class="form-label">
+                        Koppla dokumentet till
+                    </label>
+                    <select id="document-target"
+                            class="form-select"
+                            @bind="targetIndex">
+                        @for (int index = 0; index < targets.Count; index++)
+                        {
+                            <option value="@index">
+                                @targets[index].Label
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="document-file" class="form-label">
+                        Välj fil
+                    </label>
+                    <InputFile @key="fileInputKey"
+                               id="document-file"
+                               class="form-control"
+                               accept="@AllowedExtensions"
+                               aria-describedby="document-file-help"
+                               OnChange="SelectFile" />
+
+                    <div id="document-file-help" class="form-text">
+                        Tillåtna filtyper: @AllowedExtensions.
+                        Högst @(DocumentConstraints.MaxFileSize / (1024 * 1024)) MB.
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    @(isUploading ? "Laddar upp..." : "Ladda upp dokument")
+                </button>
+            </fieldset>
+        </form>
+    </section>
+
+    <section aria-labelledby="documents-heading">
+        <h2 id="documents-heading" class="h5">Uppladdade dokument</h2>
+
+        @if (documents.Count == 0)
+        {
+            <p>Det finns inget material uppladdat för kursen ännu.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <caption class="visually-hidden">
+                        Dokument för kursen och dess moduler och aktiviteter
+                    </caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Dokument</th>
+                            <th scope="col">Placering</th>
+                            <th scope="col">Uppladdat</th>
+                            <th scope="col">Åtgärd</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var document in documents)
+                        {
+                            <tr @key="document.Id">
+                                <td class="text-break">
+                                    <strong>@document.Name</strong>
+
+                                    @if (!string.IsNullOrWhiteSpace(document.Description))
+                                    {
+                                        <div>@document.Description</div>
+                                    }
+
+                                    <small>
+                                        @document.FileName
+                                        (@FormatSize(document.SizeBytes))
+                                    </small>
+                                </td>
+                                <td>@document.Location</td>
+                                <td>
+                                    <div>@document.UploadedByName</div>
+                                    <small>
+                                        @document.UploadedAt.ToLocalTime().ToString(
+                                            "g", CultureInfo.GetCultureInfo("sv-SE"))
+                                    </small>
+                                </td>
+                                <td>
+                                    <button type="button"
+                                            class="btn btn-outline-primary btn-sm"
+                                            disabled="@isBusy"
+                                            aria-label="@($"Ladda ner {document.Name}")"
+                                            @onclick="() => DownloadAsync(document)">
+                                        @(downloadingId == document.Id
+                                            ? "Hämtar..."
+                                            : "Ladda ner")
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private readonly CancellationTokenSource lifetime = new();
+
+    private List<DocumentDto> documents = [];
+    private List<DocumentTargetDto> targets = [];
+
+    private IBrowserFile? selectedFile;
+    private IJSObjectReference? downloadModule;
+
+    private string name = string.Empty;
+    private string description = string.Empty;
+    private string? loadError;
+    private string? error;
+    private string? success;
+
+    private int targetIndex;
+    private int fileInputKey;
+    private int pageVersion;
+    private int? downloadingId;
+
+    private bool isLoading = true;
+    private bool isUploading;
+
+    private bool isBusy => isUploading || downloadingId.HasValue;
+
+    private static string AllowedExtensions =>
+        string.Join(", ", DocumentConstraints.ContentTypes.Keys);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!RendererInfo.IsInteractive)
+            return;
+
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        int version = ++pageVersion;
+        int courseId = CourseId;
+
+        isLoading = true;
+        isUploading = false;
+        downloadingId = null;
+        loadError = null;
+        error = null;
+        success = null;
+        selectedFile = null;
+        name = string.Empty;
+        description = string.Empty;
+        targetIndex = 0;
+        fileInputKey++;
+
+        try
+        {
+            var loadedTargets = await Documents.TargetsAsync(
+                courseId, lifetime.Token);
+
+            var loadedDocuments = await Documents.ListAsync(
+                courseId, lifetime.Token);
+
+            if (version != pageVersion)
+                return;
+
+            if (loadedTargets.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "No document targets were returned for the course.");
+            }
+
+            targets = loadedTargets;
+            documents = loadedDocuments;
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex, "Could not load documents for course {CourseId}.", courseId);
+
+            if (version == pageVersion)
+            {
+                loadError = UserMessage(
+                    ex, "Kursmaterialet kunde inte hämtas. Försök igen.");
+            }
+        }
+        finally
+        {
+            if (version == pageVersion)
+                isLoading = false;
+        }
+    }
+
+    private void SelectFile(InputFileChangeEventArgs args)
+    {
+        selectedFile = args.File;
+        error = null;
+        success = null;
+    }
+
+    private async Task UploadAsync()
+    {
+        if (isBusy)
+            return;
+
+        error = null;
+        success = null;
+
+        if (string.IsNullOrWhiteSpace(name) ||
+            name.Trim().Length > DocumentConstraints.MaxNameLength)
+        {
+            error = $"Ange ett namn med 1–{DocumentConstraints.MaxNameLength} tecken.";
+            return;
+        }
+
+        if (description.Trim().Length > DocumentConstraints.MaxDescriptionLength)
+        {
+            error = $"Beskrivningen får innehålla högst " +
+                    $"{DocumentConstraints.MaxDescriptionLength} tecken.";
+            return;
+        }
+
+        var file = selectedFile;
+
+        if (file is null || file.Size == 0)
+        {
+            error = "Välj en fil som inte är tom.";
+            return;
+        }
+
+        if (file.Size > DocumentConstraints.MaxFileSize)
+        {
+            error = $"Filen får vara högst " +
+                    $"{DocumentConstraints.MaxFileSize / (1024 * 1024)} MB.";
+            return;
+        }
+
+        if (!DocumentConstraints.ContentTypes.ContainsKey(
+                System.IO.Path.GetExtension(file.Name)))
+        {
+            error = "Filtypen är inte tillåten.";
+            return;
+        }
+
+        if (targetIndex < 0 || targetIndex >= targets.Count)
+        {
+            error = "Välj en kurs, modul eller aktivitet.";
+            return;
+        }
+
+        int version = pageVersion;
+        isUploading = true;
+
+        try
+        {
+            var result = await Documents.UploadAsync(
+                targets[targetIndex].Target,
+                name,
+                description,
+                file,
+                lifetime.Token);
+
+            if (version != pageVersion)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(result.ErrorMessage))
+            {
+                error = result.ErrorMessage;
+                return;
+            }
+
+            if (result.Document is null)
+            {
+                error = "Servern bekräftade inte dokumentet. " +
+                        "Ladda om sidan innan du försöker ladda upp igen.";
+                return;
+            }
+
+            documents.Insert(0, result.Document);
+
+            name = string.Empty;
+            description = string.Empty;
+            selectedFile = null;
+            fileInputKey++;
+
+            success = "Dokumentet har laddats upp.";
+        }
+        catch (OperationCanceledException) when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Document upload failed.");
+
+            if (version == pageVersion)
+            {
+                error = UserMessage(
+                    ex,
+                    "Uppladdningen kunde inte bekräftas. " +
+                    "Ladda om sidan och kontrollera dokumentlistan innan du försöker igen.");
+            }
+        }
+        finally
+        {
+            if (version == pageVersion)
+                isUploading = false;
+        }
+    }
+
+    private async Task DownloadAsync(DocumentDto document)
+    {
+        if (isBusy)
+            return;
+
+        int version = pageVersion;
+        downloadingId = document.Id;
+        error = null;
+        success = null;
+
+        try
+        {
+            downloadModule ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import",
+                Navigation.ToAbsoluteUri("js/documents.js").ToString());
+
+            string url = Navigation.ToAbsoluteUri(
+                $"api/proxy/documents/{document.Id}/download").ToString();
+
+            int status = await downloadModule.InvokeAsync<int>(
+                "download", url, document.FileName);
+
+            if (status != 200)
+            {
+                throw new HttpRequestException(
+                    "Document download failed.",
+                    null,
+                    (HttpStatusCode)status);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex, "Download failed for document {DocumentId}.", document.Id);
+
+            if (version == pageVersion)
+            {
+                error = UserMessage(
+                    ex, "Filen kunde inte hämtas. Försök igen.");
+            }
+        }
+        finally
+        {
+            if (version == pageVersion)
+                downloadingId = null;
+        }
+    }
+
+    private static string UserMessage(Exception exception, string fallback)
+    {
+        if (exception is UnauthorizedAccessException)
+            return "Din session har gått ut. Logga in igen.";
+
+        return exception is HttpRequestException http
+            ? http.StatusCode switch
+            {
+                HttpStatusCode.Unauthorized =>
+                    "Din session har gått ut. Logga in igen.",
+
+                HttpStatusCode.Forbidden =>
+                    "Du har inte behörighet att komma åt materialet.",
+
+                HttpStatusCode.NotFound =>
+                    "Kursen eller dokumentet kunde inte hittas.",
+
+                HttpStatusCode.BadRequest => 
+                    "Dokumentet kunde inte sparas. Kontrollera uppgifterna och filen.",
+
+                HttpStatusCode.RequestEntityTooLarge =>
+                    "Uppladdningen är för stor.",
+
+                _ => fallback
+            }
+            : fallback;
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        return (bytes / 1024d).ToString(
+            "N0", CultureInfo.GetCultureInfo("sv-SE")) + " kB";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        pageVersion++;
+        lifetime.Cancel();
+        lifetime.Dispose();
+
+        if (downloadModule is not null)
+        {
+            try
+            {
+                await downloadModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

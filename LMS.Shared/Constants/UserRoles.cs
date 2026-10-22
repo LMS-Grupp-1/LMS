@@ -6,6 +6,6 @@
 		public const string Student = "Student";
 
 		// All roles, used when seeding the database
-		public static readonly string[] All = [Teacher, Student];
+		public static readonly string[] All = [Student, Teacher];
 	}
 }

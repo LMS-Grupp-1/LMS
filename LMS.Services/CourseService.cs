@@ -85,7 +85,7 @@ namespace LMS.Services
 			id);
 
 			course.Name = courseUpdateDto.Name.Trim();
-			course.Description = courseUpdateDto.Description;
+			course.Description = courseUpdateDto.Description ?? string.Empty;
 			course.StartDate = courseUpdateDto.StartDate;
 			course.EndDate = courseUpdateDto.EndDate;
 
@@ -115,12 +115,6 @@ namespace LMS.Services
 			}
 
 			var today = DateTime.Today;
-
-			/* if (startDate.Date < today || endDate.Date < today)
-			{
-				throw new ArgumentException(
-					"Course dates can't be before today's date.");
-			} */
 
 			if (startDate > endDate)
 			{

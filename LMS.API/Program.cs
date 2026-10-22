@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 public class Program
 {
-    private static void Main(string[] args)
+    private static async Task Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +27,7 @@ public class Program
         builder.Services.ConfigureSwagger();
         builder.Services.AddRepositories();
         builder.Services.AddServiceLayer();
+        builder.Services.AddDocumentStorage(builder.Configuration);
         builder.Services.ConfigureAuthentication(builder.Configuration);
         builder.Services.ConfigureIdentity();
         builder.Services.ConfigurePolicys();
@@ -34,13 +35,16 @@ public class Program
 
         var app = builder.Build();
 
-        app.ConfigureExceptionHandler();
+		// Local development only (checked inside the method): starts Azurite before
+		// DataSeedService creates and clears the blob container. Does nothing in Azure.
+		await app.EnsureAzuriteRunningAsync();
+
+		app.ConfigureExceptionHandler();
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
         {
             app.UseSwagger();
-
             app.UseSwaggerUI();
         }
 
@@ -54,6 +58,6 @@ public class Program
         app.MapControllers()
             .RequireAuthorization("Default");
 
-        app.Run();
+        await app.RunAsync();
     }
 }

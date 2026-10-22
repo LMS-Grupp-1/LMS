@@ -102,11 +102,11 @@ else if (courses != null)
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Startdatum</label>
-                            <input type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="courseForm.StartDate" />
+                            <input type="date" class="form-control" @bind="courseForm.StartDate" />
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Slutdatum</label>
-                            <input type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" @bind="courseForm.EndDate" />
+                            <input type="date" class="form-control" @bind="courseForm.EndDate" />
                         </div>
                     </div>
                 </div>
@@ -224,14 +224,6 @@ else if (courses != null)
         {
             formError = "Det existerar redan en kurs med det här namnet.";
             return;
-        }
-
-        var today = DateTime.Today;
-
-        if (courseForm.StartDate.Date < today ||
-            courseForm.EndDate.Date < today)
-        {
-            formError = "Kursdatum får inte ligga före dagens datum.";
         }
 
     if (courseForm.StartDate > courseForm.EndDate)

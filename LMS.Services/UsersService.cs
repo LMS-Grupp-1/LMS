@@ -1,8 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+﻿using Domain.Contracts;
 using Domain.Models.Entities;
-using Service.Contracts;
+using LMS.Shared.Constants;
 using LMS.Shared.DTOs.Users;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Service.Contracts;
 
 namespace LMS.Services;
 
@@ -10,111 +12,124 @@ public class UsersService : IUsersService
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly RoleManager<IdentityRole> _roleManager;
-    private readonly ICourseService _courseService;
+    private readonly IUnitOfWork _unitOfWork;
 
-    public UsersService(UserManager<ApplicationUser> userManager, RoleManager<IdentityRole> roleManager, ICourseService courseService)
+    public UsersService(UserManager<ApplicationUser> userManager, 
+        RoleManager<IdentityRole> roleManager, 
+        ICourseService courseService, 
+        IUnitOfWork unitOfWork)
     {
         _userManager = userManager;
         _roleManager = roleManager;
-        _courseService = courseService;
+        _unitOfWork = unitOfWork;
     }
-    public async Task<IdentityResult> CreateUserAsync(CreateUserDto dto)
+
+    public async Task<(bool Succeeded, IEnumerable<string> Errors)> CreateUserAsync(CreateUserDto dto)
     {
-        if (!string.IsNullOrEmpty(dto.Role))
+        if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
         {
-            if (!await _roleManager.RoleExistsAsync(dto.Role))
-            {
-                var roleResult = await _roleManager.CreateAsync(new IdentityRole(dto.Role));
-                if (!roleResult.Succeeded) return roleResult;
-            }
+            return (false, new[] { $"Rollen '{dto.Role}' finns inte." });
         }
-        else
+
+        if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
         {
-            
+            return (false, new[] { "Student måste tilldelas en kurs." });
         }
 
         var user = new ApplicationUser
         {
             UserName = dto.Email,
             Email = dto.Email,
-            FirstName = dto.FirstName ?? string.Empty,
-            LastName = dto.LastName ?? string.Empty,
-            CourseId = dto.CourseId ?? null
+            FirstName = dto.FirstName?.Trim() ?? string.Empty,
+            LastName = dto.LastName?.Trim() ?? string.Empty,
+            CourseId = dto.CourseId
         };
 
-        var result = await _userManager.CreateAsync(user, dto.Password);
-        if (!result.Succeeded) return result;
+        var createResult = await _userManager.CreateAsync(user, dto.Password);
+        if (!createResult.Succeeded)
+        {
+            return (false, createResult.Errors.Select(e => e.Description));
+        }
 
         var addToRoleResult = await _userManager.AddToRoleAsync(user, dto.Role);
         if (!addToRoleResult.Succeeded)
         {
-            // ROLLBACK: Delete the user if role assignment fails
+            // Compensation / Rollback: Delete the user if role assignment fails
             await _userManager.DeleteAsync(user);
-            return addToRoleResult;
+            return (false, addToRoleResult.Errors.Select(e => e.Description));
         }
 
-        return IdentityResult.Success;
+        return (true, Enumerable.Empty<string>());
     }
-    public async Task<IEnumerable<UserDto>?> GetUsersAsync()
+
+    public async Task<(bool Succeeded, IEnumerable<string> Errors)> UpdateUserAsync(UpdateUserDto dto)
     {
-        var users = _userManager.Users.OrderBy(u => u.FirstName).ToList();
-        var userDtos = new List<UserDto>();
-
-        foreach (var user in users)
+        // 1. Validate role-specific course rule
+        if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
         {
-            var roles = await _userManager.GetRolesAsync(user);
+            return (false, new[] { "Student måste tilldelas en kurs." });
+        }
 
-            var courseName = string.Empty;
-            if (user.CourseId != null)
+        // 2. Find user
+        var user = await _userManager.FindByIdAsync(dto.Id);
+        if (user == null)
+        {
+            return (false, new[] { "Användare hittades inte." });
+        }
+
+        // 3. Validate role existence
+        if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
+        {
+            return (false, new[] { $"Rollen '{dto.Role}' finns inte." });
+        }
+
+        // 4. Handle Role Updates first (if role changed)
+        var currentRoles = await _userManager.GetRolesAsync(user);
+        if (!currentRoles.Contains(dto.Role))
+        {
+            if (currentRoles.Any())
             {
-                var course = await _courseService.GetCourseByIdAsync(user.CourseId.Value);
-                if (course != null)
+                var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                if (!removeResult.Succeeded)
                 {
-                    courseName = course.Name;
+                    return (false, removeResult.Errors.Select(e => e.Description));
                 }
             }
-            userDtos.Add(new UserDto
+
+            var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
+            if (!addResult.Succeeded)
             {
-                Id = user.Id,
-                Email = user.Email ?? string.Empty,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = roles.FirstOrDefault() ?? string.Empty,
-                CourseId = user.CourseId,
-                CourseName = courseName
-            });
+                return (false, addResult.Errors.Select(e => e.Description));
+            }
         }
+
+        // 5. Update User Properties last
+        user.UserName = dto.Email;
+        user.Email = dto.Email;
+        user.FirstName = dto.FirstName?.Trim() ?? string.Empty;
+        user.LastName = dto.LastName?.Trim() ?? string.Empty;
+        user.CourseId = dto.CourseId;
+
+        var result = await _userManager.UpdateAsync(user);
+        if (!result.Succeeded)
+        {
+            return (false, result.Errors.Select(e => e.Description));
+        }
+
+        return (true, Enumerable.Empty<string>());
+    }
+
+    public async Task<IEnumerable<UserDto>?> GetUsersAsync()
+    {
+        // Single optimized database query using mixed LINQ query & method syntax (1 DB call instead of N+1)
+        var userDtos = await _unitOfWork.Users.GetUsersWithCoursesAsync();
 
         return userDtos;
     }
-    public async Task<IEnumerable<UserDto>?> GetUsersByCourseIdAsync(int courseId)
+
+    public async Task<IEnumerable<UserDto>?> GetStudentsByCourseIdAsync(int courseId)
     {
-        var users = _userManager.Users.Where(u => u.CourseId == courseId).OrderBy(u => u.FirstName).ToList();
-
-        var courseName = "Kurs finns inte";
-        var course = await _courseService.GetCourseByIdAsync(courseId);
-        if (course != null)
-        {
-            courseName = course.Name;
-        }
-
-        var userDtos = new List<UserDto>();
-
-        foreach (var user in users)
-        {
-            var roles = await _userManager.GetRolesAsync(user);
-
-            userDtos.Add(new UserDto
-            {
-                Id = user.Id,
-                Email = user.Email ?? string.Empty,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Role = roles.FirstOrDefault() ?? string.Empty,
-                CourseId = user.CourseId,
-                CourseName = courseName
-            });
-        }
+        var userDtos = await _unitOfWork.Users.GetStudentsByCourseIdAsync(courseId);
 
         return userDtos;
     }
@@ -134,46 +149,5 @@ public class UsersService : IUsersService
 			Role = roles.FirstOrDefault() ?? string.Empty,
             CourseId = user.CourseId
         };
-    }
-
-    public async Task<IdentityResult> UpdateUserAsync(UpdateUserDto dto)
-    {
-        var user = await _userManager.FindByIdAsync(dto.Id);
-        if (user == null) return IdentityResult.Failed(new IdentityError { Description = "User not found." });
-
-        user.UserName = dto.Email;
-        user.Email = dto.Email;
-        user.FirstName = dto.FirstName ?? string.Empty;
-        user.LastName = dto.LastName ?? string.Empty;
-        user.CourseId = dto.CourseId ?? null;
-
-        var result = await _userManager.UpdateAsync(user);
-        if (!result.Succeeded) return result;
-
-        if (!string.IsNullOrEmpty(dto.Role))
-        {
-            var currentRoles = await _userManager.GetRolesAsync(user);
-
-            if (!currentRoles.Contains(dto.Role))
-            {
-                if (currentRoles.Any())
-                {
-                    var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
-                    if (!removeResult.Succeeded) return removeResult;
-                }
-
-                // Ensure the role exists before adding
-                if (!await _roleManager.RoleExistsAsync(dto.Role))
-                {
-                    var roleResult = await _roleManager.CreateAsync(new IdentityRole(dto.Role));
-                    if (!roleResult.Succeeded) return roleResult;
-                }
-
-                var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
-                if (!addResult.Succeeded) return addResult;
-            }
-        }
-
-        return IdentityResult.Success;
     }
 }
