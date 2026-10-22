@@ -1,0 +1,167 @@
+﻿@page "/assignments"
+@attribute [Authorize(Roles = UserRoles.Student)]
+@implements IDisposable
+
+@using System.Globalization
+@using System.Net
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.AssignmentDtos
+
+@inject IAssignmentService AssignmentService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Mina uppgifter</PageTitle>
+
+<h1 class="h3 fw-bold mb-4">Mina uppgifter</h1>
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center gap-2 text-muted">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Hämtar uppgifter...</span>
+    </div>
+}
+else if (errorMessage is not null)
+{
+    <div class="alert alert-warning">@errorMessage</div>
+}
+else if (assignments.Count == 0)
+{
+    <div class="text-muted">Det finns inga uppgifter i din kurs ännu.</div>
+}
+else
+{
+    <div class="list-group">
+        @foreach (var assignment in assignments)
+        {
+            var (statusText, statusClass) = GetStatusDisplay(assignment.Status);
+            var isExpanded = expandedId == assignment.Id;
+
+            <div class="list-group-item">
+                @* The whole row toggles the details, which is the detail view of the assignment *@
+                <button type="button"
+                        class="btn btn-link text-start text-decoration-none text-body w-100 p-0"
+                        aria-expanded="@isExpanded"
+                        @onclick="() => ToggleDetails(assignment.Id)">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <div class="fw-semibold">@assignment.Name</div>
+                            <small class="text-muted">@assignment.ModuleName</small>
+                        </div>
+                        <div class="text-end flex-shrink-0">
+                            <span class="badge @statusClass">@statusText</span>
+                            @if (assignment.HasFeedback)
+                            {
+                                <i class="bi bi-chat-left-text ms-1" title="Feedback finns"></i>
+                            }
+                            <div>
+                                <small class="text-muted">
+                                    @(assignment.Deadline is { } deadline
+                                        ? $"Deadline {deadline.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)}"
+                                        : "Ingen deadline")
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+
+                @if (isExpanded)
+                {
+                    <div class="mt-3 pt-3 border-top">
+                        <p class="mb-2" style="white-space: pre-line;">
+                            @(string.IsNullOrWhiteSpace(assignment.Description)
+                                ? "Ingen beskrivning."
+                                : assignment.Description)
+                        </p>
+
+                        @if (assignment.SubmittedAt is { } submittedAt)
+                        {
+                            <small class="text-muted d-block">
+                                <i class="bi bi-check2-circle"></i>
+                                Inlämnad @submittedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+                            </small>
+                        }
+
+                        @if (assignment.HasFeedback)
+                        {
+                            <small class="text-muted d-block">
+                                <i class="bi bi-chat-left-text"></i>
+                                Läraren har lämnat feedback på din inlämning.
+                            </small>
+                        }
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private IReadOnlyList<StudentAssignmentDto> assignments = [];
+    private bool isLoading = true;
+    private string? errorMessage;
+    private int? expandedId;
+    private readonly CancellationTokenSource componentCancellation = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var result = await AssignmentService.GetMyAssignmentsAsync(componentCancellation.Token);
+
+            // The server-side prerender service deliberately returns null.
+            // Keep showing the loading state until WebAssembly runs this again.
+            if (result is null)
+            {
+                return;
+            }
+
+            assignments = result;
+            isLoading = false;
+        }
+        catch (OperationCanceledException) when (componentCancellation.IsCancellationRequested)
+        {
+            // Navigating away disposes the component and cancels its request.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            // The session has expired, send the user to the login page
+            NavigationManager.NavigateTo(
+                $"Account/Login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}",
+                forceLoad: true);
+        }
+        catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        {
+            // The API returns 404 when the student is not enrolled in a course
+            errorMessage = "Du är inte kopplad till någon kurs ännu.";
+            isLoading = false;
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Uppgifterna kunde inte hämtas. Försök igen senare.";
+            isLoading = false;
+        }
+    }
+
+    // Only one assignment is expanded at a time; clicking it again collapses it.
+    private void ToggleDetails(int assignmentId) =>
+        expandedId = expandedId == assignmentId ? null : assignmentId;
+
+    // The API sends the status as an enum; the text and colour are decided here in the UI.
+    private static (string Text, string CssClass) GetStatusDisplay(AssignmentStatus status) => status switch
+    {
+        AssignmentStatus.Submitted => ("Inlämnad", "bg-success"),
+        AssignmentStatus.NotSubmitted => ("Ej inlämnad", "bg-warning text-dark"),
+        AssignmentStatus.Late => ("Försenad", "bg-danger"),
+        AssignmentStatus.NoSubmissionRequired => ("Ingen inlämning", "bg-secondary"),
+        _ => (status.ToString(), "bg-secondary")
+    };
+
+    public void Dispose()
+    {
+        componentCancellation.Cancel();
+        componentCancellation.Dispose();
+    }
+}
