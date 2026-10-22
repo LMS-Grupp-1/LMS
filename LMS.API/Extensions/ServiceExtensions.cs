@@ -9,11 +9,13 @@ public static class ServiceExtensions
     public static void AddRepositories(this IServiceCollection services)
     {
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<ICourseRepository, CourseRepository>();
         services.AddScoped<IModuleRepository, ModuleRepository>();
         services.AddScoped<IActivityRepository, ActivityRepository>();
         services.AddScoped<IDocumentRepository, DocumentRepository>();
-    }
+		services.AddScoped<IAssignmentRepository, AssignmentRepository>();
+	}
 
     public static void AddServiceLayer(this IServiceCollection services)
     {
@@ -36,5 +38,10 @@ public static class ServiceExtensions
 
         services.AddScoped<IDocumentService, DocumentService>();
         services.AddLazy<IDocumentService>();
-    }
+
+		services.AddScoped<IAssignmentService, AssignmentService>();
+		services.AddLazy<IAssignmentService>();
+        		
+		services.AddSingleton(TimeProvider.System);
+	}
 }

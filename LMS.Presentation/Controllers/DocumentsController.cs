@@ -2,6 +2,8 @@
 using LMS.Presentation.Models;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
+using Domain.Models.Exceptions;
+using Domain.Models.Documents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -27,7 +29,8 @@ public sealed class DocumentsController(IServiceManager serviceManager)
         return ExecuteAsync(async actor =>
         {
             if (courseId <= 0)
-                return BadRequest(new { message = "Välj en giltig kurs." });
+                throw new DocumentValidationException(
+                    "The course ID must be greater than zero.");
 
             var documents = await _documents.ListAsync(
                 courseId, actor, cancellationToken);
@@ -45,7 +48,8 @@ public sealed class DocumentsController(IServiceManager serviceManager)
         return ExecuteAsync(async actor =>
         {
             if (courseId <= 0)
-                return BadRequest(new { message = "Välj en giltig kurs." });
+                throw new DocumentValidationException(
+                    "The course ID must be greater than zero.");
 
             var targets = await _documents.TargetsAsync(
                 courseId, actor, cancellationToken);
@@ -69,14 +73,16 @@ public sealed class DocumentsController(IServiceManager serviceManager)
             var file = request.File;
 
             if (file is null || file.Length == 0)
-                return BadRequest(new { message = "Välj en fil som inte är tom." });
+            {
+                throw new DocumentValidationException(
+                    "The file cannot be empty.");
+            }
 
             if (file.Length > DocumentConstraints.MaxFileSize)
-                return BadRequest(new
-                {
-                    message = $"Filen får vara högst " +
-                    $"{DocumentConstraints.MaxFileSize / (1024 * 1024)} MB."
-                });
+            {
+                throw new DocumentValidationException(
+                    $"The file cannot exceed {DocumentConstraints.MaxFileSize} bytes.");
+            }
 
             var target = new DocumentTarget(
                 request.CourseId,
@@ -106,7 +112,8 @@ public sealed class DocumentsController(IServiceManager serviceManager)
         return ExecuteAsync(async actor =>
         {
             if (id <= 0)
-                return BadRequest(new { message = "Dokumentets ID är ogiltigt." });
+                throw new DocumentValidationException(
+                    "The document ID must be greater than zero.");
 
             var document = await _documents.DownloadAsync(
                 id, actor, cancellationToken);
@@ -128,77 +135,15 @@ public sealed class DocumentsController(IServiceManager serviceManager)
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            return Unauthorized(new
-            {
-                message = "Du behöver logga in för att fortsätta."
-            });
+            throw new TokenValidationException(
+                "The authenticated user identifier is missing.");
         }
-
 
         var actor = new DocumentActor(
             userId,
             User.IsInRole(UserRoles.Teacher),
             User.IsInRole(UserRoles.Student));
 
-        try
-        {
             return await action(actor);
         }
-        catch (DocumentValidationException ex)
-        {
-            string message = ex.ErrorCode switch
-            {
-                "InvalidName" =>
-                    $"Namnet måste innehålla mellan 1 och " +
-                    $"{DocumentConstraints.MaxNameLength} tecken.",
-
-                "DescriptionTooLong" =>
-                    $"Beskrivningen får innehålla högst " +
-                    $"{DocumentConstraints.MaxDescriptionLength} tecken.",
-
-                "InvalidFileName" =>
-                    $"Filnamnet är ogiltigt eller innehåller fler än " +
-                    $"{DocumentConstraints.MaxFileNameLength} tecken.",
-
-                "FileTypeNotAllowed" =>
-                    "Filtypen är inte tillåten.",
-
-                "InvalidTarget" =>
-                    "Välj en kurs, en modul eller en aktivitet.",
-
-                "FileTooLarge" =>
-                    $"Filen får vara högst " +
-                    $"{DocumentConstraints.MaxFileSize / (1024 * 1024)} MB.",
-
-                "EmptyFile" =>
-                    "Filen är tom. Välj en fil med innehåll.",
-
-                _ =>
-                    "Dokumentet kunde inte sparas. Kontrollera uppgifterna."
-            };
-
-            return BadRequest(new { message });
-        }
-        catch (DocumentAccessException)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, new
-            {
-                message = "Du har inte behörighet att komma åt detta material."
-            });
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound(new
-            {
-                message = "Dokumentet eller den valda kursen, modulen eller aktiviteten finns inte."
-            });
-        }
-        catch (FileNotFoundException)
-        {
-            return NotFound(new
-            {
-                message = "Filen kunde inte hittas."
-            });
-        }
     }
-}

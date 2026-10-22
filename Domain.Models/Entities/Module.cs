@@ -18,4 +18,6 @@ public class Module
     // public ICollection<Activity> Activities { get; set; } = new List<Activity>();
 
     public ICollection<Document> Documents { get; set; } = new List<Document>();
+
+	public ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
 }

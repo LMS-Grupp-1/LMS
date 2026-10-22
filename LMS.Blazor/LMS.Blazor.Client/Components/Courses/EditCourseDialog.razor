@@ -71,7 +71,7 @@
             CourseEditModel.Name = CourseEditModel.Name.Trim();
             CourseUpdateDto updateDto = new CourseUpdateDto(
                 CourseEditModel.Name,
-                CourseEditModel.Description,
+                CourseEditModel.Description ?? string.Empty,
                 CourseEditModel.StartDate,
                 CourseEditModel.EndDate);
 

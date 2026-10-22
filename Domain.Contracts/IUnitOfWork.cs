@@ -2,9 +2,11 @@
 
 public interface IUnitOfWork : IDisposable
 {
+    IUserRepository Users { get; }
     ICourseRepository Courses { get; }
     IModuleRepository Modules { get; }
     IActivityRepository Activities { get; }
     IDocumentRepository Documents { get; }
-    Task<int> CompleteAsync(); // Commits all changes to the database
+	IAssignmentRepository Assignments { get; }
+	Task<int> CompleteAsync(); // Commits all changes to the database
 }

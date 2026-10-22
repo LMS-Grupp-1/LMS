@@ -2,6 +2,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Domain.Contracts;
+using Domain.Models.Exceptions;
 
 namespace LMS.Infrastructure.Storage;
 
@@ -54,9 +55,8 @@ public sealed class BlobDocumentStorage : IDocumentStorage
         catch (RequestFailedException exception)
             when (exception.Status == 404)
         {
-            throw new FileNotFoundException(
-                "The document file could not be found.",
-                exception);
+            throw new DocumentNotFoundException(
+                "The document file could not be found.");
         }
     }
 

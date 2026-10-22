@@ -10,6 +10,7 @@ public class ServiceManager : IServiceManager
     private readonly Lazy<IModuleService> _moduleService;
     private readonly Lazy<IActivityService> _activityService;
     private readonly Lazy<IDocumentService> _documentService;
+    private readonly Lazy<IAssignmentService> _assignmentService;
 
 
     public IAuthService AuthService => _authService.Value;
@@ -18,13 +19,15 @@ public class ServiceManager : IServiceManager
     public IModuleService ModuleService => _moduleService.Value;
     public IActivityService ActivityService => _activityService.Value;
     public IDocumentService DocumentService => _documentService.Value;
-    
+    public IAssignmentService AssignmentService => _assignmentService.Value;
+
 	public ServiceManager(Lazy<IAuthService> authService, 
 		Lazy<IUsersService> usersService, 
         Lazy<ICourseService> courseService, 
 		Lazy<IModuleService> moduleService,
 		Lazy<IActivityService> activityService,
-        Lazy<IDocumentService> documentService)
+        Lazy<IDocumentService> documentService,
+        Lazy<IAssignmentService> assignmentService)
     {
         _authService = authService;
         _usersService = usersService;
@@ -32,5 +35,6 @@ public class ServiceManager : IServiceManager
         _moduleService = moduleService;
         _activityService = activityService;
         _documentService = documentService;
+        _assignmentService = assignmentService;
     }
 }
