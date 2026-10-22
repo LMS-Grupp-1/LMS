@@ -6,15 +6,12 @@
 @using LMS.Shared.DTOs.Users
 @using LMS.Shared.DTOs.CourseDtos
 @using Microsoft.AspNetCore.Authorization
-@using LMS.Blazor.Client.Services.ApiProxy
 @using System.Net
 @using System.Net.Http.Json
 @attribute [Authorize(Roles = UserRoles.Teacher)]
-@inject IUsersService UsersService
 @inject IApiProxyClient ApiProxy
 @inject NavigationManager navigationManager
 @inject ToastService ToastService
-@inject IApiProxyClient ApiProxy
 
 <div class="container mt-4">
     <div class="col-md-6">

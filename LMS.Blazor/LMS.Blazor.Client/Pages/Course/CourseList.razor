@@ -70,7 +70,17 @@
                                 </td>
                             </tr>
                         }
-                        else if (!filteredCourses.Any() == false)
+                        else if (filteredCourses is null)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <div class="spinner-border spinner-border-sm text-primary me-2"
+                                        role="status"></div>
+                                    Laddar kurser...
+                                </td>
+                            </tr>
+                        }
+                        else if (filteredCourses?.Any() == false)
                         {
                             <tr>
                                 <td colspan="5" class="text-center py-5 text-muted">
@@ -261,7 +271,7 @@ Denna åtgärd går inte att ångra."
             if (!string.IsNullOrWhiteSpace(errorMessage))
             {
                 Logger.LogWarning(
-                    "The API rejeted deletion of course {CourseId]: {ErrorMessage}",
+                    "The API rejected deletion of course {CourseId}: {ErrorMessage}",
                     courseToDeleteId,
                     errorMessage);
 

@@ -21,9 +21,6 @@ public class Program
         builder.Services.AddBffAuthentication(builder.Configuration);
         builder.Services.AddBffAntiforgery();
         builder.Services.AddRemoteApiProxy(builder.Configuration);
-
-        builder.Services.AddScoped<IUsersService, UsersService>();
-        builder.Services.AddScoped<IModuleService, ModuleService>();
         builder.Services.AddScoped<ToastService>();
 		builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 		builder.Services.AddScoped<LMS.Blazor.Client.Services.DocumentService>();

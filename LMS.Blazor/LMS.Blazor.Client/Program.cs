@@ -18,10 +18,6 @@ internal class Program
             BaseAddress = new Uri(builder.HostEnvironment.BaseAddress)
         });
         builder.Services.AddScoped<IApiProxyClient, ApiProxyClient>();
-
-        builder.Services.AddScoped<IModuleService, ModuleService>();
-        builder.Services.AddScoped<IModuleService, ModuleService>();
-        builder.Services.AddScoped<IModuleService, ModuleService>();
 		builder.Services.AddScoped<IAssignmentService, AssignmentService>();		
 
 		builder.Services.AddScoped<ToastService>();
