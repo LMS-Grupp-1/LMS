@@ -1,6 +1,7 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
+using LMS.Shared.DTOs;
 using LMS.Shared.DTOs.CourseDtos;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,7 +71,32 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
 			: await query.FirstOrDefaultAsync();
 	}
 
-	public void CreateCourse(Course course) => _context.Courses.Add(course);
+    public async Task<IEnumerable<DashboardCourseDto>> GetActiveCoursesAsync(int? count = null)
+    {
+        var today = DateTime.Today;
+
+        IQueryable<Course> query = _context.Courses
+            .Where(c => c.EndDate >= today)
+            .OrderByDescending(c => c.StartDate);
+
+        if (count.HasValue && count.Value > 0)
+        {
+            query = query.Take(count.Value);
+        }
+
+        return await query
+            .Select(c => new DashboardCourseDto(
+                c.Id,
+                c.Name,
+                c.StartDate,
+                c.EndDate,
+                c.Students.Count,
+                c.Modules.Count
+            ))
+            .ToListAsync();
+    }
+
+    public void CreateCourse(Course course) => _context.Courses.Add(course);
 
     public void UpdateCourse(Course course) => _context.Courses.Update(course);
 

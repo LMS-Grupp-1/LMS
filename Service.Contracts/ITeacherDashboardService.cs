@@ -1,0 +1,10 @@
+﻿using LMS.Shared.DTOs;
+
+namespace Service.Contracts;
+
+public interface ITeacherDashboardService
+{
+    Task<IEnumerable<DashboardCourseDto>> GetActiveCoursesAsync(int? count = null);
+    Task<IEnumerable<DashboardActivityDto>> GetUpcomingActivitiesAsync();
+    Task<IEnumerable<DashboardAssignmentDto>> GetRecentSubmissionsAsync();
+}

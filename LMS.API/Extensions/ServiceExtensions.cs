@@ -41,7 +41,10 @@ public static class ServiceExtensions
 
 		services.AddScoped<IAssignmentService, AssignmentService>();
 		services.AddLazy<IAssignmentService>();
-        		
-		services.AddSingleton(TimeProvider.System);
+
+        services.AddScoped<ITeacherDashboardService, TeacherDashboardService>();
+        services.AddLazy<ITeacherDashboardService>();
+
+        services.AddSingleton(TimeProvider.System);
 	}
 }

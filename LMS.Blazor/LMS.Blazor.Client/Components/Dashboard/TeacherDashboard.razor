@@ -1,4 +1,8 @@
 ﻿
+@using LMS.Shared.DTOs
+@using LMS.Blazor.Client.Services.ApiProxy
+@inject IApiProxyClient ApiProxy
+
 <div class="container-fluid py-4">
     <!-- Header -->
     <div class="row mb-4">
@@ -14,26 +18,46 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title fw-bold m-0">Aktiva kurser</h5>
-                        <a href="/courses" class="text-decoration-none text-primary fw-semibold small">Visa alla &gt;</a>
+                        <a href="/teacher/courses" class="text-decoration-none text-primary fw-semibold small">Visa alla &gt;</a>
                     </div>
 
-                    <div class="d-flex flex-column gap-3">
-                        @foreach (var course in activeCourses)
-                        {
-                            <div class="card border bg-light shadow-none p-3">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h6 class="fw-bold mb-1 text-dark">@course.CourseName</h6>
-                                        <span class="text-muted small">@course.StartDate.ToString("yyyy-MM-dd") - @course.EndDate.ToString("yyyy-MM-dd")</span>
-                                    </div>
-                                    <div class="text-end">
-                                        <span class="d-block fw-bold text-dark">@course.StudentCount elever</span>
-                                        <span class="text-muted small">@course.ModuleCount moduler</span>
+                    @if (activeCourses == null)
+                    {
+                        <div class="d-flex justify-content-center align-items-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                            <span class="text-muted">Laddar aktiva kurser...</span>
+                        </div>
+                    }
+                    else if (!activeCourses.Any())
+                    {
+                        <div class="alert alert-light text-center text-muted border py-3 mb-0">
+                            Inga aktiva kurser hittades.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-3">
+                            @foreach (var course in activeCourses)
+                            {
+                                <div class="card border bg-light shadow-none p-3">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <NavLink href="@($"/teacher/courses/{course.Id}")">
+                                                <h6 class="fw-bold mb-1 link-primary">@course.Name</h6>
+                                            </NavLink>
+                                            <span class="text-muted small">
+                                                @course.StartDate.ToString("yyyy-MM-dd") – @course.EndDate.ToString("yyyy-MM-dd")
+                                            </span>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="d-block fw-bold text-dark">@course.StudentCount elever</span>
+                                            <span class="text-muted small">@course.ModuleCount moduler</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        }
-                    </div>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -117,12 +141,7 @@
 
 @code {
     // Mock Data Models & Lists
-    private List<ActiveCourseDto> activeCourses = new()
-    {
-        new() { CourseName = "Fullstack .NET Utveckling", StartDate = new DateTime(2026, 8, 30), EndDate = new DateTime(2026, 12, 15), StudentCount = 15, ModuleCount = 5 },
-        new() { CourseName = "Avancerad C# & EF Core", StartDate = new DateTime(2026, 1, 15), EndDate = new DateTime(2026, 5, 30), StudentCount = 12, ModuleCount = 4 },
-        new() { CourseName = "Webbaserade Applikationer", StartDate = new DateTime(2026, 3, 1), EndDate = new DateTime(2026, 6, 1), StudentCount = 18, ModuleCount = 6 }
-    };
+    private IEnumerable<DashboardCourseDto>? activeCourses;
 
     private List<RecentActivityDto> recentActivities = new()
     {
@@ -140,15 +159,6 @@
         new() { ActivityType = "Test / Quiz", ActivityName = "Databasdesign & Normalisering", CourseName = "Webbaserade Applikationer", StartDate = "2026-11-05", StartTime = "13:30" }
     };
 
-    private class ActiveCourseDto
-    {
-        public string CourseName { get; set; } = string.Empty;
-        public DateTime StartDate { get; set; } = DateTime.Now;
-        public DateTime EndDate { get; set; } = DateTime.Now.AddMonths(3);
-        public int StudentCount { get; set; }
-        public int ModuleCount { get; set; }
-    }
-
     private class RecentActivityDto
     {
         public string Description { get; set; } = string.Empty;
@@ -163,4 +173,16 @@
         public string StartDate { get; set; } = string.Empty;
         public string StartTime { get; set; } = string.Empty;
     }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadActiveCoursesAsync();
+    }
+
+    private async Task LoadActiveCoursesAsync()
+    {
+        activeCourses = await ApiProxy.GetAsync<IEnumerable<DashboardCourseDto>>("teacher-dashboard/active-courses") ?? Enumerable.Empty<DashboardCourseDto>();
+        StateHasChanged();
+    }
+
 }
