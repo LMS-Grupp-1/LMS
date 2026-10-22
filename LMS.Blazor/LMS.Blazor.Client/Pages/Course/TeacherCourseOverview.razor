@@ -225,7 +225,7 @@ else if (courses != null)
                 courseForm.Name.Trim(),
                 StringComparison.OrdinalIgnoreCase)))
         {
-            formError = "Det finns redan en kurs med det namnet.";
+            formError = "Det existerar redan en kurs med det här namnet.";
             return;
         }
 
@@ -260,7 +260,7 @@ else if (courses != null)
                         errorMessage);
 
                     formError =
-                        "Kursen kunde inte sparas. Kontrollera uppgifterna och försök igen.";
+                        "Kursen kunde inte sparas. Vänligen försök igen.";
                     return;
                 }
             }
@@ -285,15 +285,14 @@ else if (courses != null)
                         errorMessage);
 
                     formError =
-                        "Kursen kunde inte skapas. Kontrollera uppgifterna och försök igen.";
+                        "Kursen kunde inte skapas. Vänligen försök igen.";
                     return;
                 }
 
                 if (createdCourse is null)
                 {
                     formError =
-                        "Servern bekräftade inte att kursen skapades. " +
-                        "Kontrollera kurslistan innan du försöker igen.";
+                        "Kursen kunde inte raderas. Vänligen försök igen.";
                     return;
                 }
             }
@@ -337,8 +336,7 @@ else if (courses != null)
             Logger.LogError(ex, "The course save request failed.");
 
             formError =
-                "Ändringen kunde inte bekräftas. " +
-                "Kontrollera kurslistan innan du försöker igen.";
+                "Ändringen kunde inte bekräftas. Vänligen försök igen.";
         }
         finally
         {
@@ -390,7 +388,7 @@ else if (courses != null)
                 id);
 
             actionError =
-                "Raderingen kunde inte bekräftas. " +
+                "Kursen kunde inte raderas. " +
                 "Ladda om kurslistan innan du försöker igen.";
         }
         finally

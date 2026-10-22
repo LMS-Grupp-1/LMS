@@ -199,7 +199,7 @@ Denna åtgärd går inte att ångra."
         catch (Exception ex)
         {
             Logger.LogWarning(ex, "Could not load courses.");
-            loadError = "Kurserna kunde inte hämtas. Försök igen.";
+            loadError = "Kunde inte ladda kurser. Försök igen.";
         }
     }
 
@@ -289,7 +289,7 @@ Denna åtgärd går inte att ångra."
         catch (UnauthorizedAccessException ex)
         {
             Logger.LogWarning(ex, "The session expired while deleting a course.");
-            ToastService.ShowToast("Din session har gått ut. Logga in igen.", ToastType.Danger);
+            ToastService.ShowToast("Din session har gått ut. Vänligen logga in och försök igen.", ToastType.Danger);
         }
         catch (Exception ex)
         {
