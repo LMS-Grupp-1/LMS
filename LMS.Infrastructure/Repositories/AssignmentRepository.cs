@@ -23,5 +23,17 @@ namespace LMS.Infrastructure.Repositories
 				.ThenBy(assignment => assignment.Name)
 				.ToListAsync();
 		}
+
+		public async Task<Assignment?> GetByIdForStudentAsync(int id, string studentId)
+		{
+			return await _context.Assignments
+				.AsNoTracking()
+				.Include(assignment => assignment.Module)
+				// Filtered include: other students' submissions are never loaded.
+				.Include(assignment => assignment.Submissions
+					.Where(submission => submission.StudentId == studentId))
+					.ThenInclude(submission => submission.Feedback)
+				.FirstOrDefaultAsync(assignment => assignment.Id == id);
+		}
 	}
 }

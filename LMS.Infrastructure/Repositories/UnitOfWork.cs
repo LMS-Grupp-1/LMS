@@ -12,13 +12,15 @@ public class UnitOfWork : IUnitOfWork
     public IActivityRepository Activities { get; }
     public IDocumentRepository Documents { get; }
 	public IAssignmentRepository Assignments { get; }
+	public ISubmissionRepository Submissions { get; }
 
 	public UnitOfWork(ApplicationDbContext context,
                       ICourseRepository courseRepository,
                       IModuleRepository moduleRepository,
                       IActivityRepository activityRepository,
                       IDocumentRepository documentRepository,
-                      IAssignmentRepository assignmentRepository)
+                      IAssignmentRepository assignmentRepository,
+                      ISubmissionRepository submissionRepository)
     {
         _context = context;
         Courses = courseRepository;
@@ -26,7 +28,8 @@ public class UnitOfWork : IUnitOfWork
         Activities = activityRepository;
         Documents = documentRepository;
         Assignments = assignmentRepository;
-    }
+		Submissions = submissionRepository;
+	}
 
     public async Task<int> CompleteAsync()
     {

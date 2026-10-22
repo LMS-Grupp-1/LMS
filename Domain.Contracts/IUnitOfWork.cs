@@ -7,5 +7,6 @@ public interface IUnitOfWork : IDisposable
     IActivityRepository Activities { get; }
     IDocumentRepository Documents { get; }
 	IAssignmentRepository Assignments { get; }
+	ISubmissionRepository Submissions { get; }
 	Task<int> CompleteAsync(); // Commits all changes to the database
 }
