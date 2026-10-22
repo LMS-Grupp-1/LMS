@@ -70,6 +70,17 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
 			: await query.FirstOrDefaultAsync();
 	}
 
+	public async Task<IReadOnlyList<ApplicationUser>> GetStudentsAsync(int courseId)
+	{
+		// Teachers have no CourseId, so only students are returned.
+		return await _context.Users
+			.AsNoTracking()
+			.Where(user => user.CourseId == courseId)
+			.OrderBy(user => user.LastName)
+			.ThenBy(user => user.FirstName)
+			.ToListAsync();
+	}
+
 	public void CreateCourse(Course course) => _context.Courses.Add(course);
 
     public void UpdateCourse(Course course) => _context.Courses.Update(course);

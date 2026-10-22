@@ -10,6 +10,7 @@ public interface ICourseRepository
     Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync(bool trackChanges);
     Task<Course?> GetByIdAsync(int id, bool trackChanges);
 	Task<Course?> GetForStudentAsync(string userId, bool trackChanges);
+	Task<IReadOnlyList<ApplicationUser>> GetStudentsAsync(int courseId);
 	void CreateCourse(Course course);
 	void UpdateCourse(Course course);
 	void DeleteCourse(Course course);
