@@ -1,17 +1,24 @@
 ﻿@page "/users"
 @using Microsoft.AspNetCore.Authorization
 @using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Shared.DTOs.Users
 @using LMS.Blazor.Client.Components.Common
 @attribute [Authorize(Roles = "Teacher")]
 @inject NavigationManager Navigation
-@inject IUsersService UsersService
+@inject IApiProxyClient ApiProxy
 @inject ToastService ToastService
 
 <PageTitle>Användarhantering</PageTitle>
 
 <div class="container mt-4">
-    @if (users == null)
+@if (!string.IsNullOrEmpty(errorMsg))
+{
+    <div class="text-danger my-2">
+        <i class="bi bi-exclamation-circle me-1"></i> @errorMsg
+    </div>
+}
+@if (users == null)
 {
     <h3 class="mb-3">Administrera Användare</h3>
     <p><em>Laddar användare...</em></p>
@@ -65,9 +72,9 @@ else
                         <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditUser(user.Id)">
                             <i class="bi bi-pencil"></i>
                         </button>
-                        <button class="btn btn-sm btn-outline-danger" @onclick="() => PromptDeleteUser(user.Id, user.FirstName, user.LastName)">
+                        @* <button class="btn btn-sm btn-outline-danger" @onclick="() => PromptDeleteUser(user.Id, user.FirstName, user.LastName)">
                             <i class="bi bi-trash"></i>
-                        </button>
+                        </button> *@
                     </td>
                 </tr>
             }
@@ -76,19 +83,20 @@ else
 }
 </div>
 
-<ConfirmDialog IsOpen="showDeleteModal"
+@* <ConfirmDialog IsOpen="showDeleteModal"
                Title="@($"Ta bort användare: {deleteUserName}")"
                Message="Är du säker på att du vill ta bort denna användare? Denna åtgärd går inte att ångra."
                ConfirmButtonText="Ta bort"
                ConfirmButtonClass="btn-danger"
                OnCancel="CloseDeleteModal"
-               OnConfirm="ConfirmDeleteUserAsync" />
+               OnConfirm="ConfirmDeleteUserAsync" /> *@
 
 @code {
     private IEnumerable<UserDto>? users;
-    private bool showDeleteModal = false;
-    private string? userToDeleteId = null;
-    private string? deleteUserName = null;
+    // private bool showDeleteModal = false;
+    // private string? userToDeleteId = null;
+    // private string? deleteUserName = null;
+    private string? errorMsg = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -97,7 +105,19 @@ else
 
     private async Task LoadUsersAsync()
     {
-        users = await UsersService.GetUsersAsync();
+        errorMsg = null;
+        try
+        {
+            users = await ApiProxy.GetAsync<IEnumerable<UserDto>>(
+                "users"
+            ) ?? Enumerable.Empty<UserDto>();
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMsg = $"Kunde inte ladda användare: {ex.Message}";
+            users = null;
+        }
+
         StateHasChanged();
     }
 
@@ -111,37 +131,36 @@ else
         Navigation.NavigateTo($"/users/edit/{id}");
     }
 
-    private void PromptDeleteUser(string userId, string firstName, string lastName)
-    {
-        userToDeleteId = userId;
-        deleteUserName = $"{firstName} {lastName}";
-        showDeleteModal = true;
-    }
+    // private void PromptDeleteUser(string userId, string firstName, string lastName)
+    // {
+    //     userToDeleteId = userId;
+    //     deleteUserName = $"{firstName} {lastName}";
+    //     showDeleteModal = true;
+    // }
 
-    private void CloseDeleteModal()
-    {
-        showDeleteModal = false;
-        userToDeleteId = null;
-        deleteUserName = null;
-    }
+    // private void CloseDeleteModal()
+    // {
+    //     showDeleteModal = false;
+    //     userToDeleteId = null;
+    //     deleteUserName = null;
+    // }
 
-    private async Task ConfirmDeleteUserAsync()
-    {
-        if (string.IsNullOrEmpty(userToDeleteId)) return;
+    // private async Task ConfirmDeleteUserAsync()
+    // {
+    //     if (string.IsNullOrEmpty(userToDeleteId)) return;
 
-        var success = false;
-        // await UsersService.DeleteUserAsync(userToDeleteId);
+    //     var success = false;
         
-        if (success)
-        {
-            CloseDeleteModal();
-            ToastService.ShowToast("Användaren har tagits bort framgångsrikt.", ToastType.Success);
-            await LoadUsersAsync(); 
-        }
-        else
-        {
-            CloseDeleteModal();
-            ToastService.ShowToast("Kunde inte ta bort användaren. Försök igen senare.", ToastType.Danger);
-        }
-    }
+    //     if (success)
+    //     {
+    //         CloseDeleteModal();
+    //         ToastService.ShowToast("Användaren har tagits bort framgångsrikt.", ToastType.Success);
+    //         await LoadUsersAsync(); 
+    //     }
+    //     else
+    //     {
+    //         CloseDeleteModal();
+    //         ToastService.ShowToast("Kunde inte ta bort användaren. Försök igen senare.", ToastType.Danger);
+    //     }
+    // }
 }

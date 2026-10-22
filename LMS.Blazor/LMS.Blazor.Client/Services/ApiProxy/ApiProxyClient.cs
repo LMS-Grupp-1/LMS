@@ -56,31 +56,35 @@ public sealed class ApiProxyClient(HttpClient httpClient) : IApiProxyClient
         using var response = await httpClient.SendAsync(request, cancellationToken);
         EnsureAuthenticated(response);
 
-        // If it's a 400 Bad Request, read the custom error message returned by your controller
-        if ((int)response.StatusCode == 400)
+        // If it's a 400 Bad Request (or any error status code), read the custom error message returned by your controller
+        if ((int)response.StatusCode == 400 || !response.IsSuccessStatusCode)
         {
             try
             {
-				var errorObj = await response.Content.ReadFromJsonAsync<ErrorResponseDto>(cancellationToken: cancellationToken);
+                // Deserialize into our clean ProblemDetails model
+                var problemDetails = await response.Content.ReadFromJsonAsync<ApiProblemDetails>(cancellationToken: cancellationToken);
 
-				// Controllers that return their own error object use "message";
-				// the exception middleware returns ProblemDetails with "detail";
-				// model validation returns "errors" per field.
-				var message = !string.IsNullOrWhiteSpace(errorObj?.Message)
-					? errorObj.Message
-					: errorObj?.Detail;
+                // Check for field-level validation errors from [ApiController]
+                if (problemDetails?.Errors is { Count: > 0 } errors)
+                {
+                    var validationMessages = string.Join(" ", errors.Values.SelectMany(messages => messages));
+                    return (default, validationMessages);
+                }
 
-				if (string.IsNullOrWhiteSpace(message) &&
-					errorObj?.Errors is { Count: > 0 } errors)
-				{
-					message = string.Join(" ", errors.Values.SelectMany(messages => messages));
-				}
+                // Check for standard ProblemDetails message from ExceptionMiddleware (Detail or Title)
+                var message = problemDetails?.Detail ?? problemDetails?.Title;
+                if (!string.IsNullOrEmpty(message))
+                {
+                    return (default, message);
+                }
 
-				return (default, string.IsNullOrWhiteSpace(message) ? "Valideringsfel uppstod." : message);
-			}
+                return (default, $"Ett fel uppstod (Status: {(int)response.StatusCode}).");
+            }
             catch
             {
-                return (default, "Ett valideringsfel uppstod.");
+                // Fallback if the response body isn't JSON
+                var rawError = await response.Content.ReadAsStringAsync(cancellationToken);
+                return (default, string.IsNullOrWhiteSpace(rawError) ? "Ett valideringsfel uppstod." : rawError);
             }
         }
 
