@@ -43,7 +43,6 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
     public async Task<ActionResult<CourseDto>> GetCourse(int id)
     {
         var course = await _courseService.GetCourseByIdAsync(id);
-        if (course is null) return NotFound();
 
         return Ok(course);
     }
