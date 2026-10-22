@@ -5,5 +5,7 @@ namespace LMS.Shared.DTOs;
 public class ErrorResponseDto
 {
     public string Message { get; set; } = string.Empty;
-    public Dictionary<string, string[]>? Errors { get; set; }
+	// The API's exception middleware returns ProblemDetails, where the message is in "detail".
+	public string? Detail { get; set; }
+	public Dictionary<string, string[]>? Errors { get; set; }
 }

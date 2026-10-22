@@ -61,20 +61,23 @@ public sealed class ApiProxyClient(HttpClient httpClient) : IApiProxyClient
         {
             try
             {
-                var errorObj = await response.Content.ReadFromJsonAsync<ErrorResponseDto>(cancellationToken: cancellationToken);
+				var errorObj = await response.Content.ReadFromJsonAsync<ErrorResponseDto>(cancellationToken: cancellationToken);
 
-                var message = errorObj?.Message; 
+				// Controllers that return their own error object use "message";
+				// the exception middleware returns ProblemDetails with "detail";
+				// model validation returns "errors" per field.
+				var message = !string.IsNullOrWhiteSpace(errorObj?.Message)
+					? errorObj.Message
+					: errorObj?.Detail;
 
-                if (string.IsNullOrWhiteSpace(message) &&
-                    errorObj?.Errors is { Count: > 0} errors)
-                {
-                    message = string.Join(
-                        " ",
-                        errors.Values.SelectMany(messages => messages));
-                }
-                
-                return (default, errorObj?.Message ?? "Valideringsfel uppstod.");
-            }
+				if (string.IsNullOrWhiteSpace(message) &&
+					errorObj?.Errors is { Count: > 0 } errors)
+				{
+					message = string.Join(" ", errors.Values.SelectMany(messages => messages));
+				}
+
+				return (default, string.IsNullOrWhiteSpace(message) ? "Valideringsfel uppstod." : message);
+			}
             catch
             {
                 return (default, "Ett valideringsfel uppstod.");
