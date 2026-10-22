@@ -5,6 +5,7 @@
 @using LMS.Blazor.Client.Components.Courses
 @using LMS.Blazor.Client.Components.Modules
 @using LMS.Blazor.Client.Components.Users
+@using LMS.Blazor.Client.Components.Submissions
 @attribute [Authorize(Roles = "Teacher")]
 @inject ICourseService CourseService
 @inject NavigationManager navigationManager
@@ -79,7 +80,7 @@
                     <ModuleList CourseId="CourseId" CurrentCourse="currentCourse" />
                     break;
                 case "submissions":
-                    <div class="alert alert-info">Inlämningar kommer snart...</div>
+                    <TeacherSubmissions CourseId="CourseId" />
                     break;
                 case "students":
                     <StudentList CourseId="CourseId" />

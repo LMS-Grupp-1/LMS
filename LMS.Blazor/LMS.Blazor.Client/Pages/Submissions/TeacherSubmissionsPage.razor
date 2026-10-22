@@ -1,0 +1,40 @@
+﻿@page "/teacher/submissions"
+@attribute [Authorize(Roles = UserRoles.Teacher)]
+
+@using Microsoft.AspNetCore.Authorization
+@using LMS.Blazor.Client.Components.Submissions
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.CourseDtos
+
+@inject ICourseService CourseService
+
+<PageTitle>Inlämningar</PageTitle>
+
+<h1 class="h3 fw-bold mb-4">Inlämningar</h1>
+
+<div class="mb-4" style="max-width: 24rem;">
+    <label class="form-label small fw-semibold" for="course-picker">Kurs</label>
+    <select id="course-picker" class="form-select" @bind="selectedCourseId">
+        <option value="0">Välj kurs...</option>
+        @foreach (var course in courses)
+        {
+            <option value="@course.Id">@course.Name</option>
+        }
+    </select>
+</div>
+
+@if (selectedCourseId > 0)
+{
+    <TeacherSubmissions CourseId="selectedCourseId" />
+}
+
+@code {
+    private List<CourseLookupDto> courses = [];
+    private int selectedCourseId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        courses = (await CourseService.GetCourseLookupsAsync()).ToList();
+    }
+}
