@@ -96,7 +96,7 @@ namespace LMS.Services
 			id);
 
 			course.Name = courseUpdateDto.Name.Trim();
-			course.Description = courseUpdateDto.Description;
+			course.Description = courseUpdateDto.Description ?? string.Empty;
 			course.StartDate = courseUpdateDto.StartDate;
 			course.EndDate = courseUpdateDto.EndDate;
 

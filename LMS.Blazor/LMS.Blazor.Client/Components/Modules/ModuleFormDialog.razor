@@ -1,6 +1,9 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Shared.DTOs.ModulesDtos
-@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
+@using System.Net
+@using System.Net.Http.Json
+@inject IApiProxyClient ApiProxy
 
 @if (IsOpen)
 {
@@ -76,7 +79,6 @@
     [Parameter] public ModuleDto? ModuleToEdit { get; set; } // Null = Create mode, Populated = Edit mode
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnModuleSaved { get; set; }
-    [Parameter] public IModuleService ModuleService { get; set; } = default!;
 
     private CreateModuleDto moduleModel = new();
     private bool IsSubmitting = false;
@@ -124,8 +126,14 @@
         {
             if (IsEditMode && ModuleToEdit != null)
             {
-                var (success, responseErrorMessage) = await ModuleService.UpdateModuleAsync(CourseId, ModuleToEdit.Id, moduleModel);
-                if (!success)
+                using var content = JsonContent.Create(moduleModel);
+                var (data, responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                    HttpMethod.Put,
+                    $"teacher/courses/{CourseId}/modules/{ModuleToEdit.Id}",
+                    content
+                );
+
+                if (!string.IsNullOrEmpty(responseErrorMessage))
                 {
                     submitErrorMessage = responseErrorMessage ?? "Det gick inte att uppdatera modulen. Försök igen.";
                     return;
@@ -133,8 +141,15 @@
             }
             else
             {
-                var (success, responseErrorMessage) = await ModuleService.CreateModuleAsync(CourseId, moduleModel);
-                if (!success)
+                using var content = JsonContent.Create(moduleModel);
+
+                var (data, responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                    HttpMethod.Post,
+                    $"teacher/courses/{CourseId}/modules",
+                    content
+                );
+
+                if (!string.IsNullOrEmpty(responseErrorMessage))
                 {
                     submitErrorMessage = responseErrorMessage ?? "Det gick inte att skapa modulen. Försök igen.";
                     return;
