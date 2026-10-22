@@ -1,4 +1,6 @@
-﻿using Azure.Storage.Blobs;
+﻿using LMS.Services;
+using System.Text;
+using Azure.Storage.Blobs;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using LMS.Shared.Constants;
@@ -60,7 +62,8 @@ internal class DataSeedService : IHostedService
 			{
 				await SeedTestModulesAsync(context, cancellationToken);
                 await SeedTestActivitiesAsync(context, cancellationToken);
-            }
+				await SeedTestAssignmentsAsync(context, container, cancellationToken);				
+			}
 
             return;
         }
@@ -113,7 +116,8 @@ internal class DataSeedService : IHostedService
 			{
 				await SeedTestModulesAsync(context, cancellationToken);
                 await SeedTestActivitiesAsync(context, cancellationToken);
-            }
+				await SeedTestAssignmentsAsync(context, container, cancellationToken);
+			}
 
 			logger.LogInformation("Seed complete");
 		}
@@ -317,7 +321,162 @@ internal class DataSeedService : IHostedService
             addedCount);
     }
 
-    private async Task ClearContainerAsync(BlobContainerClient container, CancellationToken cancellationToken)
+	// Development only: assignments that together show every status for the seeded students.
+	// Deadlines are relative to today, so the statuses make sense whenever the database is recreated.
+	private async Task SeedTestAssignmentsAsync(
+		ApplicationDbContext context,
+		BlobContainerClient? container,
+		CancellationToken cancellationToken)
+	{
+		await SeedTestAssignmentsForModuleAsync(
+			context, container,
+			courseName: "Lexicon LTU",
+			moduleName: "Grundläggande C#",
+			studentEmail: "anna.andersson@lms.com",
+			[
+				new("Inlämning: Konsolapp", "Bygg en konsolapp som läser in och sorterar en lista med namn."),
+				new("Inlämning: LINQ-övningar", "Lös övningarna 1–10 med LINQ och lämna in koden."),
+				new("Inlämning: Klasser och arv", "Modellera ett fordonsregister med en basklass och två subklasser."),
+				new("Läs kapitel 4 om generics", "Läs kapitel 4 inför nästa föreläsning."),
+				new("Öva på enhetstester", "Frivillig övning: skriv tester för dina tidigare uppgifter när du har tid.")
+			],
+			cancellationToken);
+
+		await SeedTestAssignmentsForModuleAsync(
+			context, container,
+			courseName: "Lexicon GBG",
+			moduleName: "HTML och CSS",
+			studentEmail: "johan.nilsson@lms.com",
+			[
+				new("Inlämning: Personlig webbsida", "Bygg en enkel webbsida om dig själv med semantisk HTML."),
+				new("Inlämning: Flexbox-layout", "Återskapa layouten i bilden med Flexbox och lämna in HTML- och CSS-filerna."),
+				new("Inlämning: Responsivt formulär", "Bygg ett kontaktformulär som fungerar både i mobil och på dator."),
+				new("Läs om CSS Grid", "Läs kapitlet om CSS Grid inför nästa föreläsning."),
+				new("Öva på selektorer", "Frivillig övning: träna på CSS-selektorer när du har tid.")
+			],
+			cancellationToken);
+	}
+
+	// Name and description for one seeded test assignment.
+	private sealed record TestAssignmentText(string Name, string Description);
+
+	// Seeds five assignments in one module. The texts are used in this order:
+	// 0 = upcoming deadline, 1 = handed in on time with feedback, 2 = handed in late,
+	// 3 = reading with a deadline, 4 = practice without a deadline.
+	// The given student hands in 1 and 2; the other students in the course hand in nothing.
+	private async Task SeedTestAssignmentsForModuleAsync(
+		ApplicationDbContext context,
+		BlobContainerClient? container,
+		string courseName,
+		string moduleName,
+		string studentEmail,
+		TestAssignmentText[] texts,
+		CancellationToken cancellationToken)
+	{
+		var module = await context.Modules.FirstOrDefaultAsync(
+			module => module.Course.Name == courseName && module.Name == moduleName,
+			cancellationToken);
+
+		if (module is null)
+			return;
+
+		if (await context.Assignments.AnyAsync(assignment => assignment.ModuleId == module.Id, cancellationToken))
+			return;
+
+		// Local Swedish time, the same way a teacher enters a deadline.
+		var today = DateTime.Today;
+		DateTime At(int days, int hour, int minute = 0) =>
+			today.AddDays(days).AddHours(hour).AddMinutes(minute);
+
+		Assignment Create(TestAssignmentText text, DateTime? deadline, bool requiresSubmission) => new()
+		{
+			ModuleId = module.Id,
+			Name = text.Name,
+			Description = text.Description,
+			Deadline = deadline,
+			RequiresSubmission = requiresSubmission
+		};
+
+		var upcoming = Create(texts[0], At(7, 17), requiresSubmission: true);
+		var handedInOnTime = Create(texts[1], At(-3, 17), requiresSubmission: true);
+		var handedInLate = Create(texts[2], At(-1, 17), requiresSubmission: true);
+		var reading = Create(texts[3], At(3, 17), requiresSubmission: false);
+		var practice = Create(texts[4], deadline: null, requiresSubmission: false);
+
+		context.Assignments.AddRange(upcoming, handedInOnTime, handedInLate, reading, practice);
+
+		var student = await context.Users.FirstAsync(
+			user => user.Email == studentEmail, cancellationToken);
+		var teacher = await context.Users.FirstAsync(
+			user => user.Email == DefaultUserEmail, cancellationToken);
+
+		// The student hands in one assignment the day before the deadline, and one 90 minutes too late.
+		var onTimeSubmission = await CreateTestSubmissionAsync(
+			context, container, handedInOnTime, student, At(-4, 10), cancellationToken);
+		await CreateTestSubmissionAsync(
+			context, container, handedInLate, student, At(-1, 18, 30), cancellationToken);
+
+		context.Feedbacks.Add(new Feedback
+		{
+			Submission = onTimeSubmission,
+			TeacherId = teacher.Id,
+			Comment = "Bra jobbat! Se över namngivningen så blir koden ännu tydligare.",
+			CreatedAt = DateTimeOffset.UtcNow
+		});
+
+		await context.SaveChangesAsync(cancellationToken);
+
+		logger.LogInformation(
+			"Seeded 5 test assignments with 2 submissions in {Course} / {Module}.",
+			courseName, moduleName);
+	}
+
+	// Creates a submission with a small text file. The file is uploaded to Azurite,
+	// so downloading it works the same way as for a real submission.
+	private static async Task<Submission> CreateTestSubmissionAsync(
+		ApplicationDbContext context,
+		BlobContainerClient? container,
+		Assignment assignment,
+		ApplicationUser student,
+		DateTime submittedAtLocal,
+		CancellationToken cancellationToken)
+	{
+		var content = Encoding.UTF8.GetBytes(
+			$"Testinlämning för \"{assignment.Name}\" av {student.FirstName} {student.LastName}.");
+		var blobPath = Guid.NewGuid().ToString("N");
+
+		if (container is not null)
+		{
+			await container.UploadBlobAsync(blobPath, new BinaryData(content), cancellationToken);
+		}
+
+		var submittedAt = AssignmentStatusCalculator.ToSwedishTime(submittedAtLocal);
+
+		// The document is not linked to a course, module or activity,
+		// so it never shows up in the course's shared document list.
+		var submission = new Submission
+		{
+			Assignment = assignment,
+			StudentId = student.Id,
+			SubmittedAt = submittedAt,
+			Document = new Document
+			{
+				Name = $"Inlämning – {assignment.Name}",
+				Description = "Testinlämning skapad av seed-data.",
+				FileName = "inlamning.txt",
+				ContentType = "text/plain",
+				SizeBytes = content.Length,
+				BlobPath = blobPath,
+				UploadedAt = submittedAt,
+				UploadedById = student.Id
+			}
+		};
+
+		context.Submissions.Add(submission);
+		return submission;
+	}
+
+	private async Task ClearContainerAsync(BlobContainerClient container, CancellationToken cancellationToken)
 	{
 		var deleted = 0;
 		await foreach (var blob in container.GetBlobsAsync(cancellationToken: cancellationToken))
