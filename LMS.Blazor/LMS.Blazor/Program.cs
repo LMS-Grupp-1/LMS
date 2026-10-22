@@ -23,7 +23,6 @@ public class Program
         builder.Services.AddRemoteApiProxy(builder.Configuration);
 
         builder.Services.AddScoped<IUsersService, UsersService>();
-        builder.Services.AddScoped<ICourseService, CourseService>();
         builder.Services.AddScoped<IModuleService, ModuleService>();
         builder.Services.AddScoped<ToastService>();
 		builder.Services.AddScoped<IAssignmentService, AssignmentService>();

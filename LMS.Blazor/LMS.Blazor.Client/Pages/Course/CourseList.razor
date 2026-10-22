@@ -6,9 +6,10 @@
 @using LMS.Blazor.Client.Services
 @using LMS.Blazor.Client.Components.Courses
 @using LMS.Blazor.Client.Components.Common
+@using LMS.Blazor.Client.Services.ApiProxy
 @attribute [Authorize(Roles = UserRoles.Teacher)]
 @inject NavigationManager NavManager
-@inject ICourseService CourseService
+@inject IApiProxyClient ApiProxy
 @inject ToastService ToastService
 @inject ILogger<CourseList> Logger
 
@@ -61,16 +62,15 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (filteredCourses == null)
+                        @if (!string.IsNullOrWhiteSpace(loadError))
                         {
                             <tr>
-                                <td colspan="5" class="text-center py-5 text-muted">
-                                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                                    Laddar kurser...
+                                <td colspan="5" class="text-center py-5 text-danger" role="alert">
+                                    @loadError
                                 </td>
                             </tr>
                         }
-                        else if (!filteredCourses.Any())
+                        else if (!filteredCourses.Any() == false)
                         {
                             <tr>
                                 <td colspan="5" class="text-center py-5 text-muted">
@@ -148,6 +148,7 @@ Denna åtgärd går inte att ångra."
 @code {
     private IEnumerable<CourseDto>? courses;
     private string searchTerm = string.Empty;
+    private string? loadError;
 
     // For Edit Course Modal
     private bool isModalOpen = false;
@@ -172,14 +173,23 @@ Denna åtgärd går inte att ångra."
 
     private async Task LoadCoursesAsync()
     {
+        courses = null;
+        loadError = null;
+
         try
         {
-            courses = await CourseService.GetCoursesWithCountsAsync();
+            courses = await ApiProxy.GetAsync<IEnumerable<CourseDto>>(
+                "courses/with-counts") ?? Enumerable.Empty<CourseDto>();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.LogWarning(ex, "The session expired while loading courses.");
+            loadError = "Din session har gått ut. Logga in igen.";
         }
         catch (Exception ex)
         {
-            ToastService.ShowToast($"Kunde inte ladda kurser: {ex.Message}", ToastType.Danger);
-            courses = new List<CourseDto>();
+            Logger.LogWarning(ex, "Could not load courses.");
+            loadError = "Kurserna kunde inte hämtas. Försök igen.";
         }
     }
 
@@ -236,33 +246,48 @@ Denna åtgärd går inte att ångra."
 
     private async Task ConfirmDeleteAsync()
     {
-        if (isBusy || courseToDeleteId == null) return;
+        if (isBusy || courseToDeleteId == null) 
+            return;
+
         isBusy = true;
 
         try
         {
-            var success = await CourseService.DeleteCourseAsync(courseToDeleteId.Value);
+            var (_, errorMessage) =
+                await ApiProxy.SendAndHandleErrorAsync<object>(
+                    HttpMethod.Delete,
+                    $"courses/{courseToDeleteId.Value}");
 
-            if (success)
+            if (!string.IsNullOrWhiteSpace(errorMessage))
             {
-                ToastService.ShowToast($"Kursen {courseToDeleteName} har raderats.", ToastType.Success);
-                CloseDeleteModal();
-                await LoadCoursesAsync();
+                Logger.LogWarning(
+                    "The API rejeted deletion of course {CourseId]: {ErrorMessage}",
+                    courseToDeleteId,
+                    errorMessage);
+
+                ToastService.ShowToast(
+                    "Kursen kunde inte raderas. Försök igen.",
+                    ToastType.Danger);
+
+                return;
             }
-            else
-            {
-                ToastService.ShowToast("Kursen kunde inte raderas. Försök igen.", ToastType.Danger);
-            }
+
+            ToastService.ShowToast($"Kursen {courseToDeleteName} har raderats.", ToastType.Success);
+            CloseDeleteModal();
+            await LoadCoursesAsync();
         }
         catch (UnauthorizedAccessException ex)
         {
-            Logger.LogWarning(ex, $"The session expired while the course was deleted. {ex.Message}");
-            ToastService.ShowToast("Din session har gått ut. Vänligen logga in och försök igen.", ToastType.Danger);
+            Logger.LogWarning(ex, "The session expired while deleting a course.");
+            ToastService.ShowToast("Din session har gått ut. Logga in igen.", ToastType.Danger);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, $"Course with id {courseToDeleteId} could not be deleted. {ex.Message}");
-            ToastService.ShowToast($"Kursen kunde inte raderas. {ex.Message}", ToastType.Danger);
+            Logger.LogError(ex, "Could not confirm deletion of course {CourseId}.",
+            courseToDeleteId);
+
+            ToastService.ShowToast($"Kursen kunde inte raderas. " +
+            "Ladda om kurslistan innan du försöker igen.", ToastType.Danger);
         }
         finally
         {

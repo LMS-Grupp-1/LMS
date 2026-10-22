@@ -3,9 +3,9 @@
 @using Microsoft.Extensions.Logging
 @using Microsoft.AspNetCore.Authorization
 @using LMS.Shared.DTOs.CourseDtos
-@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @attribute [Authorize(Roles = "Teacher")]
-@inject ICourseService CourseService
+@inject IApiProxyClient ApiProxy
 @inject ILogger<TeacherCourseOverview> Logger
 
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -150,17 +150,18 @@ else if (courses != null)
 
         try
         {
-            courses = await CourseService.GetAllCoursesAsync();
+            courses = await ApiProxy.GetAsync<IEnumerable<CourseDto>>(
+                "courses") ?? Enumerable.Empty<CourseDto>();
         }
         catch (UnauthorizedAccessException ex)
         {
             Logger.LogWarning(ex, "The session expired while the courses were loading.");
-            loadError = "Your session expired. Please log in again.";
+            loadError = "Din session har gått ut. Logga in igen.";
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Courses couldn't load.");
-            loadError = "Courses couldn't load. Please try again.";
+            loadError = "Kurserna kunde inte hämtas. Försök igen.";
         }
         finally
         {
@@ -205,7 +206,8 @@ else if (courses != null)
 
     private async Task SaveCourse()
     {
-        if (isBusy) return;
+        if (isBusy)
+            return;
 
         formError = null;
 
@@ -217,116 +219,191 @@ else if (courses != null)
         }
 
         if (courses != null && courses.Any(course =>
-            (!isEditing || course.Id != editingCourseId) && string.Equals(
+            (!isEditing || course.Id != editingCourseId) &&
+            string.Equals(
                 course.Name.Trim(),
                 courseForm.Name.Trim(),
                 StringComparison.OrdinalIgnoreCase)))
         {
-            formError = "Det existerar redan en kurs med det här namnet.";
+            formError = "Det finns redan en kurs med det namnet.";
             return;
         }
 
-    if (courseForm.StartDate > courseForm.EndDate)
-    {
-        formError = "Startdatum får inte ligga efter slutdatum.";
-        return;
-    }
-
-    isBusy = true;
-
-    try
-    {
-        bool success;
-
-        if (isEditing)
+        if (courseForm.StartDate > courseForm.EndDate)
         {
-            var dto = new CourseUpdateDto(
-                courseForm.Name.Trim(),
-                courseForm.Description,
-                courseForm.StartDate,
-                courseForm.EndDate);
-
-            success = await CourseService.UpdateCourseAsync(
-                editingCourseId, dto);
-        }
-        else
-        {
-            var dto = new CourseCreateDto(
-                courseForm.Name.Trim(),
-                courseForm.Description,
-                courseForm.StartDate,
-                courseForm.EndDate);
-
-            success = await CourseService.CreateCourseAsync(dto);
-        }
-
-        if (!success)
-        {
-            formError = "Kursen kunde inte sparas. Vänligen försök igen.";
+            formError = "Startdatum får inte ligga efter slutdatum.";
             return;
         }
 
-        CloseModal();
-        await LoadCourses();
-    }
-    catch (UnauthorizedAccessException ex)
-    {
-        Logger.LogWarning(ex, "The session expired while saving a course.");
-        formError = "Your session has expired. Log in again.";
-    }
-    catch (Exception ex)
-    {
-        Logger.LogError(ex, "The course could not be saved.");
-        formError = "The course could not be saved. Please try again.";
-    }
-    finally
-    {
-        isBusy = false;
-    }
-}
+        isBusy = true;
 
-
-    private async Task DeleteCourse(int id)
-{
-    if (isBusy) return;
-
-    isBusy = true;
-    actionError = null;
-
-    try
-    {
-        var success = await CourseService.DeleteCourseAsync(id);
-
-        if (success)
+        try
         {
+            if (isEditing)
+            {
+                var dto = new CourseUpdateDto(
+                    courseForm.Name.Trim(),
+                    courseForm.Description,
+                    courseForm.StartDate,
+                    courseForm.EndDate);
+
+                var (_, errorMessage) =
+                    await ApiProxy.SendAndHandleErrorAsync<object>(
+                        HttpMethod.Put,
+                        $"courses/{editingCourseId}",
+                        JsonContent.Create(dto));
+
+                if (!string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    Logger.LogWarning(
+                        "The API rejected course update: {ErrorMessage}",
+                        errorMessage);
+
+                    formError =
+                        "Kursen kunde inte sparas. Kontrollera uppgifterna och försök igen.";
+                    return;
+                }
+            }
+            else
+            {
+                var dto = new CourseCreateDto(
+                    courseForm.Name.Trim(),
+                    courseForm.Description,
+                    courseForm.StartDate,
+                    courseForm.EndDate);
+
+                var (createdCourse, errorMessage) =
+                    await ApiProxy.SendAndHandleErrorAsync<CourseDto>(
+                        HttpMethod.Post,
+                        "courses",
+                        JsonContent.Create(dto));
+
+                if (!string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    Logger.LogWarning(
+                        "The API rejected course creation: {ErrorMessage}",
+                        errorMessage);
+
+                    formError =
+                        "Kursen kunde inte skapas. Kontrollera uppgifterna och försök igen.";
+                    return;
+                }
+
+                if (createdCourse is null)
+                {
+                    formError =
+                        "Servern bekräftade inte att kursen skapades. " +
+                        "Kontrollera kurslistan innan du försöker igen.";
+                    return;
+                }
+            }
+
+            CloseModal();
             await LoadCourses();
         }
-        else
+        catch (UnauthorizedAccessException ex)
         {
-            actionError = "Kursen kunde inte raderas. Vänligen försök igen.";
+            Logger.LogWarning(
+                ex,
+                "The session expired while saving a course.");
+
+            formError = "Din session har gått ut. Logga in igen.";
+        }
+        catch (HttpRequestException ex)
+        {
+            Logger.LogWarning(ex, "The API rejected the course save request.");
+
+            formError = ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.Conflict =>
+                "Det finns redan en kurs med det namnet.",
+
+                System.Net.HttpStatusCode.BadRequest =>
+                "Kontrollera kursens uppgifter och försök igen.",
+
+                System.Net.HttpStatusCode.NotFound =>
+                "Kursen finns inte längre.",
+
+                System.Net.HttpStatusCode.Forbidden =>
+                "Du har inte behörighet att ändra kurser.",
+
+                _ =>
+                "Kursen kunde inte sparas. Försök igen."
+            };
+        }
+
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The course save request failed.");
+
+            formError =
+                "Ändringen kunde inte bekräftas. " +
+                "Kontrollera kurslistan innan du försöker igen.";
+        }
+        finally
+        {
+            isBusy = false;
         }
     }
-    catch (UnauthorizedAccessException ex)
-    {
-        Logger.LogWarning(ex, "The session expired while the course was deleted.");
-        actionError = "Your session has expired. Please log in again.";
-    }
-    catch (Exception ex)
-    {
-        Logger.LogError(ex, "Course with id {CourseId} could not be deleted.", id);
-        actionError = "The course could not be deleted. Try again.";
-    }
-    finally
-    {
-        isBusy = false;
-    }
-}
 
-    public class CourseFormModel
+    private async Task DeleteCourse(int id)
     {
-        public string Name { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public DateTime StartDate { get; set; } = DateTime.Today;
-        public DateTime EndDate { get; set; } = DateTime.Today.AddMonths(1);
+        if (isBusy)
+            return;
+
+        isBusy = true;
+        actionError = null;
+
+        try
+        {
+            var (_, errorMessage) =
+                await ApiProxy.SendAndHandleErrorAsync<object>(
+                    HttpMethod.Delete,
+                    $"courses/{id}");
+
+            if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                Logger.LogWarning(
+                    "The API rejected deletion of course {CourseId}: {ErrorMessage}",
+                    id,
+                    errorMessage);
+
+                actionError = "Kursen kunde inte raderas. Försök igen.";
+                return;
+            }
+
+            await LoadCourses();
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Logger.LogWarning(
+                ex,
+                "The session expired while deleting a course.");
+
+            actionError = "Din session har gått ut. Logga in igen.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Could not confirm deletion of course {CourseId}.",
+                id);
+
+            actionError =
+                "Raderingen kunde inte bekräftas. " +
+                "Ladda om kurslistan innan du försöker igen.";
+        }
+        finally
+        {
+            isBusy = false;
+        }
     }
-}
+
+            public class CourseFormModel
+            {
+            public string Name { get; set; } = string.Empty;
+            public string Description { get; set; } = string.Empty;
+            public DateTime StartDate { get; set; } = DateTime.Today;
+            public DateTime EndDate { get; set; } = DateTime.Today.AddMonths(1);
+            }
+     }

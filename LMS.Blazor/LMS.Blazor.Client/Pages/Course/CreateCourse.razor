@@ -5,9 +5,10 @@
 @using LMS.Shared.DTOs.CourseDtos
 @using LMS.Blazor.Client.Services
 @using LMS.Blazor.Client.Components.Courses
+@using LMS.Blazor.Client.Services.ApiProxy
 @attribute [Authorize(Roles = UserRoles.Teacher)]
 @inject NavigationManager NavManager
-@inject ICourseService CourseService
+@inject IApiProxyClient ApiProxy
 @inject ILogger<TeacherCourseOverview> Logger
 @inject ToastService ToastService
 
@@ -18,7 +19,7 @@
 
         <div class="card shadow-sm">
             <div class="card-body">
-                @if (!string.IsNullOrWhiteSpace(formError))
+@if (!string.IsNullOrWhiteSpace(formError))
                 {
                     <div class="alert alert-danger" role="alert">
                         @formError
@@ -26,10 +27,10 @@
                 }
 
                 <CourseForm Model="courseModel"
-                            OnSaveCourse="SaveCourse"
-                            OnCancel="Cancel"
-                            SubmitButtonText="Skapa kurs"
-                            IsBusy="isSubmitting" />
+                OnSaveCourse="SaveCourse"
+                OnCancel="Cancel"
+                SubmitButtonText="Skapa kurs"
+                IsBusy="isSubmitting" />
             </div>
         </div>
     </div>
@@ -47,13 +48,16 @@
 
     private async Task SaveCourse()
     {
-        if (isSubmitting) return;
+        if (isSubmitting)
+            return;
+
         formError = null;
 
         if (string.IsNullOrWhiteSpace(courseModel.Name) ||
-            courseModel.Name.Trim().Length > 50)
+            courseModel.Name.Trim().Length > CourseConstraints.NameMaxLength)
         {
-            formError = "Registrera ett kursnamn mellan 1-50 tecken.";
+            formError = "Registrera ett kursnamn mellan 1 och " +
+            $"{CourseConstraints.NameMaxLength} tecken.";
             return;
         }
 
@@ -63,9 +67,11 @@
             return;
         }
 
-        if ((courseModel.Description?.Length ?? 00) > 1000)
+        if ((courseModel.Description?.Length ?? 0) >
+            CourseConstraints.DescriptionMaxLength)
         {
-            formError = "Beskrivningen får innehålla högst 1000 tecken.";
+            formError = "Beskrivningen får innehålla högst " +
+            $"{CourseConstraints.DescriptionMaxLength} tecken.";
             return;
         }
 
@@ -74,32 +80,48 @@
         try
         {
             courseModel.Name = courseModel.Name.Trim();
-            bool success = await CourseService.CreateCourseAsync(courseModel);
 
-            if (!success)
+            var (createdCourse, errorMessage) =
+                await ApiProxy.SendAndHandleErrorAsync<CourseDto>(
+                    HttpMethod.Post,
+                    "courses",
+                    JsonContent.Create(courseModel));
+
+            if (!string.IsNullOrWhiteSpace(errorMessage))
             {
-                formError = "Kursen kunde inte skapas. Vänligen försök igen.";
+                Logger.LogWarning(
+                    "The API rejected course creation: {ErrorMessage}",
+                    errorMessage);
+
+                formError = "Kursen kunde inte skapas. Kontrollera uppgifterna och försök igen.";
                 return;
             }
-            ToastService.ShowToast($"Kursen {courseModel.Name} har skapats.", ToastType.Success);
-        }
+
+            if (createdCourse is null)
+            {
+                formError = "Servern bekräftade inte att kursen skapades." +
+                "Kontrollera kurslistan innan du försöker igen.";
+                return;
+            }
+
+                ToastService.ShowToast(
+                    $"Kursen {createdCourse.Name} har skapats.", ToastType.Success);
+            }
         catch (UnauthorizedAccessException ex)
         {
             Logger.LogWarning(ex, "The session expired while creating a course.");
             formError = "Din session har gått ut. Logga in igen.";
         }
-        catch (ArgumentException ex)
-        {
-            formError = ex.Message;
-        }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "The course could not be created.");
-            formError = "Kursen kunde inte skapas. Vänligen försök igen.";
+            Logger.LogError(ex, "The course creation request failed.");
+            formError = "Uppladdningen av kursuppgifterna kunde inte bekräftas." +
+            "Kontrollera uppgifterna innan du försöker igen.";
         }
         finally
         {
             isSubmitting = false;
         }
     }
+}
 }
