@@ -23,6 +23,7 @@ public class Program
         builder.Services.AddRemoteApiProxy(builder.Configuration);
         builder.Services.AddScoped<ToastService>();
 		builder.Services.AddScoped<IAssignmentService, AssignmentService>();
+		builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 		builder.Services.AddScoped<LMS.Blazor.Client.Services.DocumentService>();
 
         var app = builder.Build();

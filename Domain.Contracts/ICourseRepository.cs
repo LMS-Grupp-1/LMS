@@ -14,4 +14,6 @@ public interface ICourseRepository
 	Task AddAsync(Course model);
 	void Update(Course model);
 	void Delete(Course model);
+	Task<IReadOnlyList<ApplicationUser>> GetStudentsAsync(int courseId);
+
 }
