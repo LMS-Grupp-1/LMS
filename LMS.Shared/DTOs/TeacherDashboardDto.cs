@@ -17,9 +17,9 @@ public record DashboardCourseDto(
 );
 
 public record DashboardActivityDto(
-    int ActivityId,
+    int CourseId,
     int ActivityTypeId,
-    string Name,
+    string ActivityName,
     string CourseName,
     string ModuleName,
     DateTime StartDate,
@@ -28,10 +28,11 @@ public record DashboardActivityDto(
 
 // Active/Upcoming Assignments & Submissions
 public record DashboardAssignmentDto(
+    string CourseName,
     string AssignmentName,
-    DateTime AssignmentDeadline,
-    int RequiresSubmissions
+    DateTime? Deadline
 );
+
 public record DashboardSubmissionDto(
     string AssignmentName,
     string StudentName,

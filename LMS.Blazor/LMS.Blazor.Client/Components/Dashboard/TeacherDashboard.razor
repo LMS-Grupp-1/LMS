@@ -1,6 +1,8 @@
 ﻿
+@using LMS.Blazor.Client.Components.Common
 @using LMS.Shared.DTOs
 @using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Helpers
 @inject IApiProxyClient ApiProxy
 
 <div class="container-fluid py-4">
@@ -11,11 +13,18 @@
         </div>
     </div>
 
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger text-center py-3 mb-0">
+            @errorMessage
+        </div>
+    }
+
     <div class="row g-4 mb-4">
-        <!-- Aktiva kurser -->
+        <!-- Active courses -->
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
+                <div class="card-body bg-light p-3">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h5 class="card-title fw-bold m-0">Aktiva kurser</h5>
                         <a href="/teacher/courses" class="text-decoration-none text-primary fw-semibold small">Visa alla &gt;</a>
@@ -25,7 +34,7 @@
                     {
                         <div class="d-flex justify-content-center align-items-center py-4">
                             <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                            <span class="text-muted">Laddar aktiva kurser...</span>
+                            <span class="text-muted">Laddar...</span>
                         </div>
                     }
                     else if (!activeCourses.Any())
@@ -36,14 +45,14 @@
                     }
                     else
                     {
-                        <div class="d-flex flex-column gap-3">
+                        <div class="d-flex flex-column gap-2">
                             @foreach (var course in activeCourses)
                             {
-                                <div class="card border bg-light shadow-none p-3">
+                                <div class="card border bg-white shadow-none p-3">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <div>
-                                            <NavLink href="@($"/teacher/courses/{course.Id}")">
-                                                <h6 class="fw-bold mb-1 link-primary">@course.Name</h6>
+                                            <NavLink href="@($"/teacher/courses/{course.Id}")" class="text-decoration-none">
+                                                <h6 class="fw-bold link-primary mb-1">@course.Name</h6>
                                             </NavLink>
                                             <span class="text-muted small">
                                                 @course.StartDate.ToString("yyyy-MM-dd") – @course.EndDate.ToString("yyyy-MM-dd")
@@ -62,77 +71,141 @@
             </div>
         </div>
 
-        <!-- Senaste aktivitet -->
+        <!-- Recent assignments + submissions -->
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 h-100">
-                <div class="card-body">
-                    <h5 class="card-title fw-bold mb-3">Senaste aktivitet</h5>
+                <div class="card-body bg-light p-3">
+                    <h5 class="card-title fw-bold mb-3">Senaste inlämningar</h5>
 
-                    <!-- Scroll container set to show 3 rows -->
-                    <div class="overflow-y-auto pe-2" style="max-height: 250px;">
-                        <div class="d-flex flex-column m-2 gap-3">
-                            @foreach (var activity in recentActivities)
-                            {
-                                <div class="card border bg-white shadow-none p-2.5">
-                                    <div class="d-flex align-items-center m-2 gap-3">
-                                        <!-- Activity type Icon -->
-                                        <div class="rounded-circle bg-warning bg-opacity-25 text-warning d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
-                                            <i class="bi bi-file-text"></i>
-                                        </div>
-                                        <div>
-                                            <p class="mb-0 text-dark small">@activity.Description</p>
-                                            <span class="text-muted" style="font-size: 0.75rem;">@activity.TimeAgo</span>
+                    @if (activeAssignments == null)
+                    {
+                        <div class="d-flex justify-content-center align-items-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                            <span class="text-muted">Laddar...</span>
+                        </div>
+                    }
+                    else if (!activeAssignments.Any())
+                    {
+                        <div class="alert alert-light text-center text-muted border py-3 mb-0">
+                            Inga aktiva uppgifter hittades.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="overflow-y-auto pe-2" style="max-height: 250px;">
+                            <div class="d-flex flex-column gap-2">
+                                @foreach (var assignment in activeAssignments)
+                                {
+                                    <div class="card border bg-white shadow-none p-2">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <AppIconBox Type="assignment" CustomClasses="theme-box-background icon-square-40" IconSize="fs-4" />
+                                            <div>
+                                                <p class="mb-0 text-break small"> 
+                                                    <span class="text-dark">@assignment.AssignmentName</span>
+                                                    <span class="text-muted">har lägts in @assignment.CourseName</span>
+                                                </p>
+												@if (assignment.Deadline != null)
+												{
+													<span class="text-danger" style="font-size: 0.75rem;">DEADLINE: @assignment.Deadline.Value.ToString("yyyy-MM-dd HH:mm")</span>
+												}
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            }
+                                }
+                                @foreach (var activity in recentActivities)
+                                {
+                                    <div class="card border bg-white shadow-none p-2">
+                                        <div class="d-flex align-items-center gap-3">
+											<AppIconBox Type="submission" CustomClasses="theme-box-background icon-square-40" IconSize="fs-4" />
+                                            <div>
+                                                <p class="mb-0 text-dark small">@activity.Description</p>
+                                                <span class="text-muted" style="font-size: 0.75rem;">@activity.TimeAgo</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
                         </div>
-                    </div>
+                    }
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Div 2: Kommande aktiviteter -->
+    <!-- Upcoming Activities -->
     <div class="row">
         <div class="col-12">
             <div class="card shadow-sm border-0">
-                <div class="card-body">
+                <div class="card-body bg-light p-3">
                     <h5 class="card-title fw-bold mb-3">Kommande aktiviteter</h5>
 
-                    <div class="d-flex flex-column gap-3">
-                        @foreach (var upcoming in upcomingActivities)
-                        {
-                            <div class="card border bg-light shadow-none p-3">
-                                <div class="row align-items-center">
-                                    <!-- Left side: Activity Type badge & name -->
-                                    <div class="col-md-7 mb-2 mb-md-0">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <span class="badge bg-info bg-opacity-25 text-dark px-3 py-2 rounded-pill fw-semibold">
-                                                @upcoming.ActivityType
-                                            </span>
-                                            <div>
-                                                <h6 class="fw-bold mb-1 text-dark">@upcoming.ActivityName</h6>
-                                                <span class="text-muted small">Kurs: @upcoming.CourseName</span>
+                    @if (upcomingActivities == null)
+                    {
+                        <div class="d-flex justify-content-center align-items-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                            <span class="text-muted">Laddar...</span>
+                        </div>
+                    }
+                    else if (!upcomingActivities.Any())
+                    {
+                        <div class="alert alert-light text-center text-muted border py-3 mb-0">
+                            Inga kommande aktiviteter hittades.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column gap-2">
+                            @foreach (var activity in upcomingActivities)
+                            {
+                                <div class="card border bg-white shadow-none p-3">
+                                    <div class="row align-items-center">
+                                        <div class="col-md mb-2 mb-md-0">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <span class="badge @ActivityTypeHelper.GetBadgeClass(activity.ActivityTypeId) px-3 py-2 rounded-pill fw-semibold">
+                                                    @ActivityTypeHelper.GetName(activity.ActivityTypeId)
+                                                </span>
+                                                <div>
+                                                    <h6 class="fw-bold mb-1 text-dark text-break">@activity.ActivityName</h6>
+                                                    <span class="text-muted small text-break">Kurs: 
+                                                        <NavLink href="@($"/teacher/courses/{activity.CourseId}")" class="text-decoration-none">
+                                                            <span class="link-primary">@activity.CourseName</span>
+                                                        </NavLink> 
+                                                        > @activity.ModuleName</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    <!-- Right side: Date and Time with icons -->
-                                    <div class="col-md-5 text-md-end text-muted small">
-                                        <div class="d-flex flex-md-column align-items-md-end justify-content-between gap-1">
-                                            <div>
-                                                <i class="bi bi-calendar-event me-1"></i> @upcoming.StartDate
+                                        @if (activity.StartDate.Date == activity.EndDate.Date)
+                                        {
+                                            <div class="col-md-auto text-md-end text-muted small">
+                                                <div class="d-flex flex-md-column align-items-md-end justify-content-between gap-1">
+                                                    <div>
+                                                        <i class="bi bi-calendar-event me-1"></i> @activity.StartDate.ToString("yyyy-MM-dd")
+                                                    </div>
+                                                    <div>
+                                                        <i class="bi bi-clock me-1"></i> @activity.StartDate.ToString("HH:mm") – @activity.EndDate.ToString("HH:mm")
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <i class="bi bi-clock me-1"></i> @upcoming.StartTime
+                                        }
+                                        else
+                                        {
+                                            <div class="col-md-auto text-md-end text-muted small">
+                                                <div class="d-flex flex-md-column align-items-md-end justify-content-between gap-1">
+                                                    <div>
+                                                        <i class="bi bi-calendar-range me-1"></i> @activity.StartDate.ToString("yyyy-MM-dd HH:mm")
+                                                    </div>
+                                                    <div>
+                                                        Till @activity.EndDate.ToString("yyyy-MM-dd HH:mm")
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        }
                                     </div>
                                 </div>
-                            </div>
-                        }
-                    </div>
+                            }
+                        </div>
+                    }
                 </div>
             </div>
         </div>
@@ -140,8 +213,8 @@
 </div>
 
 @code {
-    // Mock Data Models & Lists
     private IEnumerable<DashboardCourseDto>? activeCourses;
+    private IEnumerable<DashboardAssignmentDto>? activeAssignments;
 
     private List<RecentActivityDto> recentActivities = new()
     {
@@ -152,12 +225,9 @@
         new() { Description = "Elin Ek lade till en kommentar på föreläsning 3", TimeAgo = "3 dagar sedan" }
     };
 
-    private List<UpcomingActivityDto> upcomingActivities = new()
-    {
-        new() { ActivityType = "Inlämning", ActivityName = "Slutprojekt Frontend", CourseName = "Fullstack .NET Utveckling", StartDate = "2026-11-01", StartTime = "15:00" },
-        new() { ActivityType = "Föreläsning", ActivityName = "Dependency Injection i ASP.NET Core", CourseName = "Avancerad C# & EF Core", StartDate = "2026-11-03", StartTime = "10:00" },
-        new() { ActivityType = "Test / Quiz", ActivityName = "Databasdesign & Normalisering", CourseName = "Webbaserade Applikationer", StartDate = "2026-11-05", StartTime = "13:30" }
-    };
+    private IEnumerable<DashboardActivityDto>? upcomingActivities;
+
+	private string? errorMessage;
 
     private class RecentActivityDto
     {
@@ -176,13 +246,60 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadActiveCoursesAsync();
+        await Task.WhenAll(
+            LoadActiveCoursesAsync(),
+            LoadActiveAssignmentsAsync(),
+            LoadUpcomingActivitiesAsync()
+        );
     }
 
     private async Task LoadActiveCoursesAsync()
     {
-        activeCourses = await ApiProxy.GetAsync<IEnumerable<DashboardCourseDto>>("teacher-dashboard/active-courses") ?? Enumerable.Empty<DashboardCourseDto>();
-        StateHasChanged();
+        try
+        {
+            errorMessage = null;
+            activeCourses = await ApiProxy.GetAsync<IEnumerable<DashboardCourseDto>>("teacher-dashboard/active-courses")
+                ?? Enumerable.Empty<DashboardCourseDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kunde inte ladda aktiva kurser. {ex.Message}";
+            activeCourses = Enumerable.Empty<DashboardCourseDto>();
+        }
+    }
+
+    private async Task LoadActiveAssignmentsAsync()
+    {
+        try
+        {
+            errorMessage = null;
+			activeAssignments = await ApiProxy.GetAsync<IEnumerable<DashboardAssignmentDto>>("teacher-dashboard/active-assignments")
+                ?? Enumerable.Empty<DashboardAssignmentDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kunde inte ladda aktiva uppgifter. {ex.Message}";
+            activeAssignments = Enumerable.Empty<DashboardAssignmentDto>();
+        }
+    }
+
+    private async Task LoadUpcomingActivitiesAsync()
+    {
+        var startDate = "2026-09-01";// DateTime.Today.ToString("yyyy-MM-dd");
+        var endDate = "2026-12-30";// DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
+
+		try
+		{
+			errorMessage = null;
+            upcomingActivities = await ApiProxy.GetAsync<List<DashboardActivityDto>>(
+                $"teacher-dashboard/upcoming-activities?startDate={startDate}&endDate={endDate}")
+                ?? Enumerable.Empty<DashboardActivityDto>();
+		}
+		catch (Exception ex)
+		{
+			errorMessage = $"Kunde inte ladda kommande aktiviteter. {ex.Message}";
+			upcomingActivities = Enumerable.Empty<DashboardActivityDto>();
+		}
     }
 
 }

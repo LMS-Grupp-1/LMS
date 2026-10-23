@@ -1,12 +1,62 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Blazor.Client.Components.Common
 
 <div class="container-fluid px-0">
 
     <div class="row g-4 mb-4">
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 p-4 h-100">
+                <h5 class="fw-bold mb-3">Kursstatistik</h5>
+                
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #e3f2fd;">
+                            <AppIconBox Type="module" />
+                            <div>
+                                <span class="text-muted small d-block">Moduler</span>
+                                <h4 class="fw-bold mb-0 text-primary">@ModuleCount</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #e8f5e9;">
+                            <AppIconBox Type="activity" />
+                            <div>
+                                <span class="text-muted small d-block">Aktiviteter</span>
+                                <h4 class="fw-bold mb-0 text-success">@ActivityCount</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3 bg-purple-subtle">
+                            <AppIconBox Type="student" />
+                            <div>
+                                <span class="text-muted small d-block">Studenter</span>
+                                <h4 class="fw-bold mb-0 text-purple">@StudentCount</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #fffde7;">
+                            <div class="fs-3 text-warning"><i class="bi bi-file-text"></i></div>
+                            <div>
+                                <span class="text-muted small d-block">Uppgifter</span>
+                                <h4 class="fw-bold mb-0 text-warning">@SubmissionCount</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 p-4 h-100">
                 <h5 class="fw-bold mb-3">Kursframsteg</h5>
-                
+
                 <div class="mb-4">
                     <div class="d-flex justify-content-between small text-muted mb-1">
                         <span>Genomsnittligt genomfört</span>
@@ -42,53 +92,6 @@
             </div>
         </div>
 
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 p-4 h-100">
-                <h5 class="fw-bold mb-3">Kursstatistik</h5>
-                
-                <div class="row g-3">
-                    <div class="col-6">
-                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #e3f2fd;">
-                            <div class="fs-3 text-primary"><i class="bi bi-book"></i></div>
-                            <div>
-                                <span class="text-muted small d-block">Moduler</span>
-                                <h4 class="fw-bold mb-0 text-primary">@ModuleCount</h4>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #e8f5e9;">
-                            <div class="fs-3 text-success"><i class="bi bi-calendar-event"></i></div>
-                            <div>
-                                <span class="text-muted small d-block">Aktiviteter</span>
-                                <h4 class="fw-bold mb-0 text-success">@ActivityCount</h4>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #f3e5f5;">
-                            <div class="fs-3" style="color: #6a1b9a;"><i class="bi bi-people"></i></div>
-                            <div>
-                                <span class="text-muted small d-block">Studenter</span>
-                                <h4 class="fw-bold mb-0" style="color: #6a1b9a;">@StudentCount</h4>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #fffde7;">
-                            <div class="fs-3 text-warning"><i class="bi bi-file-text"></i></div>
-                            <div>
-                                <span class="text-muted small d-block">Inlämningar</span>
-                                <h4 class="fw-bold mb-0 text-warning">@SubmissionCount</h4>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
     <div class="card shadow-sm border-0 p-4">

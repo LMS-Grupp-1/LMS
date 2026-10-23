@@ -24,4 +24,21 @@ public class TeacherDashboardController : ControllerBase
         var courses = await _service.TeacherDashboardService.GetActiveCoursesAsync(count);
         return Ok(courses);
     }
+
+    [HttpGet("upcoming-activities")]
+    public async Task<ActionResult<IEnumerable<DashboardActivityDto>>> GetActivitiesInDateRange(
+        [FromQuery] DateTime startDate, 
+        [FromQuery] DateTime endDate, 
+        [FromQuery] int? count = 10)
+    {
+        var activities = await _service.TeacherDashboardService.GetActivitiesInDateRangeAsync(startDate, endDate, count);
+        return Ok(activities);
+    }
+
+    [HttpGet("active-assignments")]
+    public async Task<ActionResult<IEnumerable<DashboardAssignmentDto>>> GetActiveAssignments()
+    {
+        var assignments = await _service.TeacherDashboardService.GetActiveAssignmentsAsync();
+        return Ok(assignments);
+    }
 }

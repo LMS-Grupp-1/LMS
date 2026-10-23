@@ -21,15 +21,13 @@ public class TeacherDashboardService : ITeacherDashboardService
         return await _uow.Courses.GetActiveCoursesAsync(count);
     }
 
-    public async Task<IEnumerable<DashboardActivityDto>> GetUpcomingActivitiesAsync()
+    public async Task<IEnumerable<DashboardActivityDto>> GetActivitiesInDateRangeAsync(DateTime startDate, DateTime endDate, int? count = null)
     {
-        // Logic for activities...
-        return Enumerable.Empty<DashboardActivityDto>();
+        return await _uow.Activities.GetDateRangeActivitiesAsync(startDate, endDate, count);
     }
 
-    public async Task<IEnumerable<DashboardAssignmentDto>> GetRecentSubmissionsAsync()
+    public async Task<IEnumerable<DashboardAssignmentDto>> GetActiveAssignmentsAsync()
     {
-        // Logic for submissions...
-        return Enumerable.Empty<DashboardAssignmentDto>();
+        return await _uow.Assignments.GetActiveAssignmentsAsync();
     }
 }
