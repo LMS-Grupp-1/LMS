@@ -11,6 +11,7 @@ public interface ICourseRepository
     Task<Course?> GetByIdAsync(int id, bool trackChanges);
 	Task<Course?> GetForStudentAsync(string userId, bool trackChanges);
 	Task<bool> NameExistsAsync(string name, int? excludedId = null);
+	Task<IReadOnlyList<ApplicationUser>> GetStudentsAsync(int courseId);
 	void CreateCourse(Course course);
 	void UpdateCourse(Course course);
 	void DeleteCourse(Course course);

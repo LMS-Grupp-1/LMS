@@ -1,4 +1,5 @@
 ﻿using Domain.Contracts;
+using Domain.Models.Documents;
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.Constants;
@@ -88,6 +89,83 @@ namespace LMS.Services
 				?? throw new AssignmentNotFoundException();
 
 			return StudentAssignmentMapper.ToDto(updated, timeProvider.GetUtcNow());
+		}
+
+		public async Task<IReadOnlyList<TeacherSubmissionRowDto>> GetForCourseAsync(
+			int courseId,
+			int? assignmentId,
+			AssignmentStatus? status)
+		{			
+			_ = await uow.Courses.GetByIdAsync(courseId, trackChanges: false)
+				?? throw new CourseNotFoundException(courseId);
+
+			var assignments = await uow.Assignments.GetWithSubmissionsForCourseAsync(courseId);
+			var students = await uow.Courses.GetStudentsAsync(courseId);
+			var now = timeProvider.GetUtcNow();
+
+			var rows = new List<TeacherSubmissionRowDto>();
+
+			foreach (var assignment in assignments)
+			{
+				if (assignmentId is not null && assignment.Id != assignmentId)
+					continue;
+
+				DateTimeOffset? deadline = assignment.Deadline is { } localDeadline
+					? AssignmentStatusCalculator.ToSwedishTime(localDeadline)
+					: null;
+
+				// One row per student, also for students who have not handed in.
+				foreach (var student in students)
+				{
+					// If the student has handed in more than once, the latest submission counts.
+					var latest = assignment.Submissions
+						.Where(submission => submission.StudentId == student.Id)
+						.OrderByDescending(submission => submission.SubmittedAt)
+						.FirstOrDefault();
+
+					var rowStatus = AssignmentStatusCalculator.Calculate(
+						requiresSubmission: true, deadline, latest?.SubmittedAt, now);
+
+					if (status is not null && rowStatus != status)
+						continue;
+
+					rows.Add(new TeacherSubmissionRowDto(
+						assignment.Id,
+						assignment.Name,
+						assignment.Module.Name,
+						assignment.Deadline,
+						student.Id,
+						$"{student.FirstName} {student.LastName}",
+						rowStatus,
+						latest?.Id,
+						latest?.SubmittedAt,
+						latest?.Document.FileName,
+						latest?.Feedback is not null));
+				}
+			}
+
+			return rows;
+		}
+
+		public async Task<DocumentDownload> DownloadAsync(
+			int submissionId,
+			string userId,
+			bool isTeacher,
+			CancellationToken cancellationToken)
+		{
+			var submission = await uow.Submissions.GetWithDocumentAsync(submissionId);
+						
+			if (submission is null || (!isTeacher && submission.StudentId != userId))
+			{
+				throw new SubmissionNotFoundException();
+			}
+
+			var stream = await storage.OpenReadAsync(submission.Document.BlobPath, cancellationToken);
+
+			return new DocumentDownload(
+				stream,
+				submission.Document.ContentType,
+				submission.Document.FileName);
 		}
 
 		private static string Truncate(string value, int maxLength) =>
