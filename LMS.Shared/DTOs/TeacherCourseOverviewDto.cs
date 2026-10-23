@@ -25,7 +25,7 @@ public record AssignmentStatisticsDto(
 
 public record SubmissionStatisticsDto(
     string AssignmentName,
-    DateTime Deadline,
+    DateTime? Deadline,
     int SubmissionCount,
     int FeedbackCount
 );

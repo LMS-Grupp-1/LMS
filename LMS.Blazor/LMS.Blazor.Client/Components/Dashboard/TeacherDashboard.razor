@@ -220,10 +220,10 @@
 </div>
 
 @code {
-    private IEnumerable<DashboardCourseDto>? activeCourses;
-    private IEnumerable<DashboardAssignmentDto>? activeAssignments;
-    private IEnumerable<DashboardSubmissionDto>? latestSubmissions;
-    private IEnumerable<DashboardActivityDto>? upcomingActivities;
+    private IReadOnlyList<DashboardCourseDto>? activeCourses;
+    private IReadOnlyList<DashboardAssignmentDto>? activeAssignments;
+    private IReadOnlyList<DashboardSubmissionDto>? latestSubmissions;
+    private IReadOnlyList<DashboardActivityDto>? upcomingActivities;
 
 	private string? errorMessage;
 
@@ -242,13 +242,11 @@
         try
         {
             errorMessage = null;
-            activeCourses = await ApiProxy.GetAsync<IEnumerable<DashboardCourseDto>>("teacher-dashboard/active-courses")
-                ?? Enumerable.Empty<DashboardCourseDto>();
+            activeCourses = await ApiProxy.GetAsync<IReadOnlyList<DashboardCourseDto>>("teacher-dashboard/active-courses");
         }
         catch (Exception ex)
         {
             errorMessage = $"Kunde inte ladda aktiva kurser. {ex.Message}";
-            activeCourses = Enumerable.Empty<DashboardCourseDto>();
         }
     }
 
@@ -257,13 +255,11 @@
         try
         {
             errorMessage = null;
-			activeAssignments = await ApiProxy.GetAsync<IEnumerable<DashboardAssignmentDto>>("teacher-dashboard/active-assignments")
-                ?? Enumerable.Empty<DashboardAssignmentDto>();
+			activeAssignments = await ApiProxy.GetAsync<IReadOnlyList<DashboardAssignmentDto>>("teacher-dashboard/active-assignments");
         }
         catch (Exception ex)
         {
             errorMessage = $"Kunde inte ladda aktiva uppgifter. {ex.Message}";
-            activeAssignments = Enumerable.Empty<DashboardAssignmentDto>();
         }
     }
 
@@ -273,14 +269,12 @@
         {
             errorMessage = null;
             var afterDate = DateTime.Today.AddDays(-7);
-            latestSubmissions = await ApiProxy.GetAsync<IEnumerable<DashboardSubmissionDto>>(
-                $"teacher-dashboard/latest-submissions?afterDate={afterDate:yyyy-MM-dd}")
-                ?? Enumerable.Empty<DashboardSubmissionDto>();
+            latestSubmissions = await ApiProxy.GetAsync<IReadOnlyList<DashboardSubmissionDto>>(
+                $"teacher-dashboard/latest-submissions?afterDate={afterDate:yyyy-MM-dd}");
         }
         catch (Exception ex)
         {
             errorMessage = $"Kunde inte ladda senaste inlämningar. {ex.Message}";
-            latestSubmissions = Enumerable.Empty<DashboardSubmissionDto>();
         }
     }
 
@@ -292,14 +286,12 @@
 		try
 		{
 			errorMessage = null;
-            upcomingActivities = await ApiProxy.GetAsync<List<DashboardActivityDto>>(
-                $"teacher-dashboard/upcoming-activities?startDate={startDate}&endDate={endDate}")
-                ?? Enumerable.Empty<DashboardActivityDto>();
+            upcomingActivities = await ApiProxy.GetAsync<IReadOnlyList<DashboardActivityDto>>(
+                $"teacher-dashboard/upcoming-activities?startDate={startDate}&endDate={endDate}");
 		}
 		catch (Exception ex)
 		{
 			errorMessage = $"Kunde inte ladda kommande aktiviteter. {ex.Message}";
-			upcomingActivities = Enumerable.Empty<DashboardActivityDto>();
 		}
     }
 

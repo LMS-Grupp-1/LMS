@@ -7,7 +7,8 @@ public interface IActivityRepository : IBaseRepository<Activity>
 {
     Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId);
 
-    Task<IEnumerable<DashboardActivityDto>> GetDateRangeActivitiesAsync(DateTime startDate, DateTime endDate, int? count = null);
+    Task<IReadOnlyList<DashboardActivityDto>> GetDateRangeActivitiesAsync(DateTime startDate, DateTime endDate, int? count = null);
+    Task<IReadOnlyList<ActivityOverviewDto>?> GetLatestActivitiesByCourseIdAsync(int courseId, int? count = null);
 
     Task<bool> HasOverlapAsync(
         int moduleId,

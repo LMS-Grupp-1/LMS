@@ -43,6 +43,9 @@ namespace LMS.Infrastructure.Migrations
                     b.Property<int>("ModuleId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ModuleId1")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -53,6 +56,8 @@ namespace LMS.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ModuleId");
+
+                    b.HasIndex("ModuleId1");
 
                     b.ToTable("Activities");
                 });
@@ -542,6 +547,10 @@ namespace LMS.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Domain.Models.Entities.Module", null)
+                        .WithMany("Activities")
+                        .HasForeignKey("ModuleId1");
+
                     b.Navigation("Module");
                 });
 
@@ -727,6 +736,8 @@ namespace LMS.Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Models.Entities.Module", b =>
                 {
+                    b.Navigation("Activities");
+
                     b.Navigation("Assignments");
 
                     b.Navigation("Documents");

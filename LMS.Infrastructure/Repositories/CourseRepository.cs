@@ -17,16 +17,9 @@ public class CourseRepository(ApplicationDbContext context)
             : await _context.Courses.ToListAsync();
 
     // Lightweight DTO for lookups, only includes Id and Name
-    public async Task<IEnumerable<CourseLookupDto>> GetCourseLookupsAsync(bool trackChanges)
+    public async Task<IReadOnlyList<CourseLookupDto>?> GetCourseLookupsAsync()
     {
-        IQueryable<Course> query = _context.Courses;
-
-        if (!trackChanges)
-        {
-            query = query.AsNoTracking();
-        }
-
-        return await query
+        return await _context.Courses.AsNoTracking()
             .Select(c => new CourseLookupDto(c.Id, c.Name))
             .ToListAsync();
     }
@@ -117,7 +110,7 @@ public class CourseRepository(ApplicationDbContext context)
 			.ToListAsync();
 	}
 
-    public async Task<IEnumerable<DashboardCourseDto>> GetActiveCoursesAsync(int? count = null)
+    public async Task<IReadOnlyList<DashboardCourseDto>> GetActiveCoursesAsync(int? count = null)
     {
         var today = DateTime.Today;
 
@@ -140,6 +133,20 @@ public class CourseRepository(ApplicationDbContext context)
                 c.Modules.Count
             ))
             .ToListAsync();
+    }
+
+    public async Task<CourseStatisticsDto?> GetCourseStatisticsAsync(int courseId)
+    {
+        return await _context.Courses
+            .AsNoTracking()
+            .Where(c => c.Id == courseId)
+            .Select(c => new CourseStatisticsDto(
+                c.Students.Count(),
+                c.Modules.Count(),
+                c.Modules.SelectMany(m => m.Activities).Count(),
+                c.Modules.SelectMany(a => a.Assignments).Count()
+            ))
+            .FirstOrDefaultAsync();
     }
 
 }

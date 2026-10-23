@@ -16,23 +16,44 @@ public class TeacherDashboardService : ITeacherDashboardService
         _uow = uow;
     }
 
-    public async Task<IEnumerable<DashboardCourseDto>> GetActiveCoursesAsync(int? count = null)
+    public async Task<IReadOnlyList<DashboardCourseDto>> GetActiveCoursesAsync(int? count = null)
     {
         return await _uow.Courses.GetActiveCoursesAsync(count);
     }
 
-    public async Task<IEnumerable<DashboardActivityDto>> GetActivitiesInDateRangeAsync(DateTime startDate, DateTime endDate, int? count = null)
+    public async Task<IReadOnlyList<DashboardActivityDto>> GetActivitiesInDateRangeAsync(DateTime startDate, DateTime endDate, int? count = null)
     {
         return await _uow.Activities.GetDateRangeActivitiesAsync(startDate, endDate, count);
     }
 
-    public async Task<IEnumerable<DashboardAssignmentDto>> GetActiveAssignmentsAsync()
+    public async Task<IReadOnlyList<DashboardAssignmentDto>> GetActiveAssignmentsAsync()
     {
         return await _uow.Assignments.GetActiveAssignmentsAsync();
     }
 
-    public async Task<IEnumerable<DashboardSubmissionDto>> GetLatestSubmissionsAsync(DateTime? afterDate = null)
+    public async Task<IReadOnlyList<DashboardSubmissionDto>?> GetLatestSubmissionsAsync(DateTime? afterDate = null)
     {
         return await _uow.Submissions.GetLatestAsync(afterDate);
+    }
+
+    // Statistics methods for the teacher course overview:
+    public async Task<CourseStatisticsDto?> GetCourseStatisticsAsync(int courseId)
+    {
+        return await _uow.Courses.GetCourseStatisticsAsync(courseId);
+    }
+
+    public async Task<IReadOnlyList<ActivityOverviewDto>?> GetLatestActivitiesByCourseIdAsync(int courseId, int? count = null)
+    {
+        return await _uow.Activities.GetLatestActivitiesByCourseIdAsync(courseId, count);
+    }
+
+    public async Task<AssignmentStatisticsDto?> GetAssignmentStatisticsAsync(int courseId)
+    {
+        return await _uow.Assignments.GetAssignmentStatisticsForCourse(courseId);
+    }
+
+    public async Task<IReadOnlyList<SubmissionStatisticsDto>?> GetSubmissionStatisticsByCourseIdAsync(int courseId)
+    {
+        return await _uow.Submissions.GetSubmissionStatisticsByCourseIdAsync(courseId);
     }
 }

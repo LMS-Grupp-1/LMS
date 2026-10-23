@@ -10,6 +10,7 @@ namespace Domain.Contracts
 		Task<IReadOnlyList<Assignment>> GetWithSubmissionsForCourseAsync(int courseId);
 
         Task<IReadOnlyList<DashboardAssignmentDto>> GetActiveAssignmentsAsync();
+		Task<AssignmentStatisticsDto?> GetAssignmentStatisticsForCourse(int courseId);
 
     }
 }

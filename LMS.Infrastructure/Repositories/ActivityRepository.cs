@@ -17,7 +17,7 @@ public class ActivityRepository(ApplicationDbContext context)
             .ToListAsync();
     }
 
-    public async Task<IEnumerable<DashboardActivityDto>> GetDateRangeActivitiesAsync(DateTime startDate, DateTime endDate, int? count = null)
+    public async Task<IReadOnlyList<DashboardActivityDto>> GetDateRangeActivitiesAsync(DateTime startDate, DateTime endDate, int? count = null)
     {
         IQueryable<Activity> query = _context.Activities
             .Where(a => a.StartDate >= startDate && a.StartDate <= endDate)
@@ -34,6 +34,26 @@ public class ActivityRepository(ApplicationDbContext context)
                 a.ActivityTypeId,
                 a.Name,
                 a.Module.Course.Name,
+                a.Module.Name,
+                a.StartDate,
+                a.EndDate
+            ))
+            .ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<ActivityOverviewDto>?> GetLatestActivitiesByCourseIdAsync(int courseId, int? count = null)
+    {
+        IQueryable<Activity> query = _context.Activities
+            .Where(a => a.Module.CourseId == courseId)
+            .OrderByDescending(a => a.StartDate);
+        if (count.HasValue && count.Value > 0)
+        {
+            query = query.Take(count.Value);
+        }
+        return await query
+            .Select(a => new ActivityOverviewDto(
+                a.ActivityTypeId,
+                a.Name,
                 a.Module.Name,
                 a.StartDate,
                 a.EndDate

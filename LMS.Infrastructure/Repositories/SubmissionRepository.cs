@@ -25,7 +25,7 @@ namespace LMS.Infrastructure.Repositories
 				.FirstOrDefaultAsync(submission => submission.Id == id);
 		}
 
-        public async Task<IReadOnlyList<DashboardSubmissionDto>> GetLatestAsync(DateTime? afterDate)
+        public async Task<IReadOnlyList<DashboardSubmissionDto>?> GetLatestAsync(DateTime? afterDate)
         {
             var query = _context.Submissions
                 .AsNoTracking()
@@ -46,6 +46,21 @@ namespace LMS.Infrastructure.Repositories
 					submission.SubmittedAt
 				))
 				.ToListAsync();
+        }
+
+        public async Task<IReadOnlyList<SubmissionStatisticsDto>?> GetSubmissionStatisticsByCourseIdAsync(int courseId)
+        {
+            return await _context.Assignments
+                .AsNoTracking()
+                .Where(assignment => assignment.Module.CourseId == courseId && assignment.RequiresSubmission)
+                .Select(assignment => new SubmissionStatisticsDto
+                (
+                    assignment.Name,
+                    assignment.Deadline,
+                    assignment.Submissions.Count,
+                    assignment.Submissions.Count(s => s.Feedback != null)
+                ))
+                .ToListAsync();
         }
 
         public async Task AddAsync(Submission submission)

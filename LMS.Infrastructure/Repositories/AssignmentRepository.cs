@@ -71,5 +71,19 @@ namespace LMS.Infrastructure.Repositories
                 ))
                 .ToListAsync();
         }
+
+        public async Task<AssignmentStatisticsDto?> GetAssignmentStatisticsForCourse(int courseId)
+        {
+            return await _context.Assignments
+                .AsNoTracking()
+                .Where(assignment => assignment.Module.CourseId == courseId)
+                .GroupBy(assignment => 1)
+                .Select(group => new AssignmentStatisticsDto(
+                    group.Count(),
+                    group.Count(a => a.RequiresSubmission),
+                    group.Count(a => !a.RequiresSubmission)
+                ))
+                .FirstOrDefaultAsync();
+        }
     }
 }
