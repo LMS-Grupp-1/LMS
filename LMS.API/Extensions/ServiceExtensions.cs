@@ -46,6 +46,9 @@ public static class ServiceExtensions
         services.AddScoped<ISubmissionService, SubmissionService>();
         services.AddLazy<ISubmissionService>();
 
-        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddLazy<IDashboardService>();
+
+		services.AddSingleton(TimeProvider.System);
 	}
 }
