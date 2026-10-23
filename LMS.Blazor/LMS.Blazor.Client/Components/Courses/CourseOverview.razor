@@ -5,9 +5,10 @@
 
     <div class="row g-4 mb-4">
 
+        <!-- Course Statistics -->
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 p-4 h-100">
-                <h5 class="fw-bold mb-3">Kursstatistik</h5>
+                <h5 class="fw-bold mb-3 text-uppercase">Kursstatistik</h5>
                 
                 <div class="row g-3">
                     <div class="col-6">
@@ -42,7 +43,7 @@
 
                     <div class="col-6">
                         <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #fffde7;">
-                            <div class="fs-3 text-warning"><i class="bi bi-file-text"></i></div>
+                            <AppIconBox Type="assignment" />
                             <div>
                                 <span class="text-muted small d-block">Uppgifter</span>
                                 <h4 class="fw-bold mb-0 text-warning">@SubmissionCount</h4>
@@ -53,41 +54,44 @@
             </div>
         </div>
 
+        <!-- Assignments and Submissions -->
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 p-4 h-100">
-                <h5 class="fw-bold mb-3">Kursframsteg</h5>
+                <h5 class="fw-bold mb-3 text-uppercase">Alla uppgifter</h5>
 
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between small text-muted mb-1">
-                        <span>Genomsnittligt genomfört</span>
-                        <span class="fw-bold text-dark">@AverageProgress%</span>
-                    </div>
-                    <div class="progress" style="height: 10px;">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: @(AverageProgress)%;" aria-valuenow="@AverageProgress" aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
+                <!-- Assignment summary counts -->
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-warning-subtle rounded-3 mb-3 small text-muted">
+                    <span><AppIconBox Type="assignment" IconSize="sm" /> <strong>Totalt:</strong> 5</span>
+                    <span><AppIconBox Type="submission" IconSize="sm" /> <strong class="text-truncate">Inlämningsuppgifter:</strong> 4</span>
+                    <span><AppIconBox Type="assignment" IconSize="sm" /> <strong>Övriga:</strong> 1</span>
                 </div>
 
-                <h6 class="fw-semibold text-secondary small mb-3">Moduler</h6>
-                <div class="d-flex flex-column gap-3">
-                    @if (Modules != null && Modules.Any())
-                    {
-                        @foreach (var mod in Modules)
+                <!-- Requires Submit Assignment List -->
+                <h6 class="fw-semibold text-secondary small mb-2">Inlämningsuppgifter</h6>
+        
+                <div class="overflow-y-auto pe-1" style="max-height: 132px;">
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var assignment in requiresSubmitAssignments)
                         {
-                            <div>
-                                <div class="d-flex justify-content-between small mb-1">
-                                    <span class="fw-medium text-dark">@mod.Name</span>
-                                    <span class="text-muted">@mod.Progress%</span>
+                            <div class="p-2 px-3 border rounded-2 bg-white d-flex align-items-center justify-content-between small">
+                                <div class="text-truncate me-3">
+                                    <span class="text-dark text-truncate">@assignment.AssignmentName</span>
+                                    <span class="text-danger ms-2">
+                                        <i class="bi bi-hourglass-split me-1"></i>@assignment.Deadline.ToString("yyyy-MM-dd HH:mm")
+                                    </span>
                                 </div>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: @(mod.Progress)%;"></div>
+                        
+                                <div class="d-flex align-items-center gap-3 text-nowrap text-muted">
+                                    <span title="Inlämnade">
+                                        <AppIconBox Type="submitted" IconSize="sm" /> @assignment.SubmissionCount
+                                    </span>
+                                    <span title="Bedömda">
+                                        <AppIconBox Type="feedback" IconSize="sm" /> @assignment.FeedbackCount
+                                    </span>
                                 </div>
                             </div>
                         }
-                    }
-                    else
-                    {
-                        <p class="text-muted small">Inga moduler tillgängliga för framstegsvisning.</p>
-                    }
+                    </div>
                 </div>
             </div>
         </div>
@@ -152,4 +156,21 @@
         public string Name { get; set; } = string.Empty;
         public int Progress { get; set; }
     }
+
+    private class MockAssignmentDto
+    {
+        public string AssignmentName { get; set; } = string.Empty;
+        public DateTime Deadline { get; set; }
+        public int SubmissionCount { get; set; }
+        public int FeedbackCount { get; set; }
+    }
+
+    private List<MockAssignmentDto> requiresSubmitAssignments = new()
+    {
+        new() { AssignmentName = "C# Advanced LINQ Lab", Deadline = DateTime.Today.AddDays(3).AddHours(23), SubmissionCount = 18, FeedbackCount = 12 },
+        new() { AssignmentName = "Blazor Component Architecture", Deadline = DateTime.Today.AddDays(7).AddHours(17), SubmissionCount = 10, FeedbackCount = 4 },
+        new() { AssignmentName = "Entity Framework Core Migration", Deadline = DateTime.Today.AddDays(14).AddHours(23), SubmissionCount = 5, FeedbackCount = 0 },
+        new() { AssignmentName = "ASP.NET Core Web API Security", Deadline = DateTime.Today.AddDays(21).AddHours(23), SubmissionCount = 2, FeedbackCount = 0 },
+        new() { AssignmentName = "Unit Testing with xUnit", Deadline = DateTime.Today.AddDays(28).AddHours(23), SubmissionCount = 0, FeedbackCount = 0 }
+    };
 }

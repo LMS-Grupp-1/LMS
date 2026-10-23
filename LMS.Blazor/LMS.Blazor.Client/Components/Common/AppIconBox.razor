@@ -1,10 +1,13 @@
-﻿@* <div class="@GetThemeClasses() rounded-3 d-flex align-items-center justify-content-center" 
-     style="width: 48px; height: 48px; min-width: 48px;">
-    <i class="bi @GetIconClass() fs-4"></i>
-</div> *@
-<div class="@GetCustomClasses()">
+﻿@if (CustomClasses != null)
+{
+    <div class="@GetCustomClasses()">
+        <i class="bi @GetIconClass() @GetTextColorClass() @IconSize"></i>
+    </div>
+}
+else
+{
     <i class="bi @GetIconClass() @GetTextColorClass() @IconSize"></i>
-</div>
+}
 
 @code {
     [Parameter] 
@@ -31,6 +34,8 @@
         "student" => "bi-people",
         "assignment" => "bi-file-text",
         "submission" => "bi-file-earmark-arrow-up",
+        "submitted" => "bi-file-earmark-person",
+        "feedback" => "bi-check2-circle",
         _ => "bi-folder"
     };
 
@@ -42,6 +47,8 @@
         "student" => "text-purple",
         "assignment" => "text-warning",
         "submission" => "text-warning",
+        "submitted" => "text-warning",
+        "feedback" => "text-success",
         _ => "text-secondary"
     };
 
@@ -69,7 +76,8 @@
         "student" => "bg-purple-subtle",
         "assignment" => "bg-warning-subtle",
         "submission" => "bg-warning-subtle",
-        
+        "submitted" => "bg-warning-subtle",
+        "feedback" => "bg-success-subtle",
         _ => "bg-light"
     };
 }

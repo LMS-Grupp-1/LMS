@@ -26,7 +26,7 @@ public record DashboardActivityDto(
     DateTime EndDate
 );
 
-// Active/Upcoming Assignments & Submissions
+// Active/Latest Assignments & Submissions
 public record DashboardAssignmentDto(
     string CourseName,
     string AssignmentName,
