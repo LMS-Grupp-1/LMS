@@ -21,7 +21,7 @@ public class TeacherDashboardService : ITeacherDashboardService
         return await _uow.Courses.GetActiveCoursesAsync(count);
     }
 
-    public async Task<IReadOnlyList<DashboardActivityDto>> GetActivitiesInDateRangeAsync(DateTime startDate, DateTime endDate, int? count = null)
+    public async Task<IReadOnlyList<DashboardActivityViewDto>> GetActivitiesInDateRangeAsync(DateTime startDate, DateTime endDate, int? count = null)
     {
         return await _uow.Activities.GetDateRangeActivitiesAsync(startDate, endDate, count);
     }

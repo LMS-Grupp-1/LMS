@@ -3,7 +3,7 @@ namespace LMS.Shared.DTOs;
 
 public record TeacherDashboardDto(
     IEnumerable<DashboardCourseDto> ActiveCourses,
-    IEnumerable<DashboardActivityDto> UpcomingActivities,
+    IEnumerable<DashboardActivityViewDto> UpcomingActivities,
     IEnumerable<DashboardAssignmentDto> UpcomingAssignments
 );
 
@@ -16,7 +16,7 @@ public record DashboardCourseDto(
     int ModuleCount
 );
 
-public record DashboardActivityDto(
+public record DashboardActivityViewDto(
     int CourseId,
     int ActivityTypeId,
     string ActivityName,

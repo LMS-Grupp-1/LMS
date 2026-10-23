@@ -10,6 +10,7 @@ public interface IServiceManager
     IDocumentService DocumentService { get; }
 	IAssignmentService AssignmentService { get; }
 	ISubmissionService SubmissionService { get; }
+	IDashboardService DashboardService { get; }
 
     ITeacherDashboardService TeacherDashboardService { get; }
 }

@@ -46,6 +46,9 @@ public static class ServiceExtensions
         services.AddScoped<ISubmissionService, SubmissionService>();
         services.AddLazy<ISubmissionService>();
 
+        services.AddScoped<IDashboardService, DashboardService>();
+        services.AddLazy<IDashboardService>();
+
         services.AddScoped<ITeacherDashboardService, TeacherDashboardService>();
         services.AddLazy<ITeacherDashboardService>();
 

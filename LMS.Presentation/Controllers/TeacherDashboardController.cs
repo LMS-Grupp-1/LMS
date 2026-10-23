@@ -26,7 +26,7 @@ public class TeacherDashboardController : ControllerBase
     }
 
     [HttpGet("upcoming-activities")]
-    public async Task<ActionResult<IReadOnlyList<DashboardActivityDto>>> GetActivitiesInDateRange(
+    public async Task<ActionResult<IReadOnlyList<DashboardActivityViewDto>>> GetActivitiesInDateRange(
         [FromQuery] DateTime startDate, 
         [FromQuery] DateTime endDate, 
         [FromQuery] int? count = 10)

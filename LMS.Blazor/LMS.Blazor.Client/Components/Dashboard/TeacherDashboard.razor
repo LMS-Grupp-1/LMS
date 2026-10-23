@@ -223,7 +223,7 @@
     private IReadOnlyList<DashboardCourseDto>? activeCourses;
     private IReadOnlyList<DashboardAssignmentDto>? activeAssignments;
     private IReadOnlyList<DashboardSubmissionDto>? latestSubmissions;
-    private IReadOnlyList<DashboardActivityDto>? upcomingActivities;
+    private IReadOnlyList<DashboardActivityViewDto>? upcomingActivities;
 
 	private string? errorMessage;
 
@@ -286,7 +286,7 @@
 		try
 		{
 			errorMessage = null;
-            upcomingActivities = await ApiProxy.GetAsync<IReadOnlyList<DashboardActivityDto>>(
+            upcomingActivities = await ApiProxy.GetAsync<IReadOnlyList<DashboardActivityViewDto>>(
                 $"teacher-dashboard/upcoming-activities?startDate={startDate}&endDate={endDate}");
 		}
 		catch (Exception ex)

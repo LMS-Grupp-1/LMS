@@ -5,7 +5,7 @@ namespace Service.Contracts;
 public interface ITeacherDashboardService
 {
     Task<IReadOnlyList<DashboardCourseDto>> GetActiveCoursesAsync(int? count = null);
-    Task<IReadOnlyList<DashboardActivityDto>> GetActivitiesInDateRangeAsync(DateTime startDate, DateTime endDate, int? count = null);
+    Task<IReadOnlyList<DashboardActivityViewDto>> GetActivitiesInDateRangeAsync(DateTime startDate, DateTime endDate, int? count = null);
     Task<IReadOnlyList<DashboardAssignmentDto>> GetActiveAssignmentsAsync();
     Task<IReadOnlyList<DashboardSubmissionDto>?> GetLatestSubmissionsAsync(DateTime? afterDate = null);
 
