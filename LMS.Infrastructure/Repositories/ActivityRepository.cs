@@ -1,6 +1,7 @@
-using Domain.Models.Entities;
 using Domain.Contracts;
+using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
+using LMS.Shared.DTOs.DashboardDtos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens.Experimental;
 
@@ -13,12 +14,35 @@ public class ActivityRepository(ApplicationDbContext context) : IActivityReposit
     public async Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId)
     {
         return await _context.Activities
-            .Where(m => m.ModuleId == moduleId)
+			.Include(m => m.ActivityType)
+			.Where(m => m.ModuleId == moduleId)
             .OrderBy(m => m.StartDate)
             .ToListAsync();
     }
 
-    public async Task<bool> HasOverlapAsync(
+	public async Task<IReadOnlyList<DashboardActivityDto>> GetUpcomingByCourseIdAsync(
+		int courseId,
+		DateTime now,
+		int take,
+		CancellationToken cancellationToken = default)
+	{
+		return await _context.Activities
+			.AsNoTracking()
+			.Where(activity => activity.Module.CourseId == courseId && activity.EndDate >= now)
+			.OrderBy(activity => activity.StartDate)
+			.Take(take)
+			.Select(activity => new DashboardActivityDto(
+				activity.Id,
+				activity.Name,
+				activity.ActivityType.Name,
+				activity.StartDate,
+				activity.EndDate,
+				activity.ModuleId,
+				activity.Module.Name))
+			.ToListAsync(cancellationToken);
+	}
+
+	public async Task<bool> HasOverlapAsync(
         int moduleId,
         DateTime startDate,
         DateTime endDate,
