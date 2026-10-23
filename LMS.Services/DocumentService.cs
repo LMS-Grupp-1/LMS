@@ -1,7 +1,7 @@
 ﻿using Domain.Contracts;
+using Domain.Models.Documents;
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
-using Domain.Models.Documents;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using Microsoft.Extensions.Logging;
@@ -71,29 +71,10 @@ public sealed class DocumentService(
                 $"{DocumentConstraints.MaxDescriptionLength} characters.");
         }
 
-        fileName = (fileName ?? string.Empty)
-            .Replace('\\', '/');
+		var (cleanFileName, contentType) = DocumentFiles.ValidateFileName(fileName);
+		fileName = cleanFileName;
 
-        fileName = fileName[(fileName.LastIndexOf('/') + 1)..].Trim();
-
-        if (string.IsNullOrWhiteSpace(fileName) ||
-            fileName.Length > DocumentConstraints.MaxFileNameLength ||
-            fileName.Any(char.IsControl))
-        {
-            throw new DocumentValidationException(
-                "The file name is invalid or too long.");
-        }
-
-        string extension = Path.GetExtension(fileName);
-
-        if (!DocumentConstraints.ContentTypes.TryGetValue(
-                extension, out var contentType))
-        {
-            throw new DocumentValidationException(
-                "This file type is not allowed.");
-        }
-
-        int? courseId = await unitOfWork.Documents.ResolveCourseAsync(
+		int? courseId = await unitOfWork.Documents.ResolveCourseAsync(
             target, cancellationToken);
 
         if (courseId is null)
@@ -123,8 +104,8 @@ public sealed class DocumentService(
                 "The selected document location does not exist.");
         }
 
-        using var bufferedContent = await ReadFileAsync(
-            content, cancellationToken);
+		using var bufferedContent = await DocumentFiles.ReadAsync(
+			content, cancellationToken);
 
         var document = new Document
         {
@@ -306,48 +287,6 @@ public sealed class DocumentService(
         {
             throw new DocumentValidationException(
                 "Select one course, module or activity.");
-        }
-    }
-
-    private static async Task<MemoryStream> ReadFileAsync(
-        Stream content,
-        CancellationToken cancellationToken)
-    {
-        var result = new MemoryStream();
-
-        try
-        {
-            byte[] buffer = new byte[81920];
-            int bytesRead;
-
-            while ((bytesRead = await content.ReadAsync(
-                       buffer.AsMemory(), cancellationToken)) > 0)
-            {
-                if (result.Length + bytesRead >
-                    DocumentConstraints.MaxFileSize)
-                {
-                    throw new DocumentValidationException(
-                        $"The file cannot exceed {DocumentConstraints.MaxFileSize} bytes.");
-                }
-
-                await result.WriteAsync(
-                    buffer.AsMemory(0, bytesRead),
-                    cancellationToken);
-            }
-
-            if (result.Length == 0)
-            {
-                throw new DocumentValidationException(
-                    "The file cannot be empty.");
-            }
-
-            result.Position = 0;
-            return result;
-        }
-        catch
-        {
-            result.Dispose();
-            throw;
         }
     }
 }
