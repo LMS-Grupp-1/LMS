@@ -149,22 +149,20 @@ namespace LMS.Services.Tests
 			var Course = await _sut.GetCourseByIdAsync(1);
 						
 			// Assert: 
-			Assert.Equal(Course.Name,"Lexicon LTU");
+			Assert.Equal("Lexicon LTU", Course.Name);
 		}
 		
 		[Fact]
-		public async Task GetByIdAsync_EmptyCourseOnNull()
+		public async Task GetByIdAsync_MissingCourse_ThrowsCourseNotFoundException()
 		{
 			// Arrange: return a course for any arguments, so only Verify decides the outcome
 			_courseRepository
-				.Setup(r => r.GetByIdAsync(1, false))
-				.ReturnsAsync(CreateCourse());
+				.Setup(r => r.GetByIdAsync(432, false))
+				.ReturnsAsync((Course?)null);
 
-			// Act
-			var Course = await _sut.GetCourseByIdAsync(432);
-						
-			// Assert: 
-			Assert.Null(Course);
+			// Act and assert
+			await Assert.ThrowsAsync<CourseNotFoundException>(
+				() => _sut.GetCourseByIdAsync(432)) ;
 		}
 
 
