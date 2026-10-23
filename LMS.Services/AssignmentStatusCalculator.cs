@@ -13,6 +13,11 @@ namespace LMS.Services
 		public static DateTimeOffset ToSwedishTime(DateTime localTime) =>
 			new(localTime, SwedishTime.GetUtcOffset(localTime));
 
+		// The opposite of ToSwedishTime: the current moment as Swedish local time,
+		// for comparing with stored activity times, module dates and deadlines.
+		public static DateTime ToSwedishLocalTime(DateTimeOffset moment) =>
+			TimeZoneInfo.ConvertTime(moment, SwedishTime).DateTime;
+
 		public static AssignmentStatus Calculate(
 			bool requiresSubmission,
 			DateTimeOffset? deadline,

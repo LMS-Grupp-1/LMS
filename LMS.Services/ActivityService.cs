@@ -28,8 +28,8 @@ public class ActivityService : IActivityService
         var result = await _unitOfWork.Activities.GetActivityByModuleIdAsync(moduleId);
 
         return result.Select(a => new ActivityDto(a.Id,
-            "Unimplemented",
-            a.Name,
+			a.ActivityType.Name,
+			a.Name,
             a.Description,
             a.StartDate,
             a.EndDate));
