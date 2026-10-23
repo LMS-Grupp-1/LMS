@@ -12,6 +12,7 @@ public class ServiceManager : IServiceManager
     private readonly Lazy<IDocumentService> _documentService;
     private readonly Lazy<IAssignmentService> _assignmentService;
     private readonly Lazy<ISubmissionService> _submissionService;
+    private readonly Lazy<IDashboardService> _dashboardService;
 
 
 	public IAuthService AuthService => _authService.Value;
@@ -22,6 +23,7 @@ public class ServiceManager : IServiceManager
     public IDocumentService DocumentService => _documentService.Value;
     public IAssignmentService AssignmentService => _assignmentService.Value;
 	public ISubmissionService SubmissionService => _submissionService.Value;
+	public IDashboardService DashboardService => _dashboardService.Value;
 
 	public ServiceManager(Lazy<IAuthService> authService, 
 		Lazy<IUsersService> usersService, 
@@ -30,7 +32,8 @@ public class ServiceManager : IServiceManager
 		Lazy<IActivityService> activityService,
         Lazy<IDocumentService> documentService,
         Lazy<IAssignmentService> assignmentService,
-        Lazy<ISubmissionService> submissionService)
+        Lazy<ISubmissionService> submissionService,
+        Lazy<IDashboardService> dashboardService)
     {
         _authService = authService;
         _usersService = usersService;
@@ -40,5 +43,6 @@ public class ServiceManager : IServiceManager
         _documentService = documentService;
         _assignmentService = assignmentService;
         _submissionService = submissionService;
+        _dashboardService = dashboardService;
     }
 }

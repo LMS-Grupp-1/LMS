@@ -9,6 +9,7 @@
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.AssignmentDtos
 @using Microsoft.AspNetCore.Components.Forms
+@using LMS.Blazor.Client.Helpers
 
 @inject IAssignmentService AssignmentService
 @inject NavigationManager NavigationManager
@@ -37,7 +38,7 @@ else
     <div class="list-group">
         @foreach (var assignment in assignments)
         {
-            var (statusText, statusClass) = GetStatusDisplay(assignment.Status);
+            var (statusText, statusClass) = AssignmentStatusDisplay.For(assignment.Status);
             var isExpanded = expandedId == assignment.Id;
 
             <div class="list-group-item">
@@ -265,16 +266,6 @@ else
             isSubmitting = false;
         }
     }
-
-    // The API sends the status as an enum; the text and colour are decided here in the UI.
-    private static (string Text, string CssClass) GetStatusDisplay(AssignmentStatus status) => status switch
-    {
-        AssignmentStatus.Submitted => ("Inlämnad", "bg-success"),
-        AssignmentStatus.NotSubmitted => ("Ej inlämnad", "bg-warning text-dark"),
-        AssignmentStatus.Late => ("Försenad", "bg-danger"),
-        AssignmentStatus.NoSubmissionRequired => ("Ingen inlämning", "bg-secondary"),
-        _ => (status.ToString(), "bg-secondary")
-    };
 
     public void Dispose()
     {
