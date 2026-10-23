@@ -6,15 +6,14 @@ using Microsoft.IdentityModel.Tokens.Experimental;
 
 namespace LMS.Infrastructure.Repositories;
 
-public class ActivityRepository(ApplicationDbContext context) : IActivityRepository
+public class ActivityRepository(ApplicationDbContext context) 
+    : BaseRepository<Activity>(context), IActivityRepository
 {
-    private readonly ApplicationDbContext _context = context;
-    
     public async Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId)
     {
         return await _context.Activities
-            .Where(m => m.ModuleId == moduleId)
-            .OrderBy(m => m.StartDate)
+            .Where(activity => activity.ModuleId == moduleId)
+            .OrderBy(activity => activity.StartDate)
             .ToListAsync();
     }
 
@@ -38,25 +37,5 @@ public class ActivityRepository(ApplicationDbContext context) : IActivityReposit
                 activity.StartDate < endDate &&
                 activity.EndDate > startDate,
             cancellationToken);
-    }
-
-    public async Task<Activity?> GetByIdAsync(int id)
-    {
-        return await _context.Activities.FindAsync(id);
-    }
-
-    public async Task AddAsync(Activity activity)
-    {
-        await _context.AddAsync(activity);
-    }
-
-    public void Update(Activity activity)
-    {
-        _context.Activities.Update(activity);
-    }
-
-    public void Delete(Activity activity)
-    {
-        _context.Activities.Remove(activity);
     }
 }
