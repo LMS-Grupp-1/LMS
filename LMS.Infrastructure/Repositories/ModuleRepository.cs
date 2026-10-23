@@ -23,7 +23,7 @@ public class ModuleRepository : BaseRepository<Module>, IModuleRepository
             .ToListAsync();
     }
 
-    public async Task<Module?> GetByIdAsync(int id)
+    public override async Task<Module?> GetByIdAsync(int id)
     {
         return await _context.Modules
             .Include(m => m.Course)

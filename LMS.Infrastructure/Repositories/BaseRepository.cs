@@ -1,10 +1,6 @@
 ﻿using Domain.Contracts;
 using LMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Client;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace LMS.Infrastructure.Repositories;
 

@@ -6,12 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories;
 
-public class CourseRepository : BaseRepository<Course>, ICourseRepository
+public class CourseRepository(ApplicationDbContext context)
+    : BaseRepository<Course>(context), ICourseRepository
 {
-    public CourseRepository(ApplicationDbContext context) : base(context)
-    {
-    }
-
     public async Task<IEnumerable<Course>> GetAllAsync(bool trackChanges) =>
         !trackChanges
             ? await _context.Courses.AsNoTracking().ToListAsync()

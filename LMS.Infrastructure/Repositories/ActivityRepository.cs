@@ -6,13 +6,9 @@ using Microsoft.IdentityModel.Tokens.Experimental;
 
 namespace LMS.Infrastructure.Repositories;
 
-public class ActivityRepository : BaseRepository<Activity>, IActivityRepository
+public class ActivityRepository(ApplicationDbContext context) 
+    : BaseRepository<Activity>(context), IActivityRepository
 {
-    public ActivityRepository(ApplicationDbContext context) 
-        : base(context)
-    {
-
-    }
     public async Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId)
     {
         return await _context.Activities
