@@ -1,6 +1,7 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
+using LMS.Shared.Constants;
 using LMS.Shared.DTOs.CourseDtos;
 using Microsoft.EntityFrameworkCore;
 
@@ -88,10 +89,16 @@ public class CourseRepository(ApplicationDbContext context) : ICourseRepository
 
 	public async Task<IReadOnlyList<ApplicationUser>> GetStudentsAsync(int courseId)
 	{
-		// Teachers have no CourseId, so only students are returned.
+		// Filter on the Student role, not only on CourseId:
+		// a teacher can also have a CourseId, and must not be listed as a student.
+		// Same role check as UserRepository.GetStudentsByCourseIdAsync.
 		return await _context.Users
 			.AsNoTracking()
-			.Where(user => user.CourseId == courseId)
+			.Where(user => user.CourseId == courseId &&
+				(from userRole in _context.UserRoles
+				 join role in _context.Roles on userRole.RoleId equals role.Id
+				 where userRole.UserId == user.Id && role.Name == UserRoles.Student
+				 select role.Id).Any())
 			.OrderBy(user => user.LastName)
 			.ThenBy(user => user.FirstName)
 			.ToListAsync();
