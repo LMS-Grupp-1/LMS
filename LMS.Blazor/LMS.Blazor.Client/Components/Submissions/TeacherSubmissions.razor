@@ -1,0 +1,289 @@
+﻿@using System.Globalization
+@using System.Net
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.DTOs.AssignmentDtos
+@implements IAsyncDisposable
+
+@inject ISubmissionService SubmissionService
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+@if (isLoading)
+{
+    <div class="d-flex align-items-center gap-2 text-muted">
+        <div class="spinner-border spinner-border-sm" role="status"></div>
+        <span>Hämtar inlämningar...</span>
+    </div>
+}
+else if (loadError is not null)
+{
+    <div class="alert alert-warning">@loadError</div>
+}
+else if (rows.Count == 0)
+{
+    <div class="text-muted">Kursen har inga uppgifter med inlämning, eller inga studenter.</div>
+}
+else
+{
+    @* Summary, so late and missing submissions stand out before reading the table *@
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <span class="badge bg-success">Inlämnade i tid: @rows.Count(row => Category(row) == OnTime)</span>
+        <span class="badge bg-warning text-dark">Inlämnade sent: @rows.Count(row => Category(row) == SubmittedLate)</span>
+        <span class="badge bg-danger">Saknas: @rows.Count(row => Category(row) == Missing)</span>
+        <span class="badge bg-secondary">Ej inlämnade: @rows.Count(row => Category(row) == NotYetSubmitted)</span>
+    </div>
+
+    <div class="row g-2 mb-3">
+        <div class="col-md-6">
+            <label class="form-label small fw-semibold" for="assignment-filter">Uppgift</label>
+            <select id="assignment-filter" class="form-select form-select-sm" @bind="selectedAssignmentId">
+                <option value="0">Alla uppgifter</option>
+                @foreach (var assignment in assignmentOptions)
+                {
+                    <option value="@assignment.Id">@assignment.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label small fw-semibold" for="status-filter">Status</label>
+            <select id="status-filter" class="form-select form-select-sm" @bind="selectedStatus">
+                <option value="">Alla statusar</option>
+                <option value="@AllSubmitted">Inlämnade (alla)</option>
+                <option value="@OnTime">Inlämnade i tid</option>
+                <option value="@SubmittedLate">Inlämnade sent</option>
+                <option value="@Missing">Saknas</option>
+                <option value="@NotYetSubmitted">Ej inlämnade</option>
+            </select>
+        </div>
+    </div>
+
+    @if (downloadError is not null)
+    {
+        <div class="alert alert-danger py-2">@downloadError</div>
+    }
+
+    <div class="table-responsive">
+        <table class="table table-sm align-middle">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Uppgift</th>
+                    <th>Deadline</th>
+                    <th>Status</th>
+                    <th>Inlämnad</th>
+                    <th class="text-end">Fil</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in FilteredRows)
+                {
+                    var (statusText, statusClass) = GetStatusDisplay(row);
+
+                    <tr>
+                        <td>@row.StudentName</td>
+                        <td>
+                            <div>@row.AssignmentName</div>
+                            <small class="text-muted">@row.ModuleName</small>
+                        </td>
+                        <td>@FormatDate(row.Deadline)</td>
+                        <td>
+                            <span class="badge @statusClass">@statusText</span>
+                            @if (row.HasFeedback)
+                            {
+                                <i class="bi bi-chat-left-text ms-1" title="Feedback finns"></i>
+                            }
+                        </td>
+                        <td>
+                            @if (row.SubmittedAt is { } submittedAt)
+                            {
+                                @submittedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)
+                            }
+                            else
+                            {
+                                <span class="text-danger">Saknas</span>
+                            }
+                        </td>
+                        <td class="text-end">
+                            @if (row.SubmissionId is { } submissionId)
+                            {
+                                <button type="button"
+                                        class="btn btn-outline-primary btn-sm"
+                                        disabled="@(downloadingId is not null)"
+                                        aria-label="@($"Ladda ner {row.FileName} från {row.StudentName}")"
+                                        @onclick="() => DownloadAsync(submissionId, row.FileName)">
+                                    @(downloadingId == submissionId ? "Hämtar..." : "Ladda ner")
+                                </button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    @if (!FilteredRows.Any())
+    {
+        <div class="text-muted">Inga inlämningar matchar filtret.</div>
+    }
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public int CourseId { get; set; }
+
+    private List<TeacherSubmissionRowDto> rows = [];
+    private List<(int Id, string Name)> assignmentOptions = [];
+    private bool isLoading = true;
+    private string? loadError;
+
+    // 0 = all assignments, empty string = all statuses.
+    private int selectedAssignmentId;
+    private string selectedStatus = string.Empty;
+
+    private int? downloadingId;
+    private string? downloadError;
+    private IJSObjectReference? downloadModule;
+    private int loadedCourseId;
+    private readonly CancellationTokenSource componentCancellation = new();      
+
+    // Filter categories for the teacher. "Late" covers both a late file and a missing file,
+    // so the categories use SubmissionId to tell them apart.
+    private const string AllSubmitted = "all-submitted";
+    private const string OnTime = "on-time";
+    private const string SubmittedLate = "submitted-late";
+    private const string Missing = "missing";
+    private const string NotYetSubmitted = "not-yet-submitted";
+
+    private static string Category(TeacherSubmissionRowDto row) => row switch
+    {
+        { Status: AssignmentStatus.Submitted } => OnTime,
+        { Status: AssignmentStatus.Late, SubmissionId: not null } => SubmittedLate,
+        { Status: AssignmentStatus.Late } => Missing,
+        _ => NotYetSubmitted
+    };
+
+    // All rows for the course are loaded once; filtering is done here,
+    // so changing a filter is instant and the assignment list always has every option.
+    private IEnumerable<TeacherSubmissionRowDto> FilteredRows => rows
+        .Where(row => selectedAssignmentId == 0 || row.AssignmentId == selectedAssignmentId)
+        .Where(row => selectedStatus switch
+        {
+            "" => true,
+            AllSubmitted => row.SubmissionId is not null,
+            _ => Category(row) == selectedStatus
+        });
+
+    private static (string Text, string CssClass) GetStatusDisplay(TeacherSubmissionRowDto row) =>
+        Category(row) switch
+        {
+            OnTime => ("Inlämnad", "bg-success"),
+            SubmittedLate => ("Inlämnad sent", "bg-warning text-dark"),
+            Missing => ("Saknas", "bg-danger"),
+            _ => ("Ej inlämnad", "bg-secondary")
+        };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Load again only when the course changes, for example in the course picker.
+        if (CourseId == loadedCourseId)
+            return;
+
+        loadedCourseId = CourseId;
+        isLoading = true;
+        loadError = null;
+        selectedAssignmentId = 0;
+        selectedStatus = string.Empty;
+
+        try
+        {
+            var result = await SubmissionService.GetForCourseAsync(CourseId, componentCancellation.Token);
+
+            // The server-side prerender service deliberately returns null.
+            // Keep showing the loading state until WebAssembly runs this again.
+            if (result is null)
+            {
+                loadedCourseId = 0;
+                return;
+            }
+
+            rows = result.ToList();
+            assignmentOptions = rows
+                .Select(row => (row.AssignmentId, row.AssignmentName))
+                .Distinct()
+                .ToList();
+            isLoading = false;
+        }
+        catch (OperationCanceledException) when (componentCancellation.IsCancellationRequested)
+        {
+            // Navigating away disposes the component and cancels its request.
+        }
+        catch (UnauthorizedAccessException)
+        {
+            NavigationManager.NavigateTo(
+                $"Account/Login?returnUrl={Uri.EscapeDataString(NavigationManager.Uri)}",
+                forceLoad: true);
+        }
+        catch (HttpRequestException exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        {
+            loadError = "Kursen finns inte.";
+            isLoading = false;
+        }
+        catch (HttpRequestException)
+        {
+            loadError = "Inlämningarna kunde inte hämtas. Försök igen senare.";
+            isLoading = false;
+        }
+    }
+
+    private async Task DownloadAsync(int submissionId, string? fileName)
+    {
+        downloadingId = submissionId;
+        downloadError = null;
+
+        try
+        {            
+            downloadModule ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", NavigationManager.ToAbsoluteUri("js/documents.js").ToString());
+
+            var url = NavigationManager.ToAbsoluteUri(
+                $"api/proxy/submissions/{submissionId}/download").ToString();
+
+            var status = await downloadModule.InvokeAsync<int>(
+                "download", url, fileName ?? "inlamning");
+
+            if (status != 200)
+            {
+                downloadError = "Filen kunde inte hämtas. Försök igen.";
+            }
+        }
+        catch (JSException)
+        {
+            downloadError = "Filen kunde inte hämtas. Försök igen.";
+        }
+        finally
+        {
+            downloadingId = null;
+        }
+    }
+    
+    private static string FormatDate(DateTime? date) =>
+        date?.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture) ?? "Ingen";            
+
+    public async ValueTask DisposeAsync()
+    {
+        componentCancellation.Cancel();
+        componentCancellation.Dispose();
+
+        if (downloadModule is not null)
+        {
+            try
+            {
+                await downloadModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // The browser has already closed the connection.
+            }
+        }
+    }
+}

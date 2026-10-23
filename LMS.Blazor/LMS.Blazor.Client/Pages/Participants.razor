@@ -1,15 +1,14 @@
 ﻿@page "/participants"
 @attribute [Authorize(Roles = UserRoles.Student)]
 @implements IDisposable
-
 @using Microsoft.AspNetCore.Authorization
 @using LMS.Blazor.Client.Services
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.CourseDtos
 @using System.Net
-
+@using LMS.Blazor.Client.Services.ApiProxy
 @inject NavigationManager NavigationManager
-@inject ICourseService CourseService
+@inject IApiProxyClient ApiProxy
 
 <PageTitle>Kursdeltagare</PageTitle>
 
@@ -74,7 +73,9 @@ else if (course is not null)
         try
         {
             // The participant list is part of the student's course
-            var result = await CourseService.GetMyCourseAsync(componentCancellation.Token);
+            var result = await ApiProxy.GetAsync<StudentCourseDto>(
+                "courses/my",
+                componentCancellation.Token);
 
             // The server-side prerender service deliberately returns null.
             // Keep showing the loading state until WebAssembly runs this again.

@@ -14,6 +14,7 @@ public class UnitOfWork : IUnitOfWork
     public IActivityRepository Activities { get; }
     public IDocumentRepository Documents { get; }
 	public IAssignmentRepository Assignments { get; }
+	public ISubmissionRepository Submissions { get; }
 
     public UnitOfWork(ApplicationDbContext context,
                 IUserRepository userRepository,
@@ -21,7 +22,8 @@ public class UnitOfWork : IUnitOfWork
                       IModuleRepository moduleRepository,
                       IActivityRepository activityRepository,
                       IDocumentRepository documentRepository,
-                      IAssignmentRepository assignmentRepository)
+                      IAssignmentRepository assignmentRepository,
+                      ISubmissionRepository submissionRepository)
     {
         _context = context;
         Users = userRepository;
@@ -30,7 +32,8 @@ public class UnitOfWork : IUnitOfWork
         Activities = activityRepository;
         Documents = documentRepository;
         Assignments = assignmentRepository;
-    }
+		Submissions = submissionRepository;
+	}
 
     public async Task<int> CompleteAsync()
     {

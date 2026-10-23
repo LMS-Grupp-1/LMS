@@ -10,7 +10,6 @@
 @using System.Net.Http.Json
 @attribute [Authorize(Roles = UserRoles.Teacher)]
 @inject IApiProxyClient ApiProxy
-@inject ICourseService CourseService
 @inject NavigationManager navigationManager
 @inject ToastService ToastService
 
@@ -150,7 +149,19 @@
 
     private async Task LoadCourseLookupsAsync()
     {
-        courses = await CourseService.GetCourseLookupsAsync();
+        try
+        {
+            courses = await ApiProxy.GetAsync<IEnumerable<CourseLookupDto>>(
+                "courses/lookups") ?? Enumerable.Empty<CourseLookupDto>();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            errorMessage = "Din session har gått ut. Logga in igen.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "Kurslistan kunde inte hämtas. Försök igen.";
+        }
     }
 
     private async Task HandleValidSubmit()
