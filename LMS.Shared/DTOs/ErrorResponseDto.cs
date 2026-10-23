@@ -6,6 +6,6 @@ namespace LMS.Shared.DTOs;
 // It includes properties for Title, Detail, Status, and a dictionary for Errors, allowing for detailed error information to be conveyed in API responses.
 public class ErrorResponseDto
 {
-    public string Message { get; set; } = string.Empty;
-    public Dictionary<string, string[]>? Errors { get; set; }
+	public string Message { get; set; } = string.Empty;
+	public Dictionary<string, string[]>? Errors { get; set; }
 }
