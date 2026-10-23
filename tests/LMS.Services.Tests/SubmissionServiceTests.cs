@@ -239,6 +239,193 @@ namespace LMS.Services.Tests
 				Times.Once);
 		}
 
+		/// <summary>
+		/// Scenario: a teacher asks for a course id that does not exist.
+		/// Expected: CourseNotFoundException (404) instead of an empty list.
+		/// </summary>
+		[Fact]
+		public async Task GetForCourseAsync_CourseDoesNotExist_ThrowsCourseNotFound()
+		{
+			// Arrange: the course repository finds no course with id 99.
+			_courseRepository
+				.Setup(r => r.GetByIdAsync(99, false))
+				.ReturnsAsync((Course?)null);
+
+			// Act & Assert
+			await Assert.ThrowsAsync<CourseNotFoundException>(
+				() => _sut.GetForCourseAsync(99, assignmentId: null, status: null));
+		}
+
+		/// <summary>
+		/// Scenario: two students and one assignment whose deadline has passed.
+		/// Anna has handed in on time, Erik has not handed in at all.
+		/// Expected: one row per student. Erik's row exists even though he has no submission,
+		/// with status Late and no SubmissionId. This is how missing submissions become visible.
+		/// </summary>
+		[Fact]
+		public async Task GetForCourseAsync_StudentWithoutSubmission_GetsRowWithoutSubmission()
+		{
+			// Arrange: deadline Monday 9 November 17:00 Swedish time (passed).
+			// Anna handed in on Sunday 8 November, Erik never did.
+			var assignment = CreateAssignment(deadline: new DateTime(2026, 11, 9, 17, 0, 0));
+			assignment.Submissions.Add(CreateSubmission(10, "anna", new(2026, 11, 8, 9, 0, 0, TimeSpan.Zero)));
+
+			SetupTeacherOverview([assignment], [CreateStudent("anna", "Anna"), CreateStudent("erik", "Erik")]);
+
+			// Act
+			var rows = await _sut.GetForCourseAsync(CourseId, assignmentId: null, status: null);
+
+			// Assert: two rows, one per student.
+			Assert.Equal(2, rows.Count);
+
+			var anna = Assert.Single(rows, row => row.StudentId == "anna");
+			Assert.Equal(AssignmentStatus.Submitted, anna.Status);
+			Assert.Equal(10, anna.SubmissionId);
+			Assert.Equal("report.pdf", anna.FileName);
+
+			// Erik's row has no submission, and the deadline has passed, so he is late.
+			var erik = Assert.Single(rows, row => row.StudentId == "erik");
+			Assert.Equal(AssignmentStatus.Late, erik.Status);
+			Assert.Null(erik.SubmissionId);
+			Assert.Null(erik.SubmittedAt);
+		}
+
+		/// <summary>
+		/// Scenario: a student has handed in twice; only the second time has feedback.
+		/// Expected: the row uses the latest submission, so the id, time and feedback come from it.
+		/// </summary>
+		[Fact]
+		public async Task GetForCourseAsync_SeveralSubmissions_UsesTheLatest()
+		{
+			// Arrange: deadline Friday 13 November (not passed). Anna handed in on the 9th and the 10th.
+			var assignment = CreateAssignment(deadline: new DateTime(2026, 11, 13, 17, 0, 0));
+			assignment.Submissions.Add(CreateSubmission(10, "anna", new(2026, 11, 9, 9, 0, 0, TimeSpan.Zero)));
+			assignment.Submissions.Add(CreateSubmission(11, "anna", new(2026, 11, 10, 9, 0, 0, TimeSpan.Zero), withFeedback: true));
+
+			SetupTeacherOverview([assignment], [CreateStudent("anna", "Anna")]);
+
+			// Act
+			var row = Assert.Single(await _sut.GetForCourseAsync(CourseId, assignmentId: null, status: null));
+
+			// Assert: submission 11 is the latest, and it has feedback.
+			Assert.Equal(11, row.SubmissionId);
+			Assert.True(row.HasFeedback);
+		}
+
+		/// <summary>
+		/// Scenario: the teacher filters on status Late.
+		/// Expected: only rows with that status are returned.
+		/// </summary>
+		[Fact]
+		public async Task GetForCourseAsync_StatusFilter_ReturnsOnlyMatchingRows()
+		{
+			// Arrange: the same situation as above, Anna handed in and Erik is late.
+			var assignment = CreateAssignment(deadline: new DateTime(2026, 11, 9, 17, 0, 0));
+			assignment.Submissions.Add(CreateSubmission(10, "anna", new(2026, 11, 8, 9, 0, 0, TimeSpan.Zero)));
+
+			SetupTeacherOverview([assignment], [CreateStudent("anna", "Anna"), CreateStudent("erik", "Erik")]);
+
+			// Act
+			var rows = await _sut.GetForCourseAsync(CourseId, assignmentId: null, status: AssignmentStatus.Late);
+
+			// Assert: only Erik is left.
+			var row = Assert.Single(rows);
+			Assert.Equal("erik", row.StudentId);
+		}
+
+		/// <summary>
+		/// Scenario: the course has two assignments and the teacher filters on one of them.
+		/// Expected: only rows for that assignment are returned.
+		/// </summary>
+		[Fact]
+		public async Task GetForCourseAsync_AssignmentFilter_ReturnsOnlyThatAssignment()
+		{
+			// Arrange: two assignments with ids 1 and 2.
+			var first = CreateAssignment();
+			var second = CreateAssignment();
+			second.Id = 2;
+
+			SetupTeacherOverview([first, second], [CreateStudent("anna", "Anna")]);
+
+			// Act
+			var rows = await _sut.GetForCourseAsync(CourseId, assignmentId: 2, status: null);
+
+			// Assert: one row, for assignment 2.
+			var row = Assert.Single(rows);
+			Assert.Equal(2, row.AssignmentId);
+		}
+		
+		/// <summary>
+		/// Scenario: a teacher downloads a student's submission.
+		/// Expected: the file is read from storage, with the stored content type and file name.
+		/// </summary>
+		[Fact]
+		public async Task DownloadAsync_Teacher_ReturnsTheFile()
+		{
+			// Arrange: submission 10 belongs to Anna; the caller is a teacher.
+			SetupDownload(CreateSubmission(10, "anna", Now));
+
+			// Act
+			var download = await _sut.DownloadAsync(10, "teacher-1", isTeacher: true, CancellationToken.None);
+
+			// Assert
+			Assert.Equal("report.pdf", download.FileName);
+			Assert.Equal("application/pdf", download.ContentType);
+			_storage.Verify(s => s.OpenReadAsync("blob-10", It.IsAny<CancellationToken>()), Times.Once);
+		}
+
+		/// <summary>
+		/// Scenario: a student downloads their own submission.
+		/// Expected: allowed.
+		/// </summary>
+		[Fact]
+		public async Task DownloadAsync_StudentOwnSubmission_ReturnsTheFile()
+		{
+			// Arrange: submission 10 belongs to Anna, and Anna is asking.
+			SetupDownload(CreateSubmission(10, "anna", Now));
+
+			// Act
+			var download = await _sut.DownloadAsync(10, "anna", isTeacher: false, CancellationToken.None);
+
+			// Assert
+			Assert.Equal("report.pdf", download.FileName);
+		}
+
+		/// <summary>
+		/// Scenario: a student tries to download another student's submission, for example by guessing an id.
+		/// Expected: the same SubmissionNotFoundException (404) as for an id that does not exist,
+		/// and the file is never read from storage.
+		/// </summary>
+		[Fact]
+		public async Task DownloadAsync_StudentOtherSubmission_ThrowsSubmissionNotFound()
+		{
+			// Arrange: submission 10 belongs to Anna, but Erik is asking.
+			SetupDownload(CreateSubmission(10, "anna", Now));
+
+			// Act & Assert
+			await Assert.ThrowsAsync<SubmissionNotFoundException>(
+				() => _sut.DownloadAsync(10, "erik", isTeacher: false, CancellationToken.None));
+
+			_storage.Verify(s => s.OpenReadAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+		}
+
+		/// <summary>
+		/// Scenario: the submission id does not exist.
+		/// Expected: SubmissionNotFoundException (404), even for a teacher.
+		/// </summary>
+		[Fact]
+		public async Task DownloadAsync_SubmissionDoesNotExist_ThrowsSubmissionNotFound()
+		{
+			// Arrange: the repository finds nothing.
+			_submissionRepository
+				.Setup(r => r.GetWithDocumentAsync(99))
+				.ReturnsAsync((Submission?)null);
+
+			// Act & Assert
+			await Assert.ThrowsAsync<SubmissionNotFoundException>(
+				() => _sut.DownloadAsync(99, "teacher-1", isTeacher: true, CancellationToken.None));
+		}
+
 		// --- Helpers ---------------------------------------------------------
 
 		// An assignment in the student's course (course 7) unless another course is given.
@@ -271,6 +458,59 @@ namespace LMS.Services.Tests
 
 		// A small file with some text, the content does not matter.
 		private static MemoryStream CreateFile() => new(Encoding.UTF8.GetBytes("Test content"));
+
+		// A student with only the fields the overview uses.
+		private static ApplicationUser CreateStudent(string id, string firstName) => new()
+		{
+			Id = id,
+			FirstName = firstName,
+			LastName = "Test"
+		};
+
+		// A submission with a PDF document. The blob path includes the id, so tests can check it.
+		private static Submission CreateSubmission(
+			int id,
+			string studentId,
+			DateTimeOffset submittedAt,
+			bool withFeedback = false) => new()
+			{
+				Id = id,
+				AssignmentId = AssignmentId,
+				StudentId = studentId,
+				SubmittedAt = submittedAt,
+				Document = new Document
+				{
+					FileName = "report.pdf",
+					ContentType = "application/pdf",
+					BlobPath = $"blob-{id}"
+				},
+				Feedback = withFeedback ? new Feedback { Comment = "Good" } : null
+			};
+
+		// The course exists, and has the given assignments and students.
+		private void SetupTeacherOverview(List<Assignment> assignments, List<ApplicationUser> students)
+		{
+			_courseRepository
+				.Setup(r => r.GetByIdAsync(CourseId, false))
+				.ReturnsAsync(new Course { Id = CourseId });
+			_assignmentRepository
+				.Setup(r => r.GetWithSubmissionsForCourseAsync(CourseId))
+				.ReturnsAsync(assignments);
+			_courseRepository
+				.Setup(r => r.GetStudentsAsync(CourseId))
+				.ReturnsAsync(students);
+		}
+
+		// The repository finds the submission, and storage returns an empty stream for its file.
+		private void SetupDownload(Submission submission)
+		{
+			_submissionRepository
+				.Setup(r => r.GetWithDocumentAsync(submission.Id))
+				.ReturnsAsync(submission);
+			_storage
+				.Setup(s => s.OpenReadAsync(submission.Document.BlobPath, It.IsAny<CancellationToken>()))
+				.ReturnsAsync(new MemoryStream());
+		}
 
 		// No file in storage and no database save.
 		private void VerifyNothingSaved()
