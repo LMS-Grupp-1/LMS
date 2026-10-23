@@ -41,4 +41,11 @@ public class TeacherDashboardController : ControllerBase
         var assignments = await _service.TeacherDashboardService.GetActiveAssignmentsAsync();
         return Ok(assignments);
     }
+
+    [HttpGet("latest-submissions")]
+    public async Task<ActionResult<IEnumerable<DashboardSubmissionDto>>> GetLatestSubmissions([FromQuery] DateTime? afterDate = null)
+    {
+        var submissions = await _service.TeacherDashboardService.GetLatestSubmissionsAsync(afterDate);
+        return Ok(submissions);
+    }
 }

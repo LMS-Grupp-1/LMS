@@ -77,52 +77,59 @@
                 <div class="card-body bg-light p-3">
                     <h5 class="card-title fw-bold mb-3">Senaste inlämningar</h5>
 
-                    @if (activeAssignments == null)
+                    @if (activeAssignments == null && latestSubmissions == null)
                     {
                         <div class="d-flex justify-content-center align-items-center py-4">
                             <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
                             <span class="text-muted">Laddar...</span>
                         </div>
                     }
-                    else if (!activeAssignments.Any())
+                    else if ((activeAssignments != null && !activeAssignments.Any()) && (latestSubmissions != null && !latestSubmissions.Any()))
                     {
                         <div class="alert alert-light text-center text-muted border py-3 mb-0">
-                            Inga aktiva uppgifter hittades.
+                            Inga aktiva uppgifter eller inlämningar hittades.
                         </div>
                     }
                     else
                     {
                         <div class="overflow-y-auto pe-2" style="max-height: 250px;">
                             <div class="d-flex flex-column gap-2">
-                                @foreach (var assignment in activeAssignments)
+                                @if (activeAssignments != null && activeAssignments.Any())
                                 {
-                                    <div class="card border bg-white shadow-none p-2">
-                                        <div class="d-flex align-items-center gap-3">
-                                            <AppIconBox Type="assignment" CustomClasses="theme-box-background icon-square-40" IconSize="fs-4" />
-                                            <div>
-                                                <p class="mb-0 text-break small"> 
-                                                    <span class="text-dark">@assignment.AssignmentName</span>
-                                                    <span class="text-muted">har lägts in @assignment.CourseName</span>
-                                                </p>
-												@if (assignment.Deadline != null)
-												{
-													<span class="text-danger" style="font-size: 0.75rem;">DEADLINE: @assignment.Deadline.Value.ToString("yyyy-MM-dd HH:mm")</span>
-												}
+                                    @foreach (var assignment in activeAssignments)
+                                    {
+                                        <div class="card border bg-white shadow-none p-2">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <AppIconBox Type="assignment" CustomClasses="theme-box-background icon-square-40" IconSize="fs-4" />
+                                                <div>
+                                                    <p class="mb-0 text-break small"> 
+                                                        <span class="text-dark">@assignment.AssignmentName</span>
+                                                        <span class="text-muted">har lägts in @assignment.CourseName</span>
+                                                    </p>
+												    @if (assignment.Deadline != null)
+												    {
+													    <span class="text-danger" style="font-size: 0.75rem;">DEADLINE: @assignment.Deadline.Value.ToString("yyyy-MM-dd HH:mm")</span>
+												    }
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    }
                                 }
-                                @foreach (var activity in recentActivities)
+                                
+                                @if (latestSubmissions != null && latestSubmissions.Any())
                                 {
-                                    <div class="card border bg-white shadow-none p-2">
-                                        <div class="d-flex align-items-center gap-3">
-											<AppIconBox Type="submission" CustomClasses="theme-box-background icon-square-40" IconSize="fs-4" />
-                                            <div>
-                                                <p class="mb-0 text-dark small">@activity.Description</p>
-                                                <span class="text-muted" style="font-size: 0.75rem;">@activity.TimeAgo</span>
+                                    @foreach (var submission in latestSubmissions)
+                                    {
+                                        <div class="card border bg-white shadow-none p-2">
+                                            <div class="d-flex align-items-center gap-3">
+											    <AppIconBox Type="submission" CustomClasses="theme-box-background icon-square-40" IconSize="fs-4" />
+                                                <div>
+                                                    <p class="mb-0 text-dark small">@submission.StudentName har lämnat in "@submission.AssignmentName"</p>
+                                                    <span class="text-muted" style="font-size: 0.75rem;">på @submission.SubmittedAt.ToString("yyyy-MM-dd HH:mm")</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    }
                                 }
                             </div>
                         </div>
@@ -215,40 +222,17 @@
 @code {
     private IEnumerable<DashboardCourseDto>? activeCourses;
     private IEnumerable<DashboardAssignmentDto>? activeAssignments;
-
-    private List<RecentActivityDto> recentActivities = new()
-    {
-        new() { Description = "Anna Andersson lämnade in uppgift \"HTML-struktur\"", TimeAgo = "2 timmar sedan" },
-        new() { Description = "Johan Berg ställde en fråga i forumet", TimeAgo = "4 timmar sedan" },
-        new() { Description = "Maria Lind uppdaterade sin profil", TimeAgo = "1 dag sedan" },
-        new() { Description = "Karl Svensson lämnade in uppgift \"C# Basics\"", TimeAgo = "2 dagar sedan" },
-        new() { Description = "Elin Ek lade till en kommentar på föreläsning 3", TimeAgo = "3 dagar sedan" }
-    };
-
+    private IEnumerable<DashboardSubmissionDto>? latestSubmissions;
     private IEnumerable<DashboardActivityDto>? upcomingActivities;
 
 	private string? errorMessage;
-
-    private class RecentActivityDto
-    {
-        public string Description { get; set; } = string.Empty;
-        public string TimeAgo { get; set; } = string.Empty;
-    }
-
-    private class UpcomingActivityDto
-    {
-        public string ActivityType { get; set; } = string.Empty;
-        public string ActivityName { get; set; } = string.Empty;
-        public string CourseName { get; set; } = string.Empty;
-        public string StartDate { get; set; } = string.Empty;
-        public string StartTime { get; set; } = string.Empty;
-    }
 
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(
             LoadActiveCoursesAsync(),
             LoadActiveAssignmentsAsync(),
+            LoadLatestSubmissionsAsync(),
             LoadUpcomingActivitiesAsync()
         );
     }
@@ -280,6 +264,23 @@
         {
             errorMessage = $"Kunde inte ladda aktiva uppgifter. {ex.Message}";
             activeAssignments = Enumerable.Empty<DashboardAssignmentDto>();
+        }
+    }
+
+    private async Task LoadLatestSubmissionsAsync()
+    {
+        try
+        {
+            errorMessage = null;
+            var afterDate = DateTime.Today.AddDays(-7);
+            latestSubmissions = await ApiProxy.GetAsync<IEnumerable<DashboardSubmissionDto>>(
+                $"teacher-dashboard/latest-submissions?afterDate={afterDate:yyyy-MM-dd}")
+                ?? Enumerable.Empty<DashboardSubmissionDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kunde inte ladda senaste inlämningar. {ex.Message}";
+            latestSubmissions = Enumerable.Empty<DashboardSubmissionDto>();
         }
     }
 

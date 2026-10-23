@@ -30,4 +30,9 @@ public class TeacherDashboardService : ITeacherDashboardService
     {
         return await _uow.Assignments.GetActiveAssignmentsAsync();
     }
+
+    public async Task<IEnumerable<DashboardSubmissionDto>> GetLatestSubmissionsAsync(DateTime? afterDate = null)
+    {
+        return await _uow.Submissions.GetLatestAsync(afterDate);
+    }
 }

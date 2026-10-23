@@ -36,5 +36,5 @@ public record DashboardAssignmentDto(
 public record DashboardSubmissionDto(
     string AssignmentName,
     string StudentName,
-    DateTime SubmittedAt
+    DateTimeOffset SubmittedAt
 );

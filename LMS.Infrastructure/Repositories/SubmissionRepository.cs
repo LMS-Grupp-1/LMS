@@ -1,6 +1,7 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
+using LMS.Shared.DTOs;
 using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories
@@ -24,7 +25,30 @@ namespace LMS.Infrastructure.Repositories
 				.FirstOrDefaultAsync(submission => submission.Id == id);
 		}
 
-		public async Task AddAsync(Submission submission)
+        public async Task<IReadOnlyList<DashboardSubmissionDto>> GetLatestAsync(DateTime? afterDate)
+        {
+            var query = _context.Submissions
+                .AsNoTracking()
+                .Include(submission => submission.Assignment)
+                .Include(submission => submission.Student)
+                .AsQueryable();
+
+            if (afterDate.HasValue)
+            {
+                query = query.Where(submission => submission.SubmittedAt > afterDate.Value);
+            }
+
+            return await query
+				.OrderByDescending(submission => submission.SubmittedAt)
+				.Select(submission => new DashboardSubmissionDto(
+					submission.Assignment.Name,
+					submission.Student.FirstName + " " + submission.Student.LastName,
+					submission.SubmittedAt
+				))
+				.ToListAsync();
+        }
+
+        public async Task AddAsync(Submission submission)
 		{
 			await _context.Submissions.AddAsync(submission);
 		}
