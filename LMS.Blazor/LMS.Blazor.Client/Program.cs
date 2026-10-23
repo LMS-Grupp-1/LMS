@@ -21,6 +21,7 @@ internal class Program
 		builder.Services.AddScoped<ICourseService, CourseService>();
 		builder.Services.AddScoped<IAssignmentService, AssignmentService>();
 		builder.Services.AddScoped<ISubmissionService, SubmissionService>();
+		builder.Services.AddScoped<IAssignmentService, AssignmentService>();		
 
 		builder.Services.AddScoped<ToastService>();
         builder.Services.AddScoped<DocumentService>();

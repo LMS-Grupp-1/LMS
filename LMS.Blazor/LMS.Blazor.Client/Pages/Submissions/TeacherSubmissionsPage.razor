@@ -3,11 +3,12 @@
 
 @using Microsoft.AspNetCore.Authorization
 @using LMS.Blazor.Client.Components.Submissions
-@using LMS.Blazor.Client.Services
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.CourseDtos
+@using LMS.Blazor.Client.Services.ApiProxy
 
-@inject ICourseService CourseService
+@inject IApiProxyClient ApiProxy
+
 
 <PageTitle>Inlämningar</PageTitle>
 
@@ -35,6 +36,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        courses = (await CourseService.GetCourseLookupsAsync()).ToList();
+        courses = (await ApiProxy.GetAsync<IEnumerable<CourseLookupDto>>("courses/lookups"))?.ToList() ?? [];
     }
 }
