@@ -1,7 +1,8 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
-using LMS.Shared.DTOs;
+using LMS.Shared.DTOs.CourseDtos;
+using LMS.Shared.DTOs.DashboardDtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories
@@ -25,7 +26,7 @@ namespace LMS.Infrastructure.Repositories
 				.FirstOrDefaultAsync(submission => submission.Id == id);
 		}
 
-        public async Task<IReadOnlyList<DashboardSubmissionDto>?> GetLatestAsync(DateTime? afterDate)
+        public async Task<IReadOnlyList<TeacherDashboardSubmissionDto>> GetLatestAsync(DateTime? afterDate)
         {
             var query = _context.Submissions
                 .AsNoTracking()
@@ -40,7 +41,7 @@ namespace LMS.Infrastructure.Repositories
 
             return await query
 				.OrderByDescending(submission => submission.SubmittedAt)
-				.Select(submission => new DashboardSubmissionDto(
+				.Select(submission => new TeacherDashboardSubmissionDto(
 					submission.Assignment.Name,
 					submission.Student.FirstName + " " + submission.Student.LastName,
 					submission.SubmittedAt
@@ -48,7 +49,7 @@ namespace LMS.Infrastructure.Repositories
 				.ToListAsync();
         }
 
-        public async Task<IReadOnlyList<SubmissionStatisticsDto>?> GetSubmissionStatisticsByCourseIdAsync(int courseId)
+        public async Task<IReadOnlyList<SubmissionStatisticsDto>> GetSubmissionStatisticsByCourseIdAsync(int courseId)
         {
             return await _context.Assignments
                 .AsNoTracking()

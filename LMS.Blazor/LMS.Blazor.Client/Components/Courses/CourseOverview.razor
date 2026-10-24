@@ -1,5 +1,4 @@
-﻿@using LMS.Shared.DTOs
-@using LMS.Shared.DTOs.CourseDtos
+﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Blazor.Client.Components.Common
 @using LMS.Blazor.Client.Helpers
 @using LMS.Blazor.Client.Services.ApiProxy
@@ -132,11 +131,9 @@
         <div class="col-12">
             <div class="card shadow-sm border-0">
                 <div class="card-body bg-light p-3">
-                    <h5 class="card-title fw-bold mb-3">Kommande aktiviteter</h5>
+                    <h5 class="card-title fw-bold mb-3 text-uppercase">Kommande aktiviteter</h5>
 
-                    @if (latestActivities != null && latestActivities.Any())
-                    {
-                        <div class="d-flex flex-column gap-2">
+                    <div class="d-flex flex-column gap-2">
                             @foreach (var activity in latestActivities)
                             {
                                 <div class="card border bg-white shadow-none p-3">
@@ -181,9 +178,8 @@
                                         }
                                     </div>
                                 </div>
-                            }
-                        </div>
-                    }
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -195,9 +191,9 @@
     [Parameter] public int CourseId { get; set; }
 
     private CourseStatisticsDto? courseStatistics;
-    private IReadOnlyList<ActivityOverviewDto>? latestActivities;
+    private IReadOnlyList<ActivityOverviewDto> latestActivities = Array.Empty<ActivityOverviewDto>();
     private AssignmentStatisticsDto? assignmentStatistics;
-    private IReadOnlyList<SubmissionStatisticsDto>? submissionStatistics;
+    private IReadOnlyList<SubmissionStatisticsDto> submissionStatistics = Array.Empty<SubmissionStatisticsDto>();
 
     private bool isLoading = true;
     private string? errorMessage;
@@ -219,7 +215,7 @@
             isLoading = true;
             errorMessage = null;
             courseStatistics = await ApiProxy.GetAsync<CourseStatisticsDto>(
-                $"teacher-dashboard/course-statistics/{CourseId}");
+                $"teacher/course-overview/course-statistics/{CourseId}");
         }
         catch (Exception ex)
         {
@@ -238,7 +234,7 @@
             isLoading = true;
             errorMessage = null;
             latestActivities = await ApiProxy.GetAsync<IReadOnlyList<ActivityOverviewDto>>(
-                $"teacher-dashboard/latest-activities/{CourseId}");
+                $"teacher/course-overview/latest-activities/{CourseId}") ?? Array.Empty<ActivityOverviewDto>();
         }
         catch (Exception ex)
         {
@@ -257,7 +253,7 @@
             isLoading = true;
             errorMessage = null;
             assignmentStatistics = await ApiProxy.GetAsync<AssignmentStatisticsDto>(
-                $"teacher-dashboard/assignment-statistics/{CourseId}");
+                $"teacher/course-overview/assignment-statistics/{CourseId}");
         }
         catch (Exception ex)
         {
@@ -276,7 +272,7 @@
             isLoading = true;
             errorMessage = null;
             submissionStatistics = await ApiProxy.GetAsync<IReadOnlyList<SubmissionStatisticsDto>>(
-                $"teacher-dashboard/submission-statistics/{CourseId}");
+                $"teacher/course-overview/submission-statistics/{CourseId}") ?? Array.Empty<SubmissionStatisticsDto>();
         }
         catch (Exception ex)
         {

@@ -1,6 +1,6 @@
 ﻿
 @using LMS.Blazor.Client.Components.Common
-@using LMS.Shared.DTOs
+@using LMS.Shared.DTOs.DashboardDtos
 @using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Blazor.Client.Helpers
 @inject IApiProxyClient ApiProxy
@@ -13,6 +13,13 @@
         </div>
     </div>
 
+    @if (isLoading)
+    {
+        <div class="d-flex align-items-center gap-2 text-muted p-4">
+            <div class="spinner-border spinner-border-sm" role="status"></div>
+            <span>Laddar data...</span>
+        </div>
+    }
     @if (errorMessage != null)
     {
         <div class="alert alert-danger text-center py-3 mb-0">
@@ -30,14 +37,7 @@
                         <a href="/teacher/courses" class="text-decoration-none text-primary fw-semibold small">Visa alla &gt;</a>
                     </div>
 
-                    @if (activeCourses == null)
-                    {
-                        <div class="d-flex justify-content-center align-items-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                            <span class="text-muted">Laddar...</span>
-                        </div>
-                    }
-                    else if (!activeCourses.Any())
+                    @if (!activeCourses.Any())
                     {
                         <div class="alert alert-light text-center text-muted border py-3 mb-0">
                             Inga aktiva kurser hittades.
@@ -77,14 +77,7 @@
                 <div class="card-body bg-light p-3">
                     <h5 class="card-title fw-bold mb-3">Senaste inlämningar</h5>
 
-                    @if (activeAssignments == null && latestSubmissions == null)
-                    {
-                        <div class="d-flex justify-content-center align-items-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                            <span class="text-muted">Laddar...</span>
-                        </div>
-                    }
-                    else if ((activeAssignments != null && !activeAssignments.Any()) && (latestSubmissions != null && !latestSubmissions.Any()))
+                    @if (!activeAssignments.Any() && !latestSubmissions.Any())
                     {
                         <div class="alert alert-light text-center text-muted border py-3 mb-0">
                             Inga aktiva uppgifter eller inlämningar hittades.
@@ -94,9 +87,7 @@
                     {
                         <div class="overflow-y-auto pe-2" style="max-height: 250px;">
                             <div class="d-flex flex-column gap-2">
-                                @if (activeAssignments != null && activeAssignments.Any())
-                                {
-                                    @foreach (var assignment in activeAssignments)
+                                @foreach (var assignment in activeAssignments)
                                     {
                                         <div class="card border bg-white shadow-none p-2">
                                             <div class="d-flex align-items-center gap-3">
@@ -114,11 +105,8 @@
                                             </div>
                                         </div>
                                     }
-                                }
                                 
-                                @if (latestSubmissions != null && latestSubmissions.Any())
-                                {
-                                    @foreach (var submission in latestSubmissions)
+                                @foreach (var submission in latestSubmissions)
                                     {
                                         <div class="card border bg-white shadow-none p-2">
                                             <div class="d-flex align-items-center gap-3">
@@ -130,7 +118,6 @@
                                             </div>
                                         </div>
                                     }
-                                }
                             </div>
                         </div>
                     }
@@ -146,14 +133,7 @@
                 <div class="card-body bg-light p-3">
                     <h5 class="card-title fw-bold mb-3">Kommande aktiviteter</h5>
 
-                    @if (upcomingActivities == null)
-                    {
-                        <div class="d-flex justify-content-center align-items-center py-4">
-                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
-                            <span class="text-muted">Laddar...</span>
-                        </div>
-                    }
-                    else if (!upcomingActivities.Any())
+                    @if (!upcomingActivities.Any())
                     {
                         <div class="alert alert-light text-center text-muted border py-3 mb-0">
                             Inga kommande aktiviteter hittades.
@@ -220,12 +200,13 @@
 </div>
 
 @code {
-    private IReadOnlyList<DashboardCourseDto>? activeCourses;
-    private IReadOnlyList<DashboardAssignmentDto>? activeAssignments;
-    private IReadOnlyList<DashboardSubmissionDto>? latestSubmissions;
-    private IReadOnlyList<DashboardActivityViewDto>? upcomingActivities;
+    private IReadOnlyList<TeacherDashboardCourseDto> activeCourses = Array.Empty<TeacherDashboardCourseDto>();
+    private IReadOnlyList<TeacherDashboardAssignmentDto> activeAssignments = Array.Empty<TeacherDashboardAssignmentDto>();
+    private IReadOnlyList<TeacherDashboardSubmissionDto> latestSubmissions = Array.Empty<TeacherDashboardSubmissionDto>();
+    private IReadOnlyList<TeacherDashboardActivityDto> upcomingActivities = Array.Empty<TeacherDashboardActivityDto>();
 
 	private string? errorMessage;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -241,12 +222,18 @@
     {
         try
         {
+            isLoading = true;
             errorMessage = null;
-            activeCourses = await ApiProxy.GetAsync<IReadOnlyList<DashboardCourseDto>>("teacher-dashboard/active-courses");
+            activeCourses = await ApiProxy.GetAsync<IReadOnlyList<TeacherDashboardCourseDto>>(
+                "dashboard/teacher/active-courses?count=3") ?? Array.Empty<TeacherDashboardCourseDto>();
         }
         catch (Exception ex)
         {
             errorMessage = $"Kunde inte ladda aktiva kurser. {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
@@ -254,12 +241,18 @@
     {
         try
         {
+            isLoading = true;
             errorMessage = null;
-			activeAssignments = await ApiProxy.GetAsync<IReadOnlyList<DashboardAssignmentDto>>("teacher-dashboard/active-assignments");
+			activeAssignments = await ApiProxy.GetAsync<IReadOnlyList<TeacherDashboardAssignmentDto>>(
+                "dashboard/teacher/active-assignments?count=10") ?? Array.Empty<TeacherDashboardAssignmentDto>();
         }
         catch (Exception ex)
         {
             errorMessage = $"Kunde inte ladda aktiva uppgifter. {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
@@ -267,32 +260,39 @@
     {
         try
         {
+            isLoading = true;
             errorMessage = null;
             var afterDate = DateTime.Today.AddDays(-7);
-            latestSubmissions = await ApiProxy.GetAsync<IReadOnlyList<DashboardSubmissionDto>>(
-                $"teacher-dashboard/latest-submissions?afterDate={afterDate:yyyy-MM-dd}");
+            latestSubmissions = await ApiProxy.GetAsync<IReadOnlyList<TeacherDashboardSubmissionDto>>(
+                $"dashboard/teacher/latest-submissions?afterDate={afterDate:yyyy-MM-dd}") ?? Array.Empty<TeacherDashboardSubmissionDto>();
         }
         catch (Exception ex)
         {
             errorMessage = $"Kunde inte ladda senaste inlämningar. {ex.Message}";
         }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private async Task LoadUpcomingActivitiesAsync()
     {
-        var startDate = "2026-09-01";// DateTime.Today.ToString("yyyy-MM-dd");
-        var endDate = "2026-12-30";// DateTime.Today.AddDays(7).ToString("yyyy-MM-dd");
-
 		try
 		{
+            isLoading = true;
 			errorMessage = null;
-            upcomingActivities = await ApiProxy.GetAsync<IReadOnlyList<DashboardActivityViewDto>>(
-                $"teacher-dashboard/upcoming-activities?startDate={startDate}&endDate={endDate}");
+            upcomingActivities = await ApiProxy.GetAsync<IReadOnlyList<TeacherDashboardActivityDto>>(
+                $"dashboard/teacher/upcoming-activities?count=100") ?? Array.Empty<TeacherDashboardActivityDto>();
 		}
 		catch (Exception ex)
 		{
 			errorMessage = $"Kunde inte ladda kommande aktiviteter. {ex.Message}";
 		}
+        finally
+        {
+            isLoading = false;
+        }
     }
 
 }

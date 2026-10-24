@@ -2,7 +2,7 @@ using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using LMS.Shared.DTOs.DashboardDtos;
-using LMS.Shared.DTOs;
+using LMS.Shared.DTOs.CourseDtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories;
@@ -19,10 +19,12 @@ public class ActivityRepository(ApplicationDbContext context)
 			.ToListAsync();
 	}
 
-    public async Task<IReadOnlyList<DashboardActivityViewDto>> GetDateRangeActivitiesAsync(DateTime startDate, DateTime endDate, int? count = null)
+    public async Task<IReadOnlyList<TeacherDashboardActivityDto>> GetUpcomingActivitiesAsync(int? count = null)
     {
+        var today = DateTimeOffset.UtcNow;
+
         IQueryable<Activity> query = _context.Activities
-            .Where(a => a.StartDate >= startDate && a.StartDate <= endDate)
+            .Where(a => a.StartDate >= today)
             .OrderBy(a => a.StartDate);
 
         if (count.HasValue && count.Value > 0)
@@ -31,7 +33,7 @@ public class ActivityRepository(ApplicationDbContext context)
         }
 
         return await query
-            .Select(a => new DashboardActivityViewDto(
+            .Select(a => new TeacherDashboardActivityDto(
                 a.Module.CourseId,
                 a.ActivityTypeId,
                 a.Name,
@@ -43,7 +45,7 @@ public class ActivityRepository(ApplicationDbContext context)
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<ActivityOverviewDto>?> GetLatestActivitiesByCourseIdAsync(int courseId, int? count = null)
+    public async Task<IReadOnlyList<ActivityOverviewDto>> GetLatestActivitiesByCourseIdAsync(int courseId, int? count = null)
     {
         IQueryable<Activity> query = _context.Activities
             .Where(a => a.Module.CourseId == courseId)

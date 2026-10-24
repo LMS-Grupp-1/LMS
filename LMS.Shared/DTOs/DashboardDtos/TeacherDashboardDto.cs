@@ -1,13 +1,13 @@
-﻿
-namespace LMS.Shared.DTOs;
+﻿namespace LMS.Shared.DTOs.DashboardDtos;
 
 public record TeacherDashboardDto(
-    IEnumerable<DashboardCourseDto> ActiveCourses,
-    IEnumerable<DashboardActivityViewDto> UpcomingActivities,
-    IEnumerable<DashboardAssignmentDto> UpcomingAssignments
+    IReadOnlyList<TeacherDashboardCourseDto>? ActiveCourses,
+    IReadOnlyList<TeacherDashboardActivityDto>? UpcomingActivities,
+    IReadOnlyList<TeacherDashboardAssignmentDto>? ActiveAssignments,
+    IReadOnlyList<TeacherDashboardSubmissionDto>? LatestSubmissions
 );
 
-public record DashboardCourseDto(
+public record TeacherDashboardCourseDto(
     int Id,
     string Name,
     DateTime StartDate,
@@ -16,7 +16,7 @@ public record DashboardCourseDto(
     int ModuleCount
 );
 
-public record DashboardActivityViewDto(
+public record TeacherDashboardActivityDto(
     int CourseId,
     int ActivityTypeId,
     string ActivityName,
@@ -27,13 +27,13 @@ public record DashboardActivityViewDto(
 );
 
 // Active/Latest Assignments & Submissions
-public record DashboardAssignmentDto(
+public record TeacherDashboardAssignmentDto(
     string CourseName,
     string AssignmentName,
     DateTime? Deadline
 );
 
-public record DashboardSubmissionDto(
+public record TeacherDashboardSubmissionDto(
     string AssignmentName,
     string StudentName,
     DateTimeOffset SubmittedAt

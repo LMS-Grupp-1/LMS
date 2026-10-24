@@ -12,5 +12,5 @@ public interface IServiceManager
 	ISubmissionService SubmissionService { get; }
 	IDashboardService DashboardService { get; }
 
-    ITeacherDashboardService TeacherDashboardService { get; }
+    ITeacherCourseOverviewService TeacherCourseOverviewService { get; }
 }

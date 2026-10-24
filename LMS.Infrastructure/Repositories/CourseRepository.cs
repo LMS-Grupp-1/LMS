@@ -2,8 +2,8 @@
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using LMS.Shared.Constants;
-using LMS.Shared.DTOs;
 using LMS.Shared.DTOs.CourseDtos;
+using LMS.Shared.DTOs.DashboardDtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories;
@@ -17,7 +17,7 @@ public class CourseRepository(ApplicationDbContext context)
             : await _context.Courses.ToListAsync();
 
     // Lightweight DTO for lookups, only includes Id and Name
-    public async Task<IReadOnlyList<CourseLookupDto>?> GetCourseLookupsAsync()
+    public async Task<IReadOnlyList<CourseLookupDto>> GetCourseLookupsAsync()
     {
         return await _context.Courses.AsNoTracking()
             .Select(c => new CourseLookupDto(c.Id, c.Name))
@@ -110,7 +110,7 @@ public class CourseRepository(ApplicationDbContext context)
 			.ToListAsync();
 	}
 
-    public async Task<IReadOnlyList<DashboardCourseDto>> GetActiveCoursesAsync(int? count = null)
+    public async Task<IReadOnlyList<TeacherDashboardCourseDto>> GetActiveCoursesAsync(int? count = null)
     {
         var today = DateTime.Today;
 
@@ -124,7 +124,7 @@ public class CourseRepository(ApplicationDbContext context)
         }
 
         return await query
-            .Select(c => new DashboardCourseDto(
+            .Select(c => new TeacherDashboardCourseDto(
                 c.Id,
                 c.Name,
                 c.StartDate,

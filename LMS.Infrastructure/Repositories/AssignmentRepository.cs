@@ -1,7 +1,8 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
-using LMS.Shared.DTOs;
+using LMS.Shared.DTOs.CourseDtos;
+using LMS.Shared.DTOs.DashboardDtos;
 using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories
@@ -56,20 +57,26 @@ namespace LMS.Infrastructure.Repositories
 				.ToListAsync();
 		}
 
-        public async Task<IReadOnlyList<DashboardAssignmentDto>> GetActiveAssignmentsAsync()
+        public async Task<IReadOnlyList<TeacherDashboardAssignmentDto>> GetActiveAssignmentsAsync(int? count = null)
         {
             var currentDate = DateTime.Today;
 
-            return await _context.Assignments
+            var query = _context.Assignments
                 .AsNoTracking()
                 .Where(assignment => assignment.Deadline != null && assignment.Deadline >= currentDate)
                 .OrderBy(assignment => assignment.Deadline)
-                .Select(assignment => new DashboardAssignmentDto(
+                .Select(assignment => new TeacherDashboardAssignmentDto(
                     CourseName: assignment.Module.Course.Name,
                     AssignmentName: assignment.Name,
                     Deadline: assignment.Deadline
-                ))
-                .ToListAsync();
+                ));
+
+            if (count.HasValue && count.Value > 0)
+            {
+                query = query.Take(count.Value);
+            }
+
+            return await query.ToListAsync();
         }
 
         public async Task<AssignmentStatisticsDto?> GetAssignmentStatisticsForCourse(int courseId)
