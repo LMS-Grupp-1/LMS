@@ -19,11 +19,11 @@ namespace LMS.Infrastructure.Data.Configurations
                    .HasMaxLength(ModuleConstraints.DescriptionMaxLength);
 
             // A module belongs to one course. 
-            // If the course is deleted, cascade delete its modules.
+            // The course can be deleted if it has any modules.
             builder.HasOne(m => m.Course)
                    .WithMany(c => c.Modules)
                    .HasForeignKey(m => m.CourseId)
-                   .OnDelete(DeleteBehavior.Cascade);
+                   .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

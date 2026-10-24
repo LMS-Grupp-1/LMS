@@ -1,116 +1,185 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
+@using LMS.Blazor.Client.Components.Common
+@using LMS.Blazor.Client.Helpers
+@using LMS.Blazor.Client.Services.ApiProxy
 
-<div class="container-fluid px-0">
+@inject IApiProxyClient ApiProxy
+
+<div class="container-fluid px-0 position-relative">
+    @if (isLoading)
+    {
+        <div class="position-absolute top-0 start-0 w-100 h-100 bg-white bg-opacity-75 d-flex justify-content-center align-items-center rounded-3" style="z-index: 10;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Laddar...</span>
+            </div>
+        </div>
+    }
+    @if (errorMessage != null)
+    {
+        <div class="alert alert-danger text-center py-3 mb-0">
+            @errorMessage
+        </div>
+    }
 
     <div class="row g-4 mb-4">
+
+        <!-- Course Statistics -->
         <div class="col-lg-6">
             <div class="card shadow-sm border-0 p-4 h-100">
-                <h5 class="fw-bold mb-3">Kursframsteg</h5>
+                <h5 class="fw-bold mb-3 text-uppercase">Kursstatistik</h5>
                 
-                <div class="mb-4">
-                    <div class="d-flex justify-content-between small text-muted mb-1">
-                        <span>Genomsnittligt genomfört</span>
-                        <span class="fw-bold text-dark">@AverageProgress%</span>
+                @if (courseStatistics != null)
+                {
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3 bg-primary-subtle">
+                            <AppIconBox Type="module" />
+                            <div>
+                                <span class="text-muted small d-block">Moduler</span>
+                                <h4 class="fw-bold mb-0 text-primary">@courseStatistics.ModuleCount</h4>
+                            </div>
+                        </div>
                     </div>
-                    <div class="progress" style="height: 10px;">
-                        <div class="progress-bar bg-primary" role="progressbar" style="width: @(AverageProgress)%;" aria-valuenow="@AverageProgress" aria-valuemin="0" aria-valuemax="100"></div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3 bg-success-subtle">
+                            <AppIconBox Type="activity" />
+                            <div>
+                                <span class="text-muted small d-block">Aktiviteter</span>
+                                <h4 class="fw-bold mb-0 text-success">@courseStatistics.ActivityCount</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3 bg-purple-subtle">
+                            <AppIconBox Type="student" />
+                            <div>
+                                <span class="text-muted small d-block">Studenter</span>
+                                <h4 class="fw-bold mb-0 text-purple">@courseStatistics.StudentCount</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-6">
+                        <div class="p-3 rounded d-flex align-items-center gap-3 bg-warning-subtle">
+                            <AppIconBox Type="assignment" />
+                            <div>
+                                <span class="text-muted small d-block">Uppgifter</span>
+                                <h4 class="fw-bold mb-0 text-warning">@courseStatistics.AssignmentCount</h4>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                }
+            </div>
+        </div>
 
-                <h6 class="fw-semibold text-secondary small mb-3">Moduler</h6>
-                <div class="d-flex flex-column gap-3">
-                    @if (Modules != null && Modules.Any())
-                    {
-                        @foreach (var mod in Modules)
+        <!-- Assignments and Submissions -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm border-0 p-4 h-100">
+                <h5 class="fw-bold mb-3 text-uppercase">Alla uppgifter</h5>
+
+                <!-- Assignment summary counts -->
+                @if (assignmentStatistics != null)
+                {
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 bg-warning-subtle rounded-3 mb-3 small text-muted">
+                    <span><AppIconBox Type="assignment" IconSize="sm" /> <strong>Totalt:</strong> @assignmentStatistics.TotalCount</span>
+                    <span><AppIconBox Type="submission" IconSize="sm" /> <strong class="text-truncate">Inlämningsuppgifter:</strong> @assignmentStatistics.RequiresSubmissionCount</span>
+                    <span><AppIconBox Type="assignment" IconSize="sm" /> <strong>Övriga:</strong> @assignmentStatistics.OtherCount</span>
+                </div>  
+                }
+
+                <!-- Requires Submit Assignment List -->
+                <h6 class="fw-semibold text-secondary small mb-2">Inlämningsuppgifter</h6>
+
+                @if (submissionStatistics != null && submissionStatistics.Any())
+                {
+                <div class="overflow-y-auto pe-1" style="max-height: 132px;">
+                    <div class="d-flex flex-column gap-2">
+                        @foreach (var assignment in submissionStatistics)
                         {
-                            <div>
-                                <div class="d-flex justify-content-between small mb-1">
-                                    <span class="fw-medium text-dark">@mod.Name</span>
-                                    <span class="text-muted">@mod.Progress%</span>
+                            <div class="p-2 px-3 border rounded-2 bg-white d-flex align-items-center justify-content-between small">
+                                <div class="text-truncate me-3">
+                                    <span class="text-dark text-truncate">@assignment.AssignmentName</span>
+                                    <span class="text-danger ms-2">
+                                        <i class="bi bi-hourglass-split me-1"></i>@assignment.Deadline?.ToString("yyyy-MM-dd HH:mm")
+                                    </span>
                                 </div>
-                                <div class="progress" style="height: 6px;">
-                                    <div class="progress-bar bg-success" role="progressbar" style="width: @(mod.Progress)%;"></div>
+                        
+                                <div class="d-flex align-items-center gap-3 text-nowrap text-muted">
+                                    <span title="Inlämnade">
+                                        <AppIconBox Type="submitted" IconSize="sm" /> @assignment.SubmissionCount
+                                    </span>
+                                    <span title="Bedömda">
+                                        <AppIconBox Type="feedback" IconSize="sm" /> @assignment.FeedbackCount
+                                    </span>
                                 </div>
                             </div>
                         }
-                    }
-                    else
-                    {
-                        <p class="text-muted small">Inga moduler tillgängliga för framstegsvisning.</p>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="card shadow-sm border-0 p-4 h-100">
-                <h5 class="fw-bold mb-3">Kursstatistik</h5>
+                    </div>
+                </div> 
+                }
                 
-                <div class="row g-3">
-                    <div class="col-6">
-                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #e3f2fd;">
-                            <div class="fs-3 text-primary"><i class="bi bi-book"></i></div>
-                            <div>
-                                <span class="text-muted small d-block">Moduler</span>
-                                <h4 class="fw-bold mb-0 text-primary">@ModuleCount</h4>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #e8f5e9;">
-                            <div class="fs-3 text-success"><i class="bi bi-calendar-event"></i></div>
-                            <div>
-                                <span class="text-muted small d-block">Aktiviteter</span>
-                                <h4 class="fw-bold mb-0 text-success">@ActivityCount</h4>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #f3e5f5;">
-                            <div class="fs-3" style="color: #6a1b9a;"><i class="bi bi-people"></i></div>
-                            <div>
-                                <span class="text-muted small d-block">Studenter</span>
-                                <h4 class="fw-bold mb-0" style="color: #6a1b9a;">@StudentCount</h4>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="col-6">
-                        <div class="p-3 rounded d-flex align-items-center gap-3" style="background-color: #fffde7;">
-                            <div class="fs-3 text-warning"><i class="bi bi-file-text"></i></div>
-                            <div>
-                                <span class="text-muted small d-block">Inlämningar</span>
-                                <h4 class="fw-bold mb-0 text-warning">@SubmissionCount</h4>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
+
     </div>
 
-    <div class="card shadow-sm border-0 p-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="fw-bold mb-0">Senaste aktiviteter</h5>
-            <a href="javascript:void(0);" class="text-decoration-none small fw-semibold text-primary">Visa alla &gt;</a>
-        </div>
+    <!-- Latest activities -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-body bg-light p-3">
+                    <h5 class="card-title fw-bold mb-3 text-uppercase">Kommande aktiviteter</h5>
 
-        <div class="d-flex flex-column gap-3">
-            <div class="d-flex align-items-start gap-3 p-2 border-bottom pb-3">
-                <div class="fs-4 text-secondary mt-1"><i class="bi bi-file-earmark-text"></i></div>
-                <div>
-                    <p class="mb-0 fw-semibold text-dark">Anna Andersson lämnade in uppgift Java applikation</p>
-                    <span class="text-muted small">2 timmar sedan</span>
-                </div>
-            </div>
+                    <div class="d-flex flex-column gap-2">
+                            @foreach (var activity in latestActivities)
+                            {
+                                <div class="card border bg-white shadow-none p-3">
+                                    <div class="row align-items-center">
+                                        <div class="col-md mb-2 mb-md-0">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <span class="badge @ActivityTypeHelper.GetBadgeClass(activity.ActivityTypeId) px-3 py-2 rounded-pill fw-semibold">
+                                                    @ActivityTypeHelper.GetName(activity.ActivityTypeId)
+                                                </span>
+                                                <div>
+                                                    <h6 class="fw-bold mb-1 text-dark text-break">@activity.ActivityName</h6>
+                                                    <span class="text-muted small text-break">Module: @activity.ModuleName</span>
+                                                </div>
+                                            </div>
+                                        </div>
 
-            <div class="d-flex align-items-start gap-3 p-2">
-                <div class="fs-4 text-secondary mt-1"><i class="bi bi-file-earmark-text"></i></div>
-                <div>
-                    <p class="mb-0 fw-semibold text-dark">Karl Karlsson lade till en ny aktivitet i Modul 1</p>
-                    <span class="text-muted small">5 timmar sedan</span>
+                                        @if (activity.StartDate.Date == activity.EndDate.Date)
+                                        {
+                                            <div class="col-md-auto text-md-end text-muted small">
+                                                <div class="d-flex flex-md-column align-items-md-end justify-content-between gap-1">
+                                                    <div>
+                                                        <i class="bi bi-calendar-event me-1"></i> @activity.StartDate.ToString("yyyy-MM-dd")
+                                                    </div>
+                                                    <div>
+                                                        <i class="bi bi-clock me-1"></i> @activity.StartDate.ToString("HH:mm") – @activity.EndDate.ToString("HH:mm")
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="col-md-auto text-md-end text-muted small">
+                                                <div class="d-flex flex-md-column align-items-md-end justify-content-between gap-1">
+                                                    <div>
+                                                        <i class="bi bi-calendar-range me-1"></i> @activity.StartDate.ToString("yyyy-MM-dd HH:mm")
+                                                    </div>
+                                                    <div>
+                                                        Till @activity.EndDate.ToString("yyyy-MM-dd HH:mm")
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                        }
+                    </div>
                 </div>
             </div>
         </div>
@@ -119,34 +188,100 @@
 </div>
 
 @code {
-    [Parameter] public CourseDto? Course { get; set; }
+    [Parameter] public int CourseId { get; set; }
 
-    // Metrics and Progress Parameters
-    [Parameter] public int AverageProgress { get; set; } = 65;
-    [Parameter] public int ModuleCount { get; set; } = 3;
-    [Parameter] public int ActivityCount { get; set; } = 11;
-    [Parameter] public int StudentCount { get; set; } = 5;
-    [Parameter] public int SubmissionCount { get; set; } = 3;
+    private CourseStatisticsDto? courseStatistics;
+    private IReadOnlyList<ActivityOverviewDto> latestActivities = Array.Empty<ActivityOverviewDto>();
+    private AssignmentStatisticsDto? assignmentStatistics;
+    private IReadOnlyList<SubmissionStatisticsDto> submissionStatistics = Array.Empty<SubmissionStatisticsDto>();
 
-    [Parameter] public IEnumerable<ModuleProgressModel>? Modules { get; set; }
+    private bool isLoading = true;
+    private string? errorMessage;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Fallback mock module progress rows if none passed from parent
-        if (Modules == null || !Modules.Any())
+        await Task.WhenAll(
+             LoadCourseStatisticsAsync(),
+             LoadLatestActivitiesAsync(),
+             LoadAssignmentStatisticsAsync(),
+             LoadSubmissionStatisticsAsync()
+         );
+    }
+
+    private async Task LoadCourseStatisticsAsync()
+    {
+        try
         {
-            Modules = new List<ModuleProgressModel>
-            {
-                new() { Name = "Introduktion till C#", Progress = 100 },
-                new() { Name = "Blazor WebAssembly", Progress = 60 },
-                new() { Name = "Clean Architecture", Progress = 35 }
-            };
+            isLoading = true;
+            errorMessage = null;
+            courseStatistics = await ApiProxy.GetAsync<CourseStatisticsDto>(
+                $"teacher/course-overview/course-statistics/{CourseId}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kunde inte ladda kursstatistik: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
-    public class ModuleProgressModel
+    private async Task LoadLatestActivitiesAsync()
     {
-        public string Name { get; set; } = string.Empty;
-        public int Progress { get; set; }
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            latestActivities = await ApiProxy.GetAsync<IReadOnlyList<ActivityOverviewDto>>(
+                $"teacher/course-overview/latest-activities/{CourseId}") ?? Array.Empty<ActivityOverviewDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kunde inte ladda senaste aktiviteter: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
+
+    private async Task LoadAssignmentStatisticsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            assignmentStatistics = await ApiProxy.GetAsync<AssignmentStatisticsDto>(
+                $"teacher/course-overview/assignment-statistics/{CourseId}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kunde inte ladda uppgiftsstatistik: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadSubmissionStatisticsAsync()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = null;
+            submissionStatistics = await ApiProxy.GetAsync<IReadOnlyList<SubmissionStatisticsDto>>(
+                $"teacher/course-overview/submission-statistics/{CourseId}") ?? Array.Empty<SubmissionStatisticsDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kunde inte ladda inlämningsstatistik: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
 }
