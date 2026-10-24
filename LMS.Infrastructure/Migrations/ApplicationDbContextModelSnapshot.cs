@@ -43,9 +43,6 @@ namespace LMS.Infrastructure.Migrations
                     b.Property<int>("ModuleId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("ModuleId1")
-                        .HasColumnType("int");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -58,8 +55,6 @@ namespace LMS.Infrastructure.Migrations
                     b.HasIndex("ActivityTypeId");
 
                     b.HasIndex("ModuleId");
-
-                    b.HasIndex("ModuleId1");
 
                     b.ToTable("Activities");
                 });
@@ -544,22 +539,18 @@ namespace LMS.Infrastructure.Migrations
             modelBuilder.Entity("Domain.Models.Entities.Activity", b =>
                 {
                     b.HasOne("Domain.Models.Entities.ActivityType", "ActivityType")
-                        .WithMany()
+                        .WithMany("Activities")
                         .HasForeignKey("ActivityTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("Domain.Models.Entities.Module", "Module")
-                        .WithMany()
+                        .WithMany("Activities")
                         .HasForeignKey("ModuleId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("ActivityType");
-
-                    b.HasOne("Domain.Models.Entities.Module", null)
-                        .WithMany("Activities")
-                        .HasForeignKey("ModuleId1");
 
                     b.Navigation("Module");
                 });
@@ -641,7 +632,7 @@ namespace LMS.Infrastructure.Migrations
                     b.HasOne("Domain.Models.Entities.Course", "Course")
                         .WithMany("Modules")
                         .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Course");
@@ -728,6 +719,11 @@ namespace LMS.Infrastructure.Migrations
             modelBuilder.Entity("Domain.Models.Entities.Activity", b =>
                 {
                     b.Navigation("Documents");
+                });
+
+            modelBuilder.Entity("Domain.Models.Entities.ActivityType", b =>
+                {
+                    b.Navigation("Activities");
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Assignment", b =>
