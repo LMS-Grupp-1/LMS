@@ -3,6 +3,7 @@ using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.ModulesDtos;
 using Service.Contracts;
+using Module = Domain.Models.Entities.Module;
 
 namespace LMS.Services;
 
@@ -19,7 +20,8 @@ public class ModuleService : IModuleService
     {
         var course = await _unitOfWork.Courses.GetByIdAsync(courseId,false);
         if (course == null)  
-            throw new KeyNotFoundException("The selected course does not exist.");
+            throw new EntityNotFoundException("Kurs", courseId);
+
         var modules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
 
         return modules.Select(m => new ModuleDto
@@ -33,37 +35,9 @@ public class ModuleService : IModuleService
         });
     }
 
-    public async Task<(bool Success, string ErrorMessage)> CreateModuleAsync(int courseId, CreateModuleDto dto)
+    public async Task CreateModuleAsync(int courseId, CreateModuleDto dto)
     {
-        if (dto.StartDate > dto.EndDate)
-        {
-            return (false, "Modulens startdatum får inte vara efter dess slutdatum.");
-        }
-
-        var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
-        if (course == null)
-        {
-            return (false, "Den valda kursen hittades inte.");
-        }
-
-        // Module dates must be within course dates
-        if (dto.StartDate < course.StartDate || dto.EndDate > course.EndDate)
-        {
-            return (false, $"Modulens datum måste ligga inom kursens tidsram ({course.StartDate.ToShortDateString()} - {course.EndDate.ToShortDateString()}).");
-        }
-
-        var existingModules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
-
-        // Modules must not overlap
-        // Overlap formula: (StartA <= EndB) && (EndA >= StartB)
-        foreach (var existing in existingModules)
-        {
-            bool isOverlapping = dto.StartDate <= existing.EndDate && dto.EndDate >= existing.StartDate;
-            if (isOverlapping)
-            {
-                return (false, $"Modulen överlappar med en befintlig modul: '{existing.Name}' ({existing.StartDate.ToShortDateString()} - {existing.EndDate.ToShortDateString()}).");
-            }
-        }
+        await ValidateModuleAsync(courseId, dto, null);
 
         var module = new Module
         {
@@ -76,47 +50,18 @@ public class ModuleService : IModuleService
 
         await _unitOfWork.Modules.AddAsync(module);
         await _unitOfWork.CompleteAsync();
-
-        return (true, string.Empty);
     }
 
-    public async Task<(bool Success, string ErrorMessage)> UpdateModuleAsync(int courseId, int moduleId, CreateModuleDto dto)
+    public async Task UpdateModuleAsync(int courseId, int moduleId, CreateModuleDto dto)
     {
-        if (dto.StartDate > dto.EndDate)
-        {
-            return (false, "Modulens startdatum får inte vara efter dess slutdatum.");
-        }
-
-        var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
-        if (course == null)
-        {
-            return (false, "Den valda kursen hittades inte.");
-        }
-
         // Check if the module to update actually exists
         var moduleToUpdate = await _unitOfWork.Modules.GetByIdAsync(moduleId);
         if (moduleToUpdate == null || moduleToUpdate.CourseId != courseId)
         {
-            return (false, "Modulen hittades inte.");
+            throw new EntityNotFoundException("Mudul", moduleId);
         }
 
-        // Module dates must be within course dates
-        if (dto.StartDate < course.StartDate || dto.EndDate > course.EndDate)
-        {
-            return (false, $"Modulens datum måste ligga inom kursens tidsram ({course.StartDate.ToShortDateString()} - {course.EndDate.ToShortDateString()}).");
-        }
-
-        var existingModules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
-
-        // Modules must not overlap (exclude the current module being updated)
-        foreach (var existing in existingModules.Where(m => m.Id != moduleId))
-        {
-            bool isOverlapping = dto.StartDate <= existing.EndDate && dto.EndDate >= existing.StartDate;
-            if (isOverlapping)
-            {
-                return (false, $"Modulen överlappar med en befintlig modul: '{existing.Name}' ({existing.StartDate.ToShortDateString()} - {existing.EndDate.ToShortDateString()}).");
-            }
-        }
+        await ValidateModuleAsync(courseId, dto, moduleId);
 
         // Update entity properties
         moduleToUpdate.Name = dto.Name;
@@ -126,21 +71,55 @@ public class ModuleService : IModuleService
 
         _unitOfWork.Modules.Update(moduleToUpdate);
         await _unitOfWork.CompleteAsync();
-
-        return (true, string.Empty);
     }
 
-    public async Task<(bool Success, string ErrorMessage)> DeleteModuleAsync(int courseId, int moduleId)
+    public async Task DeleteModuleAsync(int courseId, int moduleId)
     {
         var module = await _unitOfWork.Modules.GetByIdAsync(moduleId);
         if (module == null || module.CourseId != courseId)
         {
-            return (false, "Modulen kunde inte hittas.");
+            throw new EntityNotFoundException("Mudul", moduleId);
         }
 
         _unitOfWork.Modules.Delete(module);
         await _unitOfWork.CompleteAsync();
+    }
 
-        return (true, string.Empty);
+    private async Task ValidateModuleAsync(int courseId, CreateModuleDto dto, int? editModuleId)
+    {
+        if (dto.StartDate > dto.EndDate)
+        {
+            throw new BadRequestException("Modulens startdatum får inte vara efter slutdatum.");
+        }
+
+        var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
+        if (course == null)
+        {
+            throw new EntityNotFoundException("Kurs", courseId);
+        }
+
+        // Module dates must be within course dates
+        if (dto.StartDate < course.StartDate || dto.EndDate > course.EndDate)
+        {
+            throw new BadRequestException($"Modulens datum måste ligga inom kursens tidsram ({course.StartDate.ToShortDateString()} - {course.EndDate.ToShortDateString()}).");
+        }
+
+        var existingModules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
+
+        if (editModuleId is not null && editModuleId > 0)
+        {
+            existingModules = existingModules.Where(m => m.Id != editModuleId.Value);
+        }
+
+        // Modules must not overlap
+        // Overlap formula: (StartA <= EndB) && (EndA >= StartB)
+        foreach (var existing in existingModules)
+        {
+            bool isOverlapping = dto.StartDate <= existing.EndDate && dto.EndDate >= existing.StartDate;
+            if (isOverlapping)
+            {
+                throw new BadRequestException($"Modulen överlappar med en befintlig modul: '{existing.Name}' ({existing.StartDate.ToShortDateString()} - {existing.EndDate.ToShortDateString()}).");
+            }
+        }
     }
 }
