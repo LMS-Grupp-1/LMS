@@ -8,8 +8,7 @@ public static class ActivityTypeHelper
         2 => "E-lärande",
         3 => "Övning",
         4 => "Inlämning",
-        5 => "Övrigt",
-        _ => "Aktivitet"
+        _ => "Övrigt"
     };
 
     public static string GetBadgeClass(int activityTypeId) => activityTypeId switch

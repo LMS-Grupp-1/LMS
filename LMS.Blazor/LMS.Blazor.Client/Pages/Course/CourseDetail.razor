@@ -7,15 +7,19 @@
 @using LMS.Blazor.Client.Components.Users
 @using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Blazor.Client.Components.Submissions
+@using LMS.Blazor.Client.Components.Common
 @attribute [Authorize(Roles = "Teacher")]
 @inject IApiProxyClient ApiProxy
 @inject NavigationManager navigationManager
 @inject ToastService ToastService
 
-<div class="container my-4">
-    <div class="card shadow-sm p-4 mb-4 border-0 bg-light">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
+<div class="container p-0 my-4">
+    <div class="card px-0 pb-4 mb-4 border-0 bg-light">
+        <div class="d-flex align-items-start gap-3">
+            <div class="flex-shrink-0">
+                <AppIconBox Type="course" CustomClasses="theme-box-background" />
+            </div>
+            <div class="flex-grow-1">
                 <h5 class="fw-bold mb-2">@(currentCourse?.Name ?? (isLoading ? "Laddar kurs..." : "Kurs"))</h5>
                 <p class="text-secondary">@(currentCourse?.Description ?? string.Empty)</p>
                 
@@ -23,7 +27,7 @@
                 {
                     <div class="d-flex align-items-center text-muted small gap-3">
                         <div>
-                            <i class="bi bi-calendar-event me-1 text-primary"></i>
+                            <i class="bi bi-calendar-range me-1 text-dark"></i>
                             <span>@currentCourse.StartDate.ToShortDateString()</span>
                             <span> - @currentCourse.EndDate.ToShortDateString()</span>
                         </div>
@@ -31,9 +35,12 @@
                 }
             </div>
             
-            <button class="btn btn-outline-primary" @onclick="OpenEditCourseDialog">
-                <i class="bi bi-pencil me-1"></i> Redigera kurs
-            </button>
+            <div class="flex-shrink-0">
+                <button class="btn btn-outline-primary" @onclick="OpenEditCourseDialog">
+                    <i class="bi bi-pencil"></i>
+                    <span class="d-none d-md-inline ms-1">Redigera kurs</span>
+                </button>
+            </div>
         </div>
     </div>
 

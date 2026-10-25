@@ -2,6 +2,7 @@ using Domain.Contracts;
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.ActivityDtos;
+using LMS.Shared.DTOs.ModulesDtos;
 using Service.Contracts;
 using System.Xml.Linq;
 
@@ -27,7 +28,9 @@ public class ActivityService : IActivityService
 
         var result = await _unitOfWork.Activities.GetActivityByModuleIdAsync(moduleId);
 
-        return result.Select(a => new ActivityDto(a.Id,
+        return result.Select(a => new ActivityDto(
+            a.Id,
+            a.ActivityType.Id,
 			a.ActivityType.Name,
 			a.Name,
             a.Description,
@@ -35,7 +38,7 @@ public class ActivityService : IActivityService
             a.EndDate));
     }
 
-    public async Task CreateActivityAsync(int moduleId, CreateActivityDto dto)
+    public async Task CreateActivityAsync(int moduleId, ActivityFormDto dto)
     {
         await ValidateActivityAsync(
             moduleId,
@@ -55,6 +58,33 @@ public class ActivityService : IActivityService
         await _unitOfWork.Activities.AddAsync(activity);
         await _unitOfWork.CompleteAsync();
     }
+
+    public async Task UpdateActivityAsync(int moduleId, int activityId, ActivityFormDto dto)
+    {
+        var activity = await _unitOfWork.Activities.GetByIdAsync(activityId);
+        if (activity == null)
+        {
+            throw new EntityNotFoundException("Aktivitet", activityId);
+        }
+
+        await ValidateActivityAsync(
+           moduleId,
+           dto.Name,
+           dto.StartDate,
+           dto.EndDate,
+           activityId);
+
+        // Update entity properties
+        activity.ActivityTypeId = dto.ActivityTypeId;
+        activity.Name = dto.Name;
+        activity.Description = string.IsNullOrEmpty(dto.Description) ? "Ingen beskrivning" : dto.Description;
+        activity.StartDate = dto.StartDate;
+        activity.EndDate = dto.EndDate;
+
+        _unitOfWork.Activities.Update(activity);
+        await _unitOfWork.CompleteAsync();
+    }
+
 
     private async Task ValidateActivityAsync(
         int moduleId,
