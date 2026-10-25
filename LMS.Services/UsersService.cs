@@ -1,5 +1,6 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
+using Domain.Models.Exceptions;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.Users;
 using Microsoft.AspNetCore.Identity;
@@ -24,16 +25,16 @@ public class UsersService : IUsersService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<(bool Succeeded, IEnumerable<string> Errors)> CreateUserAsync(CreateUserDto dto)
+    public async Task CreateUserAsync(CreateUserDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
         {
-            return (false, new[] { $"Rollen '{dto.Role}' finns inte." });
+            throw new EntityNotFoundException("Rolle", dto.Role);
         }
 
         if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
         {
-            return (false, new[] { "Student måste tilldelas en kurs." });
+            throw new BadRequestException("Student måste tilldelas en kurs.");
         }
 
         var user = new ApplicationUser
@@ -48,39 +49,42 @@ public class UsersService : IUsersService
         var createResult = await _userManager.CreateAsync(user, dto.Password);
         if (!createResult.Succeeded)
         {
-            return (false, createResult.Errors.Select(e => e.Description));
+            // Combine all ASP.NET Core Identity error descriptions into one readable string
+            var errorMessages = string.Join(" ", createResult.Errors.Select(e => e.Description));
+
+            throw new BadRequestException(errorMessages);
         }
 
         var addToRoleResult = await _userManager.AddToRoleAsync(user, dto.Role);
         if (!addToRoleResult.Succeeded)
         {
             // Compensation / Rollback: Delete the user if role assignment fails
-            await _userManager.DeleteAsync(user);
-            return (false, addToRoleResult.Errors.Select(e => e.Description));
-        }
+            // await _userManager.DeleteAsync(user);
 
-        return (true, Enumerable.Empty<string>());
+            // Combine all ASP.NET Core Identity error descriptions into one readable string
+            throw new BadRequestException(string.Join(" ", addToRoleResult.Errors.Select(e => e.Description)));
+        }
     }
 
-    public async Task<(bool Succeeded, IEnumerable<string> Errors)> UpdateUserAsync(UpdateUserDto dto)
+    public async Task UpdateUserAsync(UpdateUserDto dto)
     {
         // 1. Validate role-specific course rule
         if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
         {
-            return (false, new[] { "Student måste tilldelas en kurs." });
+            throw new BadRequestException("Student måste tilldelas en kurs.");
         }
 
         // 2. Find user
         var user = await _userManager.FindByIdAsync(dto.Id);
         if (user == null)
         {
-            return (false, new[] { "Användare hittades inte." });
+            throw new EntityNotFoundException("Användaren", dto.Id);
         }
 
         // 3. Validate role existence
         if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
         {
-            return (false, new[] { $"Rollen '{dto.Role}' finns inte." });
+            throw new EntityNotFoundException("Rolle", dto.Role);
         }
 
         // 4. Handle Role Updates first (if role changed)
@@ -92,14 +96,14 @@ public class UsersService : IUsersService
                 var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
                 if (!removeResult.Succeeded)
                 {
-                    return (false, removeResult.Errors.Select(e => e.Description));
+                    throw new BadRequestException(string.Join(" ", removeResult.Errors.Select(e => e.Description)));
                 }
             }
 
             var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
             if (!addResult.Succeeded)
             {
-                return (false, addResult.Errors.Select(e => e.Description));
+                throw new BadRequestException(string.Join(" ", addResult.Errors.Select(e => e.Description)));
             }
         }
 
@@ -113,31 +117,25 @@ public class UsersService : IUsersService
         var result = await _userManager.UpdateAsync(user);
         if (!result.Succeeded)
         {
-            return (false, result.Errors.Select(e => e.Description));
+            throw new BadRequestException(string.Join(" ", result.Errors.Select(e => e.Description)));
         }
-
-        return (true, Enumerable.Empty<string>());
     }
 
-    public async Task<IEnumerable<UserDto>?> GetUsersAsync()
+    public async Task<IEnumerable<UserDto>> GetUsersAsync()
     {
         // Single optimized database query using mixed LINQ query & method syntax (1 DB call instead of N+1)
-        var userDtos = await _unitOfWork.Users.GetUsersWithCoursesAsync();
-
-        return userDtos;
+        return await _unitOfWork.Users.GetUsersWithCoursesAsync();
     }
 
-    public async Task<IEnumerable<UserDto>?> GetStudentsByCourseIdAsync(int courseId)
+    public async Task<IEnumerable<UserDto>> GetStudentsByCourseIdAsync(int courseId)
     {
-        var userDtos = await _unitOfWork.Users.GetStudentsByCourseIdAsync(courseId);
-
-        return userDtos;
+        return await _unitOfWork.Users.GetStudentsByCourseIdAsync(courseId);
     }
 
     public async Task<UserDto?> GetUserByIdAsync(string id)
     {
         var user = await _userManager.FindByIdAsync(id);
-        if (user == null) return null;
+        if (user == null) throw new EntityNotFoundException("Användaren", id);
 
         var roles = await _userManager.GetRolesAsync(user);
 

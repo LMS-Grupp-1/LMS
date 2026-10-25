@@ -95,6 +95,7 @@ public class ActivityRepository(ApplicationDbContext context)
         CancellationToken cancellationToken = default)
     {
         var query = _context.Activities
+            .AsNoTracking()
             .Where(activity => activity.ModuleId == moduleId);
 
         if (excludedActivityId.HasValue)

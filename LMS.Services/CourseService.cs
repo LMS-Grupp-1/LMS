@@ -20,17 +20,10 @@ namespace LMS.Services
 
         public async Task<IEnumerable<CourseDto>> GetCoursesWithCountsAsync()
         {
-            var courseDtos = await _uow.Courses.GetAllWithCountsAsync(trackChanges: false);
-
-            if (courseDtos == null || !courseDtos.Any())
-            {
-                return Enumerable.Empty<CourseDto>();
-            }
-
-            return courseDtos;
+            return await _uow.Courses.GetAllWithCountsAsync(trackChanges: false);
         }
 
-        public async Task<IReadOnlyList<CourseLookupDto>?> GetCourseLookupsAsync()
+        public async Task<IReadOnlyList<CourseLookupDto>> GetCourseLookupsAsync()
         {
 			return await _uow.Courses.GetCourseLookupsAsync();
         }

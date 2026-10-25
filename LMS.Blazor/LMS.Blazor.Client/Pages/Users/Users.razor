@@ -92,7 +92,7 @@ else
                OnConfirm="ConfirmDeleteUserAsync" /> *@
 
 @code {
-    private IEnumerable<UserDto>? users;
+    private IEnumerable<UserDto> users = Enumerable.Empty<UserDto>();
     // private bool showDeleteModal = false;
     // private string? userToDeleteId = null;
     // private string? deleteUserName = null;
@@ -115,10 +115,7 @@ else
         catch (HttpRequestException ex)
         {
             errorMsg = $"Kunde inte ladda användare: {ex.Message}";
-            users = null;
         }
-
-        StateHasChanged();
     }
 
     private void NavigeraToCreateUser()
