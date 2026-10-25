@@ -17,6 +17,7 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/LMS.API.Tests/LMS.API.Tests.csproj" />
+    <Project Path="tests/LMS.Presentation.Tests/LMS.Presentation.Tests.csproj" />
     <Project Path="tests/LMS.Services.Tests/LMS.Services.Tests.csproj" Id="15f2e062-eef1-460d-a310-8ec94b8cd94f" />
   </Folder>
 </Solution>
