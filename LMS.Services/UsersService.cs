@@ -29,12 +29,12 @@ public class UsersService : IUsersService
     {
         if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
         {
-            throw new EntityNotFoundException("Rolle", dto.Role);
+            throw new EntityNotFoundException("Role", dto.Role);
         }
 
         if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
         {
-            throw new BadRequestException("Student måste tilldelas en kurs.");
+            throw new BadRequestException("Student must be assigned to a course.");
         }
 
         var user = new ApplicationUser
@@ -71,20 +71,20 @@ public class UsersService : IUsersService
         // 1. Validate role-specific course rule
         if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
         {
-            throw new BadRequestException("Student måste tilldelas en kurs.");
+            throw new BadRequestException("Student must be assigned to a course.");
         }
 
         // 2. Find user
         var user = await _userManager.FindByIdAsync(dto.Id);
         if (user == null)
         {
-            throw new EntityNotFoundException("Användaren", dto.Id);
+            throw new EntityNotFoundException("User", dto.Id);
         }
 
         // 3. Validate role existence
         if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
         {
-            throw new EntityNotFoundException("Rolle", dto.Role);
+            throw new EntityNotFoundException("Role", dto.Role);
         }
 
         // 4. Handle Role Updates first (if role changed)
@@ -135,7 +135,7 @@ public class UsersService : IUsersService
     public async Task<UserDto?> GetUserByIdAsync(string id)
     {
         var user = await _userManager.FindByIdAsync(id);
-        if (user == null) throw new EntityNotFoundException("Användaren", id);
+        if (user == null) throw new EntityNotFoundException("User", id);
 
         var roles = await _userManager.GetRolesAsync(user);
 

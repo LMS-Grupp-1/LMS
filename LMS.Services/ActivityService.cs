@@ -64,7 +64,7 @@ public class ActivityService : IActivityService
         var activity = await _unitOfWork.Activities.GetByIdAsync(activityId);
         if (activity == null)
         {
-            throw new EntityNotFoundException("Aktivitet", activityId);
+            throw new EntityNotFoundException("Activity", activityId);
         }
 
         await ValidateActivityAsync(
