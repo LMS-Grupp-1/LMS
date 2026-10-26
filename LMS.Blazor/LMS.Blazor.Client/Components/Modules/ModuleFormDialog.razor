@@ -1,6 +1,11 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Shared.DTOs.ModulesDtos
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Blazor.Client.Services
+@using System.Net
+@using System.Net.Http.Json
+@inject IApiProxyClient ApiProxy
+@inject ToastService ToastService
 
 @if (IsOpen)
 {
@@ -76,7 +81,6 @@
     [Parameter] public ModuleDto? ModuleToEdit { get; set; } // Null = Create mode, Populated = Edit mode
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnModuleSaved { get; set; }
-    [Parameter] public IModuleService ModuleService { get; set; } = default!;
 
     private CreateModuleDto moduleModel = new();
     private bool IsSubmitting = false;
@@ -122,31 +126,48 @@
 
         try
         {
+            using var content = JsonContent.Create(moduleModel);
+        
+            string? responseErrorMessage;
+
             if (IsEditMode && ModuleToEdit != null)
             {
-                var (success, responseErrorMessage) = await ModuleService.UpdateModuleAsync(CourseId, ModuleToEdit.Id, moduleModel);
-                if (!success)
-                {
-                    submitErrorMessage = responseErrorMessage ?? "Det gick inte att uppdatera modulen. Försök igen.";
-                    return;
-                }
+                var (_, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                    HttpMethod.Put,
+                    $"teacher/courses/{CourseId}/modules/{ModuleToEdit.Id}",
+                    content
+                );
+                responseErrorMessage = error;
             }
             else
             {
-                var (success, responseErrorMessage) = await ModuleService.CreateModuleAsync(CourseId, moduleModel);
-                if (!success)
-                {
-                    submitErrorMessage = responseErrorMessage ?? "Det gick inte att skapa modulen. Försök igen.";
-                    return;
-                }
+                var (_, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                    HttpMethod.Post,
+                    $"teacher/courses/{CourseId}/modules",
+                    content
+                );
+                responseErrorMessage = error;
             }
 
+            // If the backend returned a validation error or 404, display it in the UI banner
+            if (!string.IsNullOrEmpty(responseErrorMessage))
+            {
+                submitErrorMessage = responseErrorMessage;
+                return;
+            }
+            else
+            {
+                ToastService.ShowToast("Modulen har sparas.", ToastType.Success);
+            }
+
+            // Success! Close dialog and trigger refresh
             await OnModuleSaved.InvokeAsync();
             await Close();
         }
         catch (Exception ex)
         {
-            submitErrorMessage = $"Ett fel uppstod: {ex.Message}";
+            // This catches true network dropouts or unexpected client-side exceptions
+            submitErrorMessage = $"Ett oväntat fel uppstod: {ex.Message}";
         }
         finally
         {

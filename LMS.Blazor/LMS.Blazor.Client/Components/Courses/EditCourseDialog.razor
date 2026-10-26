@@ -1,6 +1,7 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Blazor.Client.Services
-@inject ICourseService CourseService
+@using LMS.Blazor.Client.Services.ApiProxy
+@inject IApiProxyClient ApiProxy
 @inject ToastService ToastService
 
 @if (IsOpen)
@@ -69,35 +70,45 @@
         try
         {
             CourseEditModel.Name = CourseEditModel.Name.Trim();
-            CourseUpdateDto updateDto = new CourseUpdateDto(
+
+            var updateDto = new CourseUpdateDto(
                 CourseEditModel.Name,
-                CourseEditModel.Description,
+                CourseEditModel.Description ?? string.Empty,
                 CourseEditModel.StartDate,
                 CourseEditModel.EndDate);
 
-            bool success = await CourseService.UpdateCourseAsync(CourseEditModel.Id, updateDto);
+            var (_, errorMessage) =
+                await ApiProxy.SendAndHandleErrorAsync<object>(
+                    HttpMethod.Put,
+                    $"courses/{CourseEditModel.Id}",
+                    JsonContent.Create(updateDto));
 
-            if (!success)
+            if (!string.IsNullOrWhiteSpace(errorMessage))
             {
-                formError = "Kursen kunde inte sparas. Vänligen försök igen.";
+                formError = errorMessage switch
+                {
+                    "A course with this name already exists." =>
+                    "Det finns redan en kurs med det namnet.",
+
+                    _ =>
+                        "Kursen kunde inte sparas. Kontrollera uppgifterna och försök igen."
+                };
+
                 return;
             }
-            ToastService.ShowToast($"Kursen {CourseEditModel.Name} har sparat.", ToastType.Success);
+            ToastService.ShowToast($"Kursen {CourseEditModel.Name} har sparats.", ToastType.Success);
 
             await OnCourseUpdated.InvokeAsync(); // Notify parent to refresh list
             await CloseAsync();
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
-            formError = $"Din session har gått ut. Logga in igen. {ex.Message}";
+            formError = "Din session har gått ut. Logga in igen.";
         }
-        catch (ArgumentException ex)
+        catch (Exception)
         {
-            formError = ex.Message;
-        }
-        catch (Exception ex)
-        {
-            formError = $"Kursen kunde inte sparas. Vänligen försök igen. {ex.Message}";
+            formError = "Kursen kunde inte sparas. " +
+            "Kontrollera uppgifterna innan du försöker igen.";
         }
         finally
         {

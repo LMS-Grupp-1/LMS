@@ -1,0 +1,193 @@
+﻿@using LMS.Blazor.Client.ViewModels.Modules
+@using LMS.Shared.DTOs.ActivityDtos
+@using LMS.Shared.DTOs.ActivityTypeDtos
+@using LMS.Shared.Constants
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Services
+@using System.Net.Http.Json
+@inject IApiProxyClient ApiProxy
+@inject ToastService ToastService
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <EditForm Model="activityModel" OnValidSubmit="HandleSubmitAsync">
+                    <DataAnnotationsValidator />
+                    
+                    <div class="modal-header">
+                        <h5 class="modal-title">@(IsEditMode ? "Redigera activitet" : "Lägg till activitet")</h5>
+                        <button type="button" class="btn-close" @onclick="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        @if (CurrentModule != null)
+                        {
+                            <div class="card bg-light border-0 mb-4 p-3">
+                                <h6 class="text-primary fw-bold mb-1">Moduleinformation</h6>
+                                <p class="mb-1"><strong>Namn:</strong> @CurrentModule.Name</p>
+                                <p class="mb-1 text-muted small"><strong>Beskrivning:</strong> @CurrentModule.Description</p>
+                                <div class="text-muted small">
+                                    <span><strong>Kursperiod:</strong> @CurrentModule.StartDate.ToShortDateString() - @CurrentModule.EndDate.ToShortDateString()</span>
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Aktivitetstyp <span class="text-danger">*</span></label>
+                            <InputSelect class="form-select" @bind-Value="activityModel.ActivityTypeId">
+                                <option value="">-- Välj aktivitetstyp --</option>
+                                @if (activityTypes != null)
+                                {
+                                    @foreach (var type in activityTypes)
+                                    {
+                                        <option value="@type.Id">@type.Name</option>
+                                    }
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="@(() => activityModel.ActivityTypeId)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Activitetnamn <span class="text-danger">*</span></label>
+                            <InputText class="form-control" @bind-Value="activityModel.Name" />
+                            <ValidationMessage For="() => activityModel.Name" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Beskrivning <span class="text-danger">*</span></label>
+                            <InputTextArea class="form-control" @bind-Value="activityModel.Description" rows="3" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Startdatum & tid <span class="text-danger">*</span></label>
+                                <InputDate Type="InputDateType.DateTimeLocal" class="form-control" @bind-Value="activityModel.StartDate" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Slutdatum & tid <span class="text-danger">*</span></label>
+                                <InputDate Type="InputDateType.DateTimeLocal" class="form-control" @bind-Value="activityModel.EndDate" />
+                            </div>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(submitErrorMessage))
+                        {
+                            <div class="alert alert-danger mt-3 mb-0">@submitErrorMessage</div>
+                        }
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="Close">Avbryt</button>
+                        <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                            @if (IsSubmitting) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            @(IsEditMode ? "Spara ändringar" : "Skapa")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public ModuleViewModel CurrentModule { get; set; } = default!;
+    [Parameter] public ActivityDto? ActivityToEdit { get; set; } // Null = Create mode, Populated = Edit mode
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback OnActivitySaved { get; set; }
+
+    private ActivityFormDto activityModel = new();
+    private bool IsSubmitting = false;
+    private bool IsEditMode => ActivityToEdit != null;
+    private string? submitErrorMessage;
+    private IReadOnlyList<ActivityTypeDto> activityTypes => ActivityTypes.All;
+
+    protected override void OnParametersSet()
+    {
+        if (IsOpen)
+        {
+            IsSubmitting = false;
+            submitErrorMessage = null;
+
+            if (IsEditMode && ActivityToEdit != null)
+            {
+                // Populate fields with existing data for editing
+                activityModel = new ActivityFormDto
+                {
+                    ActivityTypeId = ActivityToEdit.ActivityTypeId,
+                    Name = ActivityToEdit.Name,
+                    Description = ActivityToEdit.Description,
+                    StartDate = ActivityToEdit.StartDate,
+                    EndDate = ActivityToEdit.EndDate
+                };
+            }
+            else
+            {
+                // Set up defaults for creating a new module
+                var startDate = CurrentModule?.StartDate ?? DateTime.Today;
+                activityModel = new ActivityFormDto 
+                { 
+                    StartDate = startDate,
+                    EndDate = startDate.AddHours(1)
+                };
+            }
+        }
+    }
+
+    private async Task Close() => await OnClose.InvokeAsync();
+
+    private async Task HandleSubmitAsync()
+    {
+        IsSubmitting = true;
+        submitErrorMessage = null;
+
+        if (IsEditMode && ActivityToEdit != null)
+        {
+            using var content = JsonContent.Create(activityModel);
+            (bool? successData, string? responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                HttpMethod.Put,
+                $"teacher/modules/{CurrentModule.Id}/activities/{ActivityToEdit.Id}",
+                content
+            );
+
+            IsSubmitting = false;
+
+            if (!string.IsNullOrEmpty(responseErrorMessage))
+            {
+                submitErrorMessage = $"Det gick inte att uppdatera aktiviteten. {responseErrorMessage}";
+                return;
+            }
+            else
+            {
+                ToastService.ShowToast($"Aktivitet {activityModel.Name} har ändrats.", ToastType.Success);
+            }
+        }
+        else
+        {
+            using var content = JsonContent.Create(activityModel);
+
+            (bool? successData, string? responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                HttpMethod.Post,
+                $"teacher/modules/{CurrentModule.Id}/activities",
+                content
+            );
+
+            IsSubmitting = false;
+
+            if (!string.IsNullOrEmpty(responseErrorMessage))
+            {
+                submitErrorMessage = $"Det gick inte att skapa aktiviteten. {responseErrorMessage}";
+                return;
+            }
+            else
+            {
+                ToastService.ShowToast($"Aktivitet {activityModel.Name} har skapats.", ToastType.Success);
+            }
+        }
+
+        await OnActivitySaved.InvokeAsync();
+        await Close();
+    }
+
+}

@@ -15,7 +15,9 @@ public class Module
     public Course Course { get; set; } = null!;
 
     // Navigation property for child activities
-    // public ICollection<Activity> Activities { get; set; } = new List<Activity>();
+    public ICollection<Activity> Activities { get; set; } = new List<Activity>();
 
     public ICollection<Document> Documents { get; set; } = new List<Document>();
+
+	public ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
 }

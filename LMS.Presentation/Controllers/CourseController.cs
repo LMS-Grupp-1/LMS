@@ -43,7 +43,6 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
     public async Task<ActionResult<CourseDto>> GetCourse(int id)
     {
         var course = await _courseService.GetCourseByIdAsync(id);
-        if (course is null) return NotFound();
 
         return Ok(course);
     }
@@ -63,48 +62,23 @@ public class CourseController(IServiceManager serviceManager) : ControllerBase
 	[Authorize(Roles = UserRoles.Teacher)]
     public async Task<ActionResult<CourseDto>> CreateCourse([FromBody] CourseCreateDto courseCreateDto)
     {
-        try
-        {
-            var createdCourse = await _courseService.CreateCourseAsync(courseCreateDto);
-            return CreatedAtAction(nameof(GetCourse), new { id = createdCourse.Id }, createdCourse);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var createdCourse = await _courseService.CreateCourseAsync(courseCreateDto); 
+        return CreatedAtAction(nameof(GetCourse), new { id = createdCourse.Id }, createdCourse);
     }
 
     [HttpPut("{id:int}")]
 	[Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> UpdateCourse(int id, [FromBody] CourseUpdateDto courseUpdateDto)
     {
-        try
-        {
-            await _courseService.UpdateCourseAsync(id, courseUpdateDto);
-            return NoContent();
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        await _courseService.UpdateCourseAsync(id, courseUpdateDto);
+        return NoContent();
     }
 
     [HttpDelete("{id:int}")]
     [Authorize(Roles = "Teacher")] 
     public async Task<IActionResult> DeleteCourse(int id)
     {
-        try
-        {
-            await _courseService.DeleteCourseAsync(id); 
-            return NoContent();
-        }
-        catch (KeyNotFoundException)
-        {
-            return NotFound();
-        }
+        await _courseService.DeleteCourseAsync(id); 
+        return NoContent();
     }
 }

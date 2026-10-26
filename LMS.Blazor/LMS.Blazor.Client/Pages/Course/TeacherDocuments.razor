@@ -480,6 +480,9 @@ else
                 HttpStatusCode.NotFound =>
                     "Kursen eller dokumentet kunde inte hittas.",
 
+                HttpStatusCode.BadRequest => 
+                    "Dokumentet kunde inte sparas. Kontrollera uppgifterna och filen.",
+
                 HttpStatusCode.RequestEntityTooLarge =>
                     "Uppladdningen är för stor.",
 

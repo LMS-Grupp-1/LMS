@@ -1,13 +1,15 @@
 ﻿
 @page "/users/create"
 @using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.Users
 @using LMS.Shared.DTOs.CourseDtos
 @using Microsoft.AspNetCore.Authorization
+@using System.Net
+@using System.Net.Http.Json
 @attribute [Authorize(Roles = UserRoles.Teacher)]
-@inject IUsersService UsersService
-@inject ICourseService CourseService
+@inject IApiProxyClient ApiProxy
 @inject NavigationManager navigationManager
 @inject ToastService ToastService
 
@@ -27,10 +29,12 @@
             <div class="mb-3">
                 <label class="form-label">Förnamn:</label>
                 <InputText @bind-Value="model.FirstName" class="form-control" />
+                <ValidationMessage For="@(() => model.FirstName)" />
             </div>
             <div class="mb-3">
                 <label class="form-label">Efternamn:</label>
                 <InputText @bind-Value="model.LastName" class="form-control" />
+                <ValidationMessage For="@(() => model.LastName)" />
             </div>
 
             <div class="mb-3">
@@ -49,8 +53,10 @@
                 <label class="form-label">Roll:</label>
                 <InputSelect @bind-Value="model.Role" class="form-control">
                     <option value="">Välj roll...</option>
-                    <option value="Student">Student</option>
-                    <option value="Teacher">Teacher</option>
+                    @foreach (var role in UserRoles.All)
+                    {
+                        <option value="@role">@role</option>
+                    }
                 </InputSelect>
                 <ValidationMessage For="@(() => model.Role)" />
             </div>
@@ -91,7 +97,7 @@
     private CreateUserDto model = new();
     private bool isSubmitting = false;
     private string? errorMessage;
-    private IEnumerable<CourseLookupDto>? courses;
+    private IEnumerable<CourseLookupDto> courses = Enumerable.Empty<CourseLookupDto>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -124,7 +130,7 @@
                             if (segments[i] == "courses" && int.TryParse(segments[i + 1].Split('?')[0], out int courseId))
                             {
                                 model.CourseId = courseId; // Set default dropdown value
-                                model.Role = "Student"; // Set default role to Student
+                                model.Role = UserRoles.Student; // Set default role to Student
                                 break;
                             }
                         }
@@ -138,7 +144,19 @@
 
     private async Task LoadCourseLookupsAsync()
     {
-        courses = await CourseService.GetCourseLookupsAsync();
+        try
+        {
+            courses = await ApiProxy.GetAsync<IEnumerable<CourseLookupDto>>(
+                "courses/lookups") ?? Enumerable.Empty<CourseLookupDto>();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            errorMessage = "Din session har gått ut. Logga in igen.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Kurslistan kunde inte hämtas. Försök igen. {ex.Message}";
+        }
     }
 
     private async Task HandleValidSubmit()
@@ -146,28 +164,31 @@
         isSubmitting = true;
         errorMessage = null;
 
-        try
+        if (model.Role == UserRoles.Student && (!model.CourseId.HasValue || model.CourseId.Value <= 0))
         {
-            bool success = await UsersService.CreateUserAsync(model);
-
-            if (success)
-            {
-                ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} har skapats.", ToastType.Success);
-
-                NavigateToReturnUrl();
-            }
-            else
-            {
-                errorMessage = $"Det gick inte att skapa användaren.";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Ett fel uppstod: {ex.Message}";
-        }
-        finally
-        {
+            errorMessage = "Student måste tilldelas en kurs.";
             isSubmitting = false;
+            return;
+        }
+
+        using var content = JsonContent.Create(model);
+        (bool? successData, string? responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                HttpMethod.Post,
+                "users",
+                content
+        );
+
+        isSubmitting = false;
+
+        if (string.IsNullOrEmpty(responseErrorMessage))
+        {
+            ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} har skapats.", ToastType.Success);
+
+            NavigateToReturnUrl();
+        }
+        else
+        {
+            errorMessage = $"Det gick inte att skapa användaren. {responseErrorMessage}";
         }
     }
 

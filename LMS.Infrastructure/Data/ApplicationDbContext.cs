@@ -15,17 +15,17 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Activity> Activities => Set<Activity>();
     public DbSet<ActivityType> ActivityTypes => Set<ActivityType>();
     public DbSet<Document> Documents => Set<Document>();
+	public DbSet<Assignment> Assignments => Set<Assignment>();
+	public DbSet<Submission> Submissions => Set<Submission>();
+	public DbSet<Feedback> Feedbacks => Set<Feedback>();
 
-    protected override void OnModelCreating(ModelBuilder builder)
+	protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 
+        // This automatically registers every Configuration that implement IEntityTypeConfiguration<T> in ApplicationDbContext
+        // So do not need to register every new configuration like CourseConfiguration/ActivityConfiguration.
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext)
             .Assembly);
-
-        builder.ApplyConfiguration(
-            new Configurations.ActivityConfiguration());
-        builder.ApplyConfiguration(
-            new LMS.Infrastructure.Data.Configurations.CourseConfiguration());
     }
 }

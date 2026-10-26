@@ -6,5 +6,7 @@ public interface IActivityService
 {
     Task<IEnumerable<ActivityDto>> GetActivitesByModuleIdAsync(int moduleId);
     
-    Task CreateActivityAsync(int moduleId,CreateActivityDto dto);
+    Task CreateActivityAsync(int moduleId,ActivityFormDto dto);
+
+    Task UpdateActivityAsync(int moduleId, int activityId, ActivityFormDto dto);
 }

@@ -21,16 +21,9 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
-        if (dto == null)
-        {
-            return BadRequest(new { message = "Request body is empty or invalid." });
-        }
-
-        var result = await _service.UsersService.CreateUserAsync(dto);
-        if (!result.Succeeded)
-        {
-            return BadRequest(result.Errors);
-        }
+        // If validation fails or Identity throws, it automatically bubbles up 
+        // to your global middleware, which turns it into a 400 ProblemDetails response.
+        await _service.UsersService.CreateUserAsync(dto);
 
         return Ok(true);
     }
@@ -45,7 +38,7 @@ public class UsersController : ControllerBase
     [HttpGet("students/{courseId}")]
     public async Task<IActionResult> GetUsersByCourseId(int courseId)
     {
-        var users = await _service.UsersService.GetUsersByCourseIdAsync(courseId);
+        var users = await _service.UsersService.GetStudentsByCourseIdAsync(courseId);
         return Ok(users);
     }
 
@@ -53,7 +46,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> GetUserById(string id)
     {
         var user = await _service.UsersService.GetUserByIdAsync(id);
-        if (user == null) return NotFound();
+
         return Ok(user);
     }
 
@@ -61,8 +54,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserDto dto)
     {
         dto.Id = id;
-        var result = await _service.UsersService.UpdateUserAsync(dto);
-        if (!result.Succeeded) return BadRequest(result.Errors);
+        await _service.UsersService.UpdateUserAsync(dto);
 
         return Ok(true);
     }

@@ -29,7 +29,7 @@ public static class AzuriteExtensions
 				{
 					// Windows: opens a separate window that keeps running after the API stops.
 					FileName = "cmd.exe",
-					Arguments = $"/c azurite {azuriteArguments}",
+					Arguments = $"/k azurite {azuriteArguments}",
 					UseShellExecute = true // Opens a separate window that keeps running after the API stops.
 				}
 				: new ProcessStartInfo
@@ -47,10 +47,17 @@ public static class AzuriteExtensions
 				"Could not start Azurite. Install it with 'npm install -g azurite' or start it manually.", ex);
 		}
 
-		// Wait up to 15 seconds for Azurite to start listening.
-		for (var i = 0; i < 30 && !await IsListeningAsync(); i++)
+		// Wait up to 60 seconds for Azurite to start listening (first start on Windows can be slow).
+		for (var i = 0; i < 120 && !await IsListeningAsync(); i++)
 		{
 			await Task.Delay(500);
+		}
+
+		if (!await IsListeningAsync())
+		{
+			throw new InvalidOperationException(
+				$"Azurite did not start on port {BlobPort} within 60 seconds. Check that 'azurite' works in a new terminal " +
+				"(install with 'npm install -g azurite'), then restart Visual Studio so it picks up the updated PATH.");
 		}
 	}
 
