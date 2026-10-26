@@ -17,7 +17,7 @@
                     <DataAnnotationsValidator />
                     
                     <div class="modal-header">
-                        <h5 class="modal-title">@(IsEditMode ? "Redigera activitet" : "Lägg till activitet")</h5>
+                        <h5 class="modal-title">@(IsEditMode ? "Redigera Aktivitet" : "Lägg till Aktivitet")</h5>
                         <button type="button" class="btn-close" @onclick="Close"></button>
                     </div>
 
@@ -25,7 +25,7 @@
                         @if (CurrentModule != null)
                         {
                             <div class="card bg-light border-0 mb-4 p-3">
-                                <h6 class="text-primary fw-bold mb-1">Moduleinformation</h6>
+                                <h6 class="text-primary fw-bold mb-1">Modulinformation</h6>
                                 <p class="mb-1"><strong>Namn:</strong> @CurrentModule.Name</p>
                                 <p class="mb-1 text-muted small"><strong>Beskrivning:</strong> @CurrentModule.Description</p>
                                 <div class="text-muted small">
@@ -50,7 +50,7 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Activitetnamn <span class="text-danger">*</span></label>
+                            <label class="form-label">Namn <span class="text-danger">*</span></label>
                             <InputText class="form-control" @bind-Value="activityModel.Name" />
                             <ValidationMessage For="() => activityModel.Name" />
                         </div>
