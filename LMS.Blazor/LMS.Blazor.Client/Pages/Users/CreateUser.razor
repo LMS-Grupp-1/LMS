@@ -97,7 +97,7 @@
     private CreateUserDto model = new();
     private bool isSubmitting = false;
     private string? errorMessage;
-    private IEnumerable<CourseLookupDto>? courses;
+    private IEnumerable<CourseLookupDto> courses = Enumerable.Empty<CourseLookupDto>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -153,9 +153,9 @@
         {
             errorMessage = "Din session har gått ut. Logga in igen.";
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            errorMessage = "Kurslistan kunde inte hämtas. Försök igen.";
+            errorMessage = $"Kurslistan kunde inte hämtas. Försök igen. {ex.Message}";
         }
     }
 
@@ -164,39 +164,31 @@
         isSubmitting = true;
         errorMessage = null;
 
-        try
+        if (model.Role == UserRoles.Student && (!model.CourseId.HasValue || model.CourseId.Value <= 0))
         {
-            if (model.Role == UserRoles.Student && (!model.CourseId.HasValue || model.CourseId.Value <= 0))
-            {
-                errorMessage = "Student måste tilldelas en kurs.";
-                return;
-            }
-
-            using var content = JsonContent.Create(model);
-            var (data, responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
-                    HttpMethod.Post,
-                    "users",
-                    content
-            );
-
-            if (string.IsNullOrEmpty(responseErrorMessage))
-            {
-                ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} har skapats.", ToastType.Success);
-
-                NavigateToReturnUrl();
-            }
-            else
-            {
-                errorMessage = responseErrorMessage ?? "Det gick inte att skapa användaren.";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Ett fel uppstod: {ex.Message}";
-        }
-        finally
-        {
+            errorMessage = "Student måste tilldelas en kurs.";
             isSubmitting = false;
+            return;
+        }
+
+        using var content = JsonContent.Create(model);
+        (bool? successData, string? responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                HttpMethod.Post,
+                "users",
+                content
+        );
+
+        isSubmitting = false;
+
+        if (string.IsNullOrEmpty(responseErrorMessage))
+        {
+            ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} har skapats.", ToastType.Success);
+
+            NavigateToReturnUrl();
+        }
+        else
+        {
+            errorMessage = $"Det gick inte att skapa användaren. {responseErrorMessage}";
         }
     }
 

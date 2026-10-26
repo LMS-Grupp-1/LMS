@@ -98,7 +98,7 @@
     private bool isLoading = true;
     private bool isSubmitting = false;
     private string? errorMessage;
-    private IEnumerable<CourseLookupDto>? courses;
+    private IEnumerable<CourseLookupDto> courses = Enumerable.Empty<CourseLookupDto>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -169,39 +169,31 @@
         isSubmitting = true;
         errorMessage = null;
 
-        try
+        if (model.Role == UserRoles.Student && (!model.CourseId.HasValue || model.CourseId.Value <= 0))
         {
-            if (model.Role == UserRoles.Student && (!model.CourseId.HasValue || model.CourseId.Value <= 0))
-            {
-                errorMessage = "Student måste tilldelas en kurs.";
-                return;
-            }
-
-            using var content = JsonContent.Create(model);
-            var (data, responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
-                    HttpMethod.Put,
-                    $"users/{model.Id}",
-                    content
-            );
-            
-            if (string.IsNullOrEmpty(responseErrorMessage))
-            {
-                ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} har uppdaterats.", ToastType.Success);
-
-                NavigateToReturnUrl();
-            }
-            else
-            {
-                errorMessage = "Det gick inte att uppdatera användaren.";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Ett fel uppstod: {ex.Message}";
-        }
-        finally
-        {
+            errorMessage = "Student måste tilldelas en kurs.";
             isSubmitting = false;
+            return;
+        }
+
+        using var content = JsonContent.Create(model);
+        (bool? successData, string? responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                HttpMethod.Put,
+                $"users/{model.Id}",
+                content
+        );
+
+        isSubmitting = false;
+
+        if (string.IsNullOrEmpty(responseErrorMessage))
+        {
+            ToastService.ShowToast($"Användare {model.FirstName} {model.LastName} har uppdaterats.", ToastType.Success);
+
+            NavigateToReturnUrl();
+        }
+        else
+        {
+            errorMessage = $"Det gick inte att uppdatera användaren. {responseErrorMessage}";
         }
     }
 

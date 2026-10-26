@@ -10,10 +10,11 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h5 class="fw-bold mb-1">MODULER</h5>
-            <p class="text-muted small mb-0">Hantera moduler och tillhörande aktiviteter för denna kurs.</p>
+            <p class="text-muted small mb-0 px-2">Hantera moduler och tillhörande aktiviteter för denna kurs.</p>
         </div>
         <button class="btn btn-primary" @onclick="OpenAddModuleModal">
-            <i class="bi bi-plus-circle me-1"></i> Lägg till modul
+            <i class="bi bi-plus-circle"></i>
+            <span class="d-none d-md-inline ms-1">Lägg till modul</span>
         </button>
     </div>
     @if (!string.IsNullOrEmpty(moduleListErrorMsg))
@@ -25,9 +26,9 @@
 
     @if (isLoading)
     {
-        <p class="text-muted">Laddar moduler...</p>
+        <p class="text-muted px-2">Laddar moduler...</p>
     }
-    else if (modules == null || !modules.Any())
+    else if (!modules.Any())
     {
         <div class="alert alert-info">Inga moduler hittades för denna kurs.</div>
     }
@@ -38,18 +39,16 @@
             {
                 bool isExpanded = expandedModuleIds.Contains(mod.Id);
 
-                <div class="card shadow-sm border-0 p-3">
-                    <div class="row align-items-center">
+                <div class="card shadow-sm border-0">
+                    <div class="row align-items-center p-3">
                         <div class="col-auto">
-                            <div class="p-3 rounded bg-light text-primary fs-4">
-                                <i class="bi bi-journal-text"></i>
-                            </div>
+                            <AppIconBox Type="module" CustomClasses="theme-box-background" />
                         </div>
 
                         <div class="col">
                             <h5 class="fw-bold mb-1">@mod.Name</h5>
                             <div class="text-muted small">
-                                <i class="bi bi-calendar3 me-1"></i>
+                                <i class="bi bi-calendar-week me-1 text-primary"></i>
                                 <span>@mod.StartDate.ToShortDateString() - @mod.EndDate.ToShortDateString()</span>
                             </div>
 
@@ -63,7 +62,8 @@
 
                         <div class="col-auto d-flex align-items-center gap-2">
                             <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenEditModuleModal(mod)">
-                                <i class="bi bi-pencil me-1"></i> Redigera modul
+                                <i class="bi bi-pencil"></i>
+                                <span class="d-none d-md-inline ms-1">Redigera modul</span>
                             </button>
                             <button class="btn btn-outline-danger btn-sm" @onclick="() => PromptDeleteModule(mod.Id, mod.Name)">
                                 <i class="bi bi-trash"></i>
@@ -78,13 +78,11 @@
 
                     @if (isExpanded)
                     {
-                        <hr class="my-3 text-muted" />
-                        <div class="ps-2">
-                            <p class="text-secondary mb-0">@(string.IsNullOrEmpty(mod.Description) ? "Ingen beskrivning angiven." : mod.Description)</p>
+                        <hr class="m-0 text-muted" />
+                        <div>
+                            <p class="text-secondary px-3 py-2 mb-0">@(string.IsNullOrEmpty(mod.Description) ? "Ingen beskrivning angiven." : mod.Description)</p>
 
-                            <div class="p-3 bg-light rounded">
-                                <ActivityList/>
-                            </div>
+                            <ActivityList CurrentModule=mod/>
                         </div>
                     }
                 </div>
@@ -93,7 +91,7 @@
     }
 </div>
 
-<!-- Unified Unified Form Dialog for both Add and Edit -->
+<!-- Unified Form Dialog for both Add and Edit -->
 <ModuleFormDialog IsOpen="isModalOpen"
                  CourseId="CourseId"
                  CurrentCourse="CurrentCourse"
@@ -115,14 +113,17 @@
 
     private IEnumerable<ModuleViewModel> modules = new List<ModuleViewModel>();
     private bool isLoading = true;
-    private bool isModalOpen = false;
-    private bool showDeleteModal = false;
+    private string? moduleListErrorMsg = null;
+    
     private ModuleDto? selectedModule = null; // null = Add mode, Has value = Edit mode
+    private bool isModalOpen = false;
+
+    private bool showDeleteModal = false;
+
     private HashSet<int> expandedModuleIds = new();
     private Dictionary<int, string> moduleErrorMsgs = new();
     private int? moduleToDeleteId = null;
     private string? deleteModuleName = null;
-    private string? moduleListErrorMsg = null;
 
     protected override async Task OnParametersSetAsync()
     {

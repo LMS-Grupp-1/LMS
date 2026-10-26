@@ -84,14 +84,19 @@ internal class DataSeedService : IHostedService
 		{
 			await CreateRolesAsync(UserRoles.All);
 			await CreateDefaultUserAsync();
-						
-			await CreateCourseWithStudentsAsync(context,
+
+            var today = DateTime.UtcNow;
+            var startDate1 = new DateTime(today.Year, today.Month, 1).AddMonths(-1);
+            var endDate1 = startDate1.AddMonths(6);
+            var startDate2 = new DateTime(today.Year, today.Month, 1);
+            var endDate2 = startDate2.AddMonths(6);
+            await CreateCourseWithStudentsAsync(context,
 				new Course
 				{
 					Name = "Lexicon LTU",
 					Description = "Fullstack .NET developer course.",
-					StartDate = new DateTime(2026, 9, 1),
-					EndDate = new DateTime(2026, 12, 18)
+					StartDate = startDate1,
+					EndDate = endDate1
 				},
 				[
 					("anna.andersson@lms.com", "Anna", "Andersson"),
@@ -104,8 +109,8 @@ internal class DataSeedService : IHostedService
 				{
 					Name = "Lexicon GBG",
 					Description = "Frontend developer course.",
-					StartDate = new DateTime(2026, 10, 1),
-					EndDate = new DateTime(2027, 1, 29)
+					StartDate = startDate2,
+					EndDate = endDate2
 				},
 				[
 					("johan.nilsson@lms.com", "Johan", "Nilsson"),
@@ -268,7 +273,7 @@ internal class DataSeedService : IHostedService
             if (hasActivities)
                 continue;
 
-			DateTime firstStart = module.StartDate.Date.AddHours(9);
+			DateTime firstStart = DateTime.UtcNow.AddHours(3);
 
             if (firstStart < module.StartDate)
             {
@@ -279,7 +284,12 @@ internal class DataSeedService : IHostedService
 			DateTime secondStart = firstEnd.AddHours(1);
 			DateTime secondEnd = secondStart.AddHours(1);
 
-			if (firstStart.Date < module.StartDate.Date ||
+			DateTime start3 = module.EndDate.AddHours(-5);
+            DateTime end3 = start3.AddHours(2);
+            DateTime start4 = module.EndDate.AddHours(-2);
+            DateTime end4 = start4.AddHours(1);
+
+            if (firstStart.Date < module.StartDate.Date ||
 				secondEnd.Date > module.EndDate.Date)
 			{
 				logger.LogWarning(
@@ -307,9 +317,27 @@ internal class DataSeedService : IHostedService
                 Description = "Övning kopplad till introduktionsföreläsningen.",
                 StartDate = secondStart,
                 EndDate = secondEnd
+            },
+            new Activity
+            {
+                ModuleId = module.Id,
+                ActivityTypeId = lectureType.Id,
+                Name = "Slutprojekt Demo",
+                Description = "Slutprojekt Demo.",
+                StartDate = start3,
+                EndDate = end3
+            },
+            new Activity
+            {
+                ModuleId = module.Id,
+                ActivityTypeId = exerciseType.Id,
+                Name = "Slutcaféet",
+                Description = "Slutcaféet.",
+                StartDate = start4,
+                EndDate = end4
             });
 
-			addedCount += 2;
+			addedCount += 4;
         }
         if (addedCount == 0)
             return;

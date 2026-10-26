@@ -1,11 +1,15 @@
 using Domain.Models.Entities;
 using LMS.Shared.DTOs.DashboardDtos;
+using LMS.Shared.DTOs.CourseDtos;
 
 namespace Domain.Contracts;
 
 public interface IActivityRepository : IBaseRepository<Activity>
 {
     Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId);
+
+    Task<IReadOnlyList<TeacherDashboardActivityDto>> GetUpcomingActivitiesAsync(int? count = null);
+    Task<IReadOnlyList<ActivityOverviewDto>> GetLatestActivitiesByCourseIdAsync(int courseId, int? count = null);
 
     Task<bool> HasOverlapAsync(
         int moduleId,
@@ -14,7 +18,8 @@ public interface IActivityRepository : IBaseRepository<Activity>
         int? excludedActivityId = null,
         CancellationToken cancellationToken = default);
 
-	Task<IReadOnlyList<DashboardActivityDto>> GetUpcomingByCourseIdAsync(
+    // Student dashboard activities
+    Task<IReadOnlyList<DashboardActivityDto>> GetUpcomingByCourseIdAsync(
 		int courseId,
 		DateTime now,
 		int take,

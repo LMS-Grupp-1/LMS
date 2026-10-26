@@ -10,7 +10,7 @@ namespace LMS.Presentation.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/teacher/courses/{courseId:int}/Modules")]
+[Route("api/teacher/courses/{courseId:int}/modules")]
 public class ModulesController : ControllerBase
 {
     private readonly IServiceManager _service;

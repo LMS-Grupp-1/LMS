@@ -1,33 +1,83 @@
-﻿<div class="app-icon-box @GetThemeClasses() rounded-3 d-flex align-items-center justify-content-center" 
-     style="width: 48px; height: 48px; min-width: 48px;">
-    <i class="bi @GetIconClass() fs-4"></i>
-</div>
+﻿@if (CustomClasses != null)
+{
+    <div class="@GetCustomClasses()">
+        <i class="bi @GetIconClass() @GetTextColorClass() @IconSize"></i>
+    </div>
+}
+else
+{
+    <i class="bi @GetIconClass() @GetTextColorClass() @IconSize"></i>
+}
 
 @code {
     [Parameter] 
     public string Type { get; set; } = "module"; // course, module, activity, student, submission
-
+    
     [Parameter] 
-    public string? CustomIcon { get; set; }
+    public string? CustomIcon { get; set; } // Optional: Custom icon rather than types we defined (e.g., "bi-arrow-right", "bi-files", etc.)
+    
+    [Parameter] 
+    public string? IconSize { get; set; } = "fs-3"; // Optional: Custom icon size class (e.g., "fs-1", "fs-2", "fs-3", etc.)
+
+    [Parameter]
+	public string? TextColor { get; set; } = null; // Optional: Custom text color class (e.g., "text-primary", "text-success")
+    
+    [Parameter]
+	public string? CustomClasses { get; set; } = null; // Optional: Custom class if needed for additional styling (e.g., "my-custom-class")
+
 
     private string GetIconClass() => CustomIcon ?? Type.ToLower() switch
     {
         "course" => "bi-book",
-        "module" => "bi-files",
+        "module" => "bi-stack",
         "activity" => "bi-calendar-check",
         "student" => "bi-people",
+        "assignment" => "bi-file-text",
         "submission" => "bi-file-earmark-arrow-up",
+        "submitted" => "bi-file-earmark-person",
+        "feedback" => "bi-check2-circle",
         _ => "bi-folder"
     };
 
-    private string GetThemeClasses() => Type.ToLower() switch
+    private string GetTextColorClass() => TextColor ?? Type.ToLower() switch
     {
-        "course" => "bg-dark-subtle text-dark",
-        "module" => "bg-info-subtle text-info",
-        "activity" => "bg-success-subtle text-success",
-        "student" => "bg-purple-subtle text-purple", 
-        "submission" => "bg-warning-subtle text-warning",
-        
-        _ => "bg-light text-secondary"
+        "course" => "text-dark",
+        "module" => "text-primary",
+        "activity" => "text-success",
+        "student" => "text-purple",
+        "assignment" => "text-warning",
+        "submission" => "text-warning",
+        "submitted" => "text-warning",
+        "feedback" => "text-success",
+        _ => "text-secondary"
+    };
+
+    private string? GetCustomClasses()
+    {
+        if (!string.IsNullOrEmpty(CustomClasses) && CustomClasses.Contains("theme-box-background"))
+        {
+            var baseClasses = "rounded-circle d-flex align-items-center justify-content-center";
+            if (!CustomClasses.Contains("icon-square"))
+            {
+                baseClasses += " icon-square-48";
+            }
+
+            return CustomClasses.Replace("theme-box-background", $"{baseClasses} {GetBgColorClasse()}");
+        }
+
+        return CustomClasses;
+    }
+
+    private string GetBgColorClasse() => Type.ToLower() switch
+    {
+        "course" => "bg-dark-subtle",
+        "module" => "bg-primary-subtle",
+        "activity" => "bg-success-subtle",
+        "student" => "bg-purple-subtle",
+        "assignment" => "bg-warning-subtle",
+        "submission" => "bg-warning-subtle",
+        "submitted" => "bg-warning-subtle",
+        "feedback" => "bg-success-subtle",
+        _ => "bg-light"
     };
 }

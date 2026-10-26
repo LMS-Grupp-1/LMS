@@ -23,12 +23,9 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     {
         base.OnModelCreating(builder);
 
+        // This automatically registers every Configuration that implement IEntityTypeConfiguration<T> in ApplicationDbContext
+        // So do not need to register every new configuration like CourseConfiguration/ActivityConfiguration.
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext)
             .Assembly);
-
-        builder.ApplyConfiguration(
-            new Configurations.ActivityConfiguration());
-        builder.ApplyConfiguration(
-            new LMS.Infrastructure.Data.Configurations.CourseConfiguration());
     }
 }
