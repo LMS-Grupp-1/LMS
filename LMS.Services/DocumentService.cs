@@ -6,6 +6,7 @@ using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using Microsoft.Extensions.Logging;
 using Service.Contracts;
+using System.Xml.Linq;
 
 namespace LMS.Services;
 
@@ -71,10 +72,10 @@ public sealed class DocumentService(
                 $"{DocumentConstraints.MaxDescriptionLength} characters.");
         }
 
-		var (cleanFileName, contentType) = DocumentFiles.ValidateFileName(fileName);
-		fileName = cleanFileName;
+        var (cleanFileName, contentType) = DocumentFiles.ValidateFileName(fileName);
+        fileName = cleanFileName;
 
-		int? courseId = await unitOfWork.Documents.ResolveCourseAsync(
+        int? courseId = await unitOfWork.Documents.ResolveCourseAsync(
             target, cancellationToken);
 
         if (courseId is null)
@@ -104,8 +105,8 @@ public sealed class DocumentService(
                 "The selected document location does not exist.");
         }
 
-		using var bufferedContent = await DocumentFiles.ReadAsync(
-			content, cancellationToken);
+        using var bufferedContent = await DocumentFiles.ReadAsync(
+            content, cancellationToken);
 
         var document = new Document
         {
@@ -215,6 +216,138 @@ public sealed class DocumentService(
             stream,
             document.ContentType,
             document.FileName);
+    }
+
+    public async Task UpdateAsync(
+    int id,
+    DocumentUpdateDto dto,
+    DocumentActor actor,
+    CancellationToken cancellationToken)
+    {
+        var (document, _) = await GetMaterialForManagementAsync(
+            id, actor, cancellationToken);
+
+        if (dto.Target is null)
+        {
+            throw new DocumentValidationException(
+                "Select one course, module or activity.");
+        }
+
+        ValidateTarget(dto.Target);
+
+        string name = (dto.Name ?? string.Empty).Trim();
+        string description = (dto.Description ?? string.Empty).Trim();
+
+        if (name.Length == 0 ||
+            name.Length > DocumentConstraints.MaxNameLength)
+        {
+            throw new DocumentValidationException(
+                $"Name must contain between 1 and " +
+                $"{DocumentConstraints.MaxNameLength} characters.");
+        }
+
+        if (description.Length > DocumentConstraints.MaxDescriptionLength)
+        {
+            throw new DocumentValidationException(
+                $"Description cannot exceed " +
+                $"{DocumentConstraints.MaxDescriptionLength} characters.");
+        }
+
+        int? targetCourseId =
+            await unitOfWork.Documents.ResolveCourseAsync(
+                dto.Target, cancellationToken);
+
+        if (targetCourseId is null)
+        {
+            throw new DocumentNotFoundException(
+                "The selected course, module or activity does not exist.");
+        }
+
+        document.Name = name;
+        document.Description = description;
+        document.CourseId = dto.Target.CourseId;
+        document.ModuleId = dto.Target.ModuleId;
+        document.ActivityId = dto.Target.ActivityId;
+
+        await unitOfWork.CompleteAsync();
+    }
+
+    public async Task DeleteAsync(
+        int id,
+        DocumentActor actor,
+        CancellationToken cancellationToken)
+    {
+        var (document, _) = await GetMaterialForManagementAsync(
+            id, actor, cancellationToken);
+
+        string blobPath = document.BlobPath;
+
+        unitOfWork.Documents.Delete(document);
+        await unitOfWork.CompleteAsync();
+
+        try
+        {
+            await storage.DeleteAsync(
+                blobPath, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(
+                ex,
+                "Document {DocumentId} was deleted from the database, " +
+                "but blob {BlobPath} could not be removed. Storage cleanup is required.",
+                id,
+                blobPath);
+        }
+    }
+
+    private async Task<(Document Document, int CourseId)>
+        GetMaterialForManagementAsync(
+            int id,
+            DocumentActor actor,
+            CancellationToken cancellationToken)
+    {
+        RequireTeacher(actor);
+
+        if (id <= 0)
+        {
+            throw new DocumentValidationException(
+                "The document ID must be greater than zero.");
+        }
+
+        var document =
+            await unitOfWork.Documents.FindForManagementAsync(
+                id, cancellationToken);
+
+        if (document is null)
+        {
+            throw new DocumentNotFoundException(
+                "The teaching material does not exist.");
+        }
+
+        var target = new DocumentTarget(
+            document.CourseId,
+            document.ModuleId,
+            document.ActivityId);
+
+        if (CountTargets(target) != 1)
+        {
+            throw new DocumentAccessException();
+        }
+
+        int? courseId = await unitOfWork.Documents.ResolveCourseAsync(
+            target, cancellationToken);
+
+        if (courseId is null)
+        {
+            throw new DocumentNotFoundException(
+                "The document location does not exist.");
+        }
+
+        await RequireCourseAccessAsync(
+            courseId.Value, actor, cancellationToken);
+
+        return (document, courseId.Value);
     }
 
     private async Task RequireCourseAccessAsync(
