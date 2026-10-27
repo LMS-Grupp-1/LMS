@@ -120,12 +120,7 @@ public class DocumentRepository : IDocumentRepository
             return Array.Empty<DocumentTargetDto>();
         }
 
-        var targets = new List<DocumentTargetDto>
-        {
-            new(
-                new DocumentTarget(CourseId: courseId),
-                "Kursmaterial")
-        };
+        var targets = new List<DocumentTargetDto>();
 
         var modules = await _context.Modules
             .AsNoTracking()
