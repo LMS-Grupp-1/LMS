@@ -5,14 +5,14 @@
             <div class="modal-content">
                 <div class="modal-header @HeaderTextClass">
                     <h5 class="modal-title">@Title</h5>
-                    <button type="button" class="btn-close" @onclick="Cancel"></button>
+                    <button type="button" class="btn-close" disabled="@IsBusy" @onclick="Cancel"></button>
                 </div>
                 <div class="modal-body">
                     <p class="mb-0">@Message</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" @onclick="Cancel">@CancelButtonText</button>
-                    <button type="button" class="btn @ConfirmButtonClass" @onclick="Confirm">@ConfirmButtonText</button>
+                    <button type="button" class="btn btn-secondary" disabled="@IsBusy" @onclick="Cancel">@CancelButtonText</button>
+                    <button type="button" class="btn @ConfirmButtonClass" disabled="@IsBusy" @onclick="Confirm">@ConfirmButtonText</button>
                 </div>
             </div>
         </div>
@@ -21,6 +21,7 @@
 
 @code {
     [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public bool IsBusy { get; set; }
     [Parameter] public string Title { get; set; } = "Bekräfta";
     [Parameter] public string Message { get; set; } = "Är du säker på att du vill utföra denna åtgärd?";
     [Parameter] public string ConfirmButtonText { get; set; } = "Bekräfta";
