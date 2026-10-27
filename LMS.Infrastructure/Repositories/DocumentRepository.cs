@@ -1,4 +1,5 @@
-﻿using Domain.Contracts;
+﻿using Azure.Storage.Blobs.Models;
+using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using LMS.Shared.DTOs.DocumentDtos;
@@ -182,5 +183,22 @@ public class DocumentRepository : IDocumentRepository
         await _context.Documents.AddAsync(
             document,
             cancellationToken);
+    }
+
+    public async Task<Document?> FindForManagementAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        return await _context.Documents
+            .Where(document =>
+            !_context.Submissions.Any(submission =>
+                submission.DocumentId == document.Id))
+            .SingleOrDefaultAsync(
+            document => document.Id == id,
+            cancellationToken);
+    }
+    public void Delete(Document document)
+    {
+        _context.Documents.Remove(document);
     }
 }
