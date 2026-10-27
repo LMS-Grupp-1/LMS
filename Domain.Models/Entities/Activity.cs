@@ -17,4 +17,5 @@ public class Activity
     public ActivityType ActivityType { get; set; } = null!;
 
     public ICollection<Document> Documents { get; set; } = new List<Document>();
+	public ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
 }

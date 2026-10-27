@@ -411,25 +411,45 @@ internal class DataSeedService : IHostedService
 		if (await context.Assignments.AnyAsync(assignment => assignment.ModuleId == module.Id, cancellationToken))
 			return;
 
+		// Every assignment must belong to an activity. The test activities are seeded before this method runs.
+		var activities = await context.Activities
+			.Where(activity => activity.ModuleId == module.Id)
+			.OrderBy(activity => activity.StartDate)
+			.ToListAsync(cancellationToken);
+
+		if (activities.Count == 0)
+		{
+			logger.LogWarning(
+				"Skipped test assignments for {Course} / {Module}: the module has no activities.",
+				courseName, moduleName);
+			return;
+		}
+
+		// Reading goes with the lecture, everything else with the exercise.
+		var lecture = activities[0];
+		var exercise = activities.FirstOrDefault(activity => activity.Name == "Praktisk övning") ?? lecture;
+
 		// Local Swedish time, the same way a teacher enters a deadline.
 		var today = DateTime.Today;
 		DateTime At(int days, int hour, int minute = 0) =>
 			today.AddDays(days).AddHours(hour).AddMinutes(minute);
 
-		Assignment Create(TestAssignmentText text, DateTime? deadline, bool requiresSubmission) => new()
+		Assignment Create(TestAssignmentText text, Activity activity, DateTime? deadline, bool requiresSubmission) => new()
 		{
-			ModuleId = module.Id,
+			// The module always comes from the activity, the same rule as in the service.
+			ModuleId = activity.ModuleId,
+			ActivityId = activity.Id,
 			Name = text.Name,
 			Description = text.Description,
 			Deadline = deadline,
 			RequiresSubmission = requiresSubmission
 		};
 
-		var upcoming = Create(texts[0], At(7, 17), requiresSubmission: true);
-		var handedInOnTime = Create(texts[1], At(-3, 17), requiresSubmission: true);
-		var handedInLate = Create(texts[2], At(-1, 17), requiresSubmission: true);
-		var reading = Create(texts[3], At(3, 17), requiresSubmission: false);
-		var practice = Create(texts[4], deadline: null, requiresSubmission: false);
+		var upcoming = Create(texts[0], exercise, At(7, 17), requiresSubmission: true);
+		var handedInOnTime = Create(texts[1], exercise, At(-3, 17), requiresSubmission: true);
+		var handedInLate = Create(texts[2], exercise, At(-1, 17), requiresSubmission: true);
+		var reading = Create(texts[3], lecture, At(3, 17), requiresSubmission: false);
+		var practice = Create(texts[4], exercise, deadline: null, requiresSubmission: false);
 
 		context.Assignments.AddRange(upcoming, handedInOnTime, handedInLate, reading, practice);
 
