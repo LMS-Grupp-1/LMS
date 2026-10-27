@@ -21,6 +21,12 @@ namespace LMS.Infrastructure.Data.Configurations
 				.WithMany(module => module.Assignments)
 				.HasForeignKey(assignment => assignment.ModuleId)
 				.OnDelete(DeleteBehavior.Restrict);
+
+			// An activity with assignments cannot be deleted until they are removed or moved.
+			builder.HasOne(assignment => assignment.Activity)
+				.WithMany(activity => activity.Assignments)
+				.HasForeignKey(assignment => assignment.ActivityId)
+				.OnDelete(DeleteBehavior.Restrict);
 		}
 	}
 }

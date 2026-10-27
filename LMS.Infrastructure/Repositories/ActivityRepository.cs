@@ -19,7 +19,16 @@ public class ActivityRepository(ApplicationDbContext context)
 			.ToListAsync();
 	}
 
-    public async Task<IReadOnlyList<TeacherDashboardActivityDto>> GetUpcomingActivitiesAsync(int? count = null)
+	public async Task<Activity?> GetWithModuleAndCourseAsync(int id)
+	{
+		return await _context.Activities
+			.AsNoTracking()
+			.Include(activity => activity.Module)
+				.ThenInclude(module => module.Course)
+			.FirstOrDefaultAsync(activity => activity.Id == id);
+	}
+
+	public async Task<IReadOnlyList<TeacherDashboardActivityDto>> GetUpcomingActivitiesAsync(int? count = null)
     {
         var today = DateTimeOffset.UtcNow;
 

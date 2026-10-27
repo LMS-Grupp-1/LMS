@@ -6,9 +6,10 @@ namespace Domain.Contracts;
 
 public interface IActivityRepository : IBaseRepository<Activity>
 {
-    Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId);
+    Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId);	
+	Task<Activity?> GetWithModuleAndCourseAsync(int id);
 
-    Task<IReadOnlyList<TeacherDashboardActivityDto>> GetUpcomingActivitiesAsync(int? count = null);
+	Task<IReadOnlyList<TeacherDashboardActivityDto>> GetUpcomingActivitiesAsync(int? count = null);
     Task<IReadOnlyList<ActivityOverviewDto>> GetLatestActivitiesByCourseIdAsync(int courseId, int? count = null);
 
     Task<bool> HasOverlapAsync(
