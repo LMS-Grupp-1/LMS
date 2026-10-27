@@ -128,6 +128,37 @@ public sealed class DocumentsController(IServiceManager serviceManager)
         });
     }
 
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public Task<IActionResult> Update(
+        int id,
+        [FromBody] DocumentUpdateDto dto,
+        CancellationToken cancellationToken)
+    {
+        return ExecuteAsync(async actor =>
+        {
+            await _documents.UpdateAsync(
+                id, dto, actor, cancellationToken);
+
+            return NoContent();
+        });
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public Task<IActionResult> Delete(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        return ExecuteAsync(async actor =>
+        {
+            await _documents.DeleteAsync(
+                id, actor, cancellationToken);
+
+            return NoContent();
+        });
+    }
+
     private async Task<IActionResult> ExecuteAsync(
         Func<DocumentActor, Task<IActionResult>> action)
     {
