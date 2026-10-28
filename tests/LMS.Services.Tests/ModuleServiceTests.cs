@@ -35,7 +35,7 @@ public class ModuleServiceTests
             () => _sut.GetModulesByCourseIdAsync(courseId)
         );
 
-        Assert.Contains("Kurs", exception.Message);
+        Assert.Contains("Course", exception.Message);
     }
 
     [Fact]
