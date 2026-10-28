@@ -63,6 +63,19 @@ public class ModuleService : IModuleService
 
         await ValidateModuleAsync(courseId, dto, moduleId);
 
+        var activities = await _unitOfWork.Activities
+            .GetActivityByModuleIdAsync(moduleId);
+        
+        bool hasActivitiesOutsidePeriod = activities.Any(activity =>
+            activity.StartDate.Date < dto.StartDate.Date ||
+            activity.EndDate.Date < dto.EndDate.Date);
+
+        if (hasActivitiesOutsidePeriod)
+        {
+            throw new BadRequestException(
+                "The module period must include all exisiting activities.");
+        }
+
         // Update entity properties
         moduleToUpdate.Name = dto.Name;
         moduleToUpdate.Description = string.IsNullOrEmpty(dto.Description) ? "Ingen beskrivning" : dto.Description;
