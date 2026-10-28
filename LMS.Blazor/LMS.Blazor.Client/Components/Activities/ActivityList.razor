@@ -1,10 +1,13 @@
-﻿@using LMS.Blazor.Client.ViewModels.Modules
-@using LMS.Shared.DTOs.ActivityDtos
+﻿@using System.Globalization
+@using LMS.Blazor.Client.Components.Assignments
 @using LMS.Blazor.Client.Helpers
-@using System.Net
-@using System.Net.Http.Json
+@using LMS.Blazor.Client.Services
 @using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.ViewModels.Modules
+@using LMS.Shared.DTOs.ActivityDtos
+@using LMS.Shared.DTOs.AssignmentDtos
 @inject IApiProxyClient ApiProxy
+@inject ToastService ToastService
 
 <div class="card shadow-sm">
     <div class="card-header bg-lignt d-flex justify-content-between align-items-center p-3">
@@ -60,6 +63,10 @@
                             </div>
 
                             <div class="btn-group gap-2" role="group">
+                                <button class="btn btn-outline-success btn-sm" @onclick="() => OpenAddAssignmentModal(activity.Id)">
+                                    <i class="bi bi-journal-plus"></i>
+                                    <span class="d-none d-md-inline ms-1">Lägg till uppgift</span>
+                                </button>
                                 <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenEditActivityModal(activity)">
                                     <i class="bi bi-pencil"></i>
                                     <span class="d-none d-md-inline ms-1">Redigera aktivitet</span>
@@ -71,6 +78,48 @@
 
                         </div>
                     </div>
+                    @{
+                        var activityAssignments = assignmentsByActivity[activity.Id].ToList();
+                    }
+                    @if (activityAssignments.Any())
+                    {
+                        <ul class="list-group list-group-flush border-top">
+                            @foreach (var assignment in activityAssignments)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap gap-2 px-3">
+                                    <div>
+                                        <i class="bi bi-journal-text me-1 text-primary"></i>
+                                        <span class="fw-semibold">@assignment.Name</span>
+                                        <span class="text-muted small ms-2">
+                                            @(assignment.Deadline is { } deadline
+                                                ? $"Deadline {deadline.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)}"
+                                                : "Ingen deadline")
+                                        </span>
+                                        @if (!assignment.RequiresSubmission)
+                                        {
+                                            <span class="badge bg-secondary ms-2">Ingen inlämning</span>
+                                        }
+                                        @if (assignment.SubmissionCount > 0)
+                                        {
+                                            <span class="badge bg-info text-dark ms-2">@assignment.SubmissionCount inlämningar</span>
+                                        }
+                                    </div>
+                                    <div class="btn-group gap-2">
+                                        <button class="btn btn-outline-primary btn-sm" @onclick="() => OpenEditAssignmentModal(assignment)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        @* Assignments with submissions cannot be deleted (the API returns 409). *@
+                                        @if (assignment.SubmissionCount == 0)
+                                        {
+                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteAssignmentAsync(assignment)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                    }
                 </div>
             }
         }
@@ -83,6 +132,14 @@
                  ActivityToEdit="selectedActivity"
                  OnClose="CloseModal"
                  OnActivitySaved="HandleActivitySaved" />
+                 
+                 <AssignmentFormDialog IsOpen="isAssignmentModalOpen"
+                      CurrentModule="CurrentModule"
+                      Activities="activities"
+                      SelectedActivityId="selectedActivityIdForAssignment"
+                      AssignmentToEdit="selectedAssignment"
+                      OnClose="CloseAssignmentModal"
+                      OnSaved="HandleAssignmentSaved" />
 
 @code {
     [Parameter] public ModuleViewModel CurrentModule { get; set; } = default!;
@@ -93,6 +150,14 @@
 
     private ActivityDto? selectedActivity = null; // null = Add mode, Has value = Edit mode
     private bool isModalOpen = false;
+
+    // Assignments grouped by activity, so each activity card can show its own.
+    private ILookup<int, TeacherAssignmentDto> assignmentsByActivity =
+        Enumerable.Empty<TeacherAssignmentDto>().ToLookup(a => a.ActivityId);
+
+    private bool isAssignmentModalOpen;
+    private int selectedActivityIdForAssignment;
+    private TeacherAssignmentDto? selectedAssignment; // null = create mode
 
     protected override async Task OnParametersSetAsync()
     {
@@ -108,6 +173,12 @@
             activities = await ApiProxy.GetAsync<IEnumerable<ActivityDto>>(
                 $"teacher/modules/{CurrentModule.Id}/activities"
             ) ?? Enumerable.Empty<ActivityDto>();
+
+            // One call per module, grouped by activity on the client.
+            var assignments = await ApiProxy.GetAsync<IEnumerable<TeacherAssignmentDto>>(
+                $"teacher/modules/{CurrentModule.Id}/assignments"
+            ) ?? Enumerable.Empty<TeacherAssignmentDto>();
+            assignmentsByActivity = assignments.ToLookup(a => a.ActivityId);
         }
         catch (HttpRequestException ex)
         {
@@ -147,4 +218,43 @@
 
     private void DeleteActivity(int id) { /* Mock action */ }
 
+    private void OpenAddAssignmentModal(int activityId)
+    {
+        selectedAssignment = null;
+        selectedActivityIdForAssignment = activityId;
+        isAssignmentModalOpen = true;
+    }
+
+    private void OpenEditAssignmentModal(TeacherAssignmentDto assignment)
+    {
+        selectedAssignment = assignment;
+        isAssignmentModalOpen = true;
+    }
+
+    private void CloseAssignmentModal()
+    {
+        isAssignmentModalOpen = false;
+        selectedAssignment = null;
+    }
+
+    private async Task HandleAssignmentSaved()
+    {
+        CloseAssignmentModal();
+        await LoadActivitiesAsync();
+    }
+
+    private async Task DeleteAssignmentAsync(TeacherAssignmentDto assignment)
+    {
+        var (_, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+            HttpMethod.Delete, $"teacher/assignments/{assignment.Id}");
+
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            ToastService.ShowToast($"Det gick inte att ta bort uppgiften. {error}", ToastType.Danger);
+            return;
+        }
+
+        ToastService.ShowToast($"Uppgiften {assignment.Name} har tagits bort.", ToastType.Success);
+        await LoadActivitiesAsync();
+    }
 }

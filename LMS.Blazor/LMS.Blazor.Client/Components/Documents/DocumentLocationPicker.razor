@@ -1,0 +1,123 @@
+﻿@using LMS.Blazor.Client.Services
+@using LMS.Shared.DTOs.DocumentDtos
+@using Microsoft.Extensions.Logging
+
+@implements IDisposable
+
+@inject DocumentService Documents
+@inject ILogger<DocumentLocationPicker> Logger
+
+@if (error is not null)
+{
+    <div class="alert alert-warning" role="alert">
+        @error
+    </div>
+}
+
+@if (isLoading)
+{
+    <p role="status">Hämtar moduler och aktiviteter...</p>
+}
+
+<div class="mb-3">
+    <label for="edit-document-target" class="form-label">
+        Koppla dokumentet till
+    </label>
+
+    <select id="edit-document-target"
+            class="form-select"
+            disabled="@(Disabled || isLoading || targets.Count == 0)"
+            @bind="targetIndex"
+            @bind:after="NotifyTargetChangedAsync">
+        <option value="-1">Välj modul eller aktivitet...</option>
+
+        @for (int index = 0; index < targets.Count; index++)
+        {
+            <option value="@index">
+                @targets[index].Label
+            </option>
+        }
+    </select>
+</div>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    [Parameter]
+    public DocumentTarget? InitialTarget { get; set; }
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    [Parameter]
+    public EventCallback<DocumentTarget?> OnTargetChanged { get; set; }
+
+    private readonly CancellationTokenSource lifetime = new();
+
+    private List<DocumentTargetDto> targets = [];
+    private int targetIndex = -1;
+    private bool isLoading = true;
+    private string? error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            targets = await Documents.TargetsAsync(
+                CourseId, lifetime.Token);
+
+            if (lifetime.IsCancellationRequested)
+                return;
+
+            targetIndex = InitialTarget is null
+                ? -1
+                : targets.FindIndex(item =>
+                    item.Target == InitialTarget);
+
+            if (targets.Count == 0)
+            {
+                error = "Kursen saknar moduler och aktiviteter " +
+                        "att koppla dokumentet till.";
+            }
+
+            await NotifyTargetChangedAsync();
+        }
+        catch (OperationCanceledException)
+            when (lifetime.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Could not load document targets for course {CourseId}.",
+                CourseId);
+
+            error = ex is UnauthorizedAccessException
+                ? "Din session har gått ut. Logga in igen."
+                : "Modulerna och aktiviteterna kunde inte hämtas. " +
+                  "Stäng dialogen och försök igen.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private Task NotifyTargetChangedAsync()
+    {
+        DocumentTarget? target =
+            targetIndex >= 0 && targetIndex < targets.Count
+                ? targets[targetIndex].Target
+                : null;
+
+        return OnTargetChanged.InvokeAsync(target);
+    }
+
+    public void Dispose()
+    {
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
+    }

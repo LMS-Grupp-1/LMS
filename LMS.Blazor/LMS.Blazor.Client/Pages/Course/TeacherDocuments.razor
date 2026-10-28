@@ -1,4 +1,6 @@
-﻿@page "/teacher/courses/{CourseId:int}/documents"
+﻿@using LMS.Blazor.Client.Components.Documents
+@using LMS.Blazor.Client.Components.Common
+@page "/teacher/courses/{CourseId:int}/documents"
 @rendermode @(new Microsoft.AspNetCore.Components.Web.InteractiveWebAssemblyRenderMode(prerender: false))
 
 @using System.Globalization
@@ -27,7 +29,7 @@
 
 <h1 class="h3">Kursmaterial</h1>
 <p>
-    Ladda upp material till kursen, en modul eller en aktivitet.
+    Ladda upp material till en modul eller en aktivitet.
     Materialet blir tillgängligt för kursens studenter.
 </p>
 
@@ -65,8 +67,15 @@ else
              aria-labelledby="upload-heading">
         <h2 id="upload-heading" class="h5">Ladda upp dokument</h2>
 
+        @if (targets.Count == 0)
+        {
+            <div class="alert alert-info" role="status">
+                Lägg till en modul eller aktivitet i kursen innan du laddar upp dokument.
+            </div>
+        }
+
         <form @onsubmit="UploadAsync" @onsubmit:preventDefault>
-            <fieldset disabled="@isBusy">
+            <fieldset disabled="@isBusy || targets.Count == 0">
                 <legend class="visually-hidden">
                     Uppgifter för dokumentet
                 </legend>
@@ -192,6 +201,20 @@ else
                                             ? "Hämtar..."
                                             : "Ladda ner")
                                     </button>
+                                    <button type="button"
+                                            class="btn btn-outline-secondary btn-sm ms-1"
+                                            disabled="@isBusy"
+                                            aria-label="@($"Redigera {document.Name}")"
+                                            @onclick="() => OpenEditDialog(document)">
+                                        Redigera
+                                    </button>
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm ms-1"
+                                            disabled="@isBusy"
+                                            aria-label="@($"Radera {document.Name}")"
+                                            @onclick="() => OpenDeleteDialog(document)">
+                                        Radera
+                                    </button>
                                 </td>
                             </tr>
                         }
@@ -199,6 +222,23 @@ else
                 </table>
             </div>
         }
+
+        @if (editingDocument is { } documentToEdit)
+{
+    <EditDocumentDialog @key="documentToEdit.Id"
+                        Document="documentToEdit"
+                        OnSaved="DocumentUpdatedAsync"
+                        OnCancel="CloseEditDialog" />
+}
+
+<ConfirmDialog IsOpen="@(deletingDocument is not null)"
+               Title="Radera dokument"
+               Message="@($"Vill du radera dokumentet ”{deletingDocument?.Name}”? Dokumentet tas bort för kursens studenter.")"
+               ConfirmButtonText="@(isDeleting ? "Raderar..." : "Radera dokument")"
+               ConfirmButtonClass="btn-danger"
+               IsBusy="@isDeleting"
+               OnConfirm="DeleteDocumentAsync"
+               OnCancel="CloseDeleteDialog" />
     </section>
 }
 
@@ -220,15 +260,27 @@ else
     private string? error;
     private string? success;
 
-    private int targetIndex;
+    private int targetIndex = -1;
     private int fileInputKey;
     private int pageVersion;
     private int? downloadingId;
 
     private bool isLoading = true;
     private bool isUploading;
+    private bool isDeleting;
+    private bool isRefreshingDocuments;
 
-    private bool isBusy => isUploading || downloadingId.HasValue;
+    private DocumentDto? editingDocument;
+    private DocumentDto? deletingDocument;
+
+    private bool isBusy =>
+        isLoading ||
+        isUploading ||
+        downloadingId.HasValue ||
+        isDeleting ||
+        isRefreshingDocuments ||
+        editingDocument is not null ||
+        deletingDocument is not null;
 
     private static string AllowedExtensions =>
         string.Join(", ", DocumentConstraints.ContentTypes.Keys);
@@ -249,13 +301,17 @@ else
         isLoading = true;
         isUploading = false;
         downloadingId = null;
+        editingDocument = null;
+        deletingDocument = null;
+        isDeleting = false;
+        isRefreshingDocuments = false;
         loadError = null;
         error = null;
         success = null;
         selectedFile = null;
         name = string.Empty;
         description = string.Empty;
-        targetIndex = 0;
+        targetIndex = -1;
         fileInputKey++;
 
         try
@@ -268,12 +324,6 @@ else
 
             if (version != pageVersion)
                 return;
-
-            if (loadedTargets.Count == 0)
-            {
-                throw new InvalidOperationException(
-                    "No document targets were returned for the course.");
-            }
 
             targets = loadedTargets;
             documents = loadedDocuments;
@@ -352,7 +402,7 @@ else
 
         if (targetIndex < 0 || targetIndex >= targets.Count)
         {
-            error = "Välj en kurs, modul eller aktivitet.";
+            error = "Välj en modul eller aktivitet.";
             return;
         }
 
@@ -462,6 +512,149 @@ else
                 downloadingId = null;
         }
     }
+
+    private void OpenEditDialog(DocumentDto document)
+{
+    if (isBusy)
+        return;
+
+    error = null;
+    success = null;
+    editingDocument = document;
+}
+
+private void CloseEditDialog()
+{
+    editingDocument = null;
+}
+
+private async Task DocumentUpdatedAsync()
+{
+    int version = pageVersion;
+    int courseId = CourseId;
+
+    editingDocument = null;
+    isRefreshingDocuments = true;
+    error = null;
+    success = "Dokumentets ändringar har sparats.";
+
+    try
+    {
+        var loadedDocuments = await Documents.ListAsync(
+            courseId, lifetime.Token);
+
+        if (version == pageVersion)
+        {
+            documents = loadedDocuments;
+        }
+    }
+    catch (OperationCanceledException)
+        when (lifetime.IsCancellationRequested)
+    {
+    }
+    catch (Exception ex)
+    {
+        Logger.LogError(
+            ex,
+            "Could not refresh documents for course {CourseId} after an update.",
+            courseId);
+
+        if (version == pageVersion)
+        {
+            error = UserMessage(
+                ex,
+                "Ändringen sparades, men dokumentlistan kunde inte uppdateras. " +
+                "Ladda om sidan.");
+        }
+    }
+    finally
+    {
+        if (version == pageVersion)
+            isRefreshingDocuments = false;
+    }
+}
+
+private void OpenDeleteDialog(DocumentDto document)
+{
+    if (isBusy)
+        return;
+
+    error = null;
+    success = null;
+    deletingDocument = document;
+}
+
+private void CloseDeleteDialog()
+{
+    if (isDeleting)
+        return;
+
+    deletingDocument = null;
+}
+
+private async Task DeleteDocumentAsync()
+{
+    if (isDeleting || deletingDocument is not { } document)
+        return;
+
+    int version = pageVersion;
+
+    isDeleting = true;
+    error = null;
+    success = null;
+
+    try
+    {
+        var (_, errorMessage) = await Documents.DeleteAsync(
+            document.Id, lifetime.Token);
+
+        if (version != pageVersion)
+            return;
+
+        if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            Logger.LogWarning(
+                "The API rejected deletion of document {DocumentId}: {ErrorMessage}",
+                document.Id,
+                errorMessage);
+
+            error = "Dokumentet kunde inte raderas. " +
+                    "Kontrollera att det finns kvar och försök igen.";
+            return;
+        }
+
+        documents.RemoveAll(item => item.Id == document.Id);
+
+        success = "Dokumentet har raderats.";
+    }
+    catch (OperationCanceledException)
+        when (lifetime.IsCancellationRequested)
+    {
+    }
+    catch (Exception ex)
+    {
+        Logger.LogError(
+            ex,
+            "Could not confirm deletion of document {DocumentId}.",
+            document.Id);
+
+        if (version == pageVersion)
+        {
+            error = UserMessage(
+                ex,
+                "Raderingen kunde inte bekräftas. " +
+                "Ladda om sidan och kontrollera dokumentlistan innan du försöker igen.");
+        }
+    }
+    finally
+    {
+        if (version == pageVersion)
+        {
+            isDeleting = false;
+            deletingDocument = null;
+        }
+    }
+}
 
     private static string UserMessage(Exception exception, string fallback)
     {

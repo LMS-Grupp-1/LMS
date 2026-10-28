@@ -1,0 +1,155 @@
+﻿@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.DocumentDtos
+
+<form @onsubmit="SubmitAsync" @onsubmit:preventDefault>
+    <div class="modal-body">
+        @if (!string.IsNullOrWhiteSpace(displayError))
+        {
+            <div class="alert alert-danger" role="alert">
+                @displayError
+            </div>
+        }
+
+        <p class="text-muted small">
+            Fil: @Document.FileName
+        </p>
+
+        <fieldset disabled="@IsSaving">
+            <legend class="visually-hidden">
+                Redigera dokumentets uppgifter
+            </legend>
+
+            <div class="mb-3">
+                <label for="edit-document-name" class="form-label">
+                    Dokumentnamn
+                </label>
+
+                <input id="edit-document-name"
+                       class="form-control"
+                       maxlength="@DocumentConstraints.MaxNameLength"
+                       @bind="name" />
+
+                <div class="form-text">
+                    Högst @DocumentConstraints.MaxNameLength tecken.
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="edit-document-description" class="form-label">
+                    Beskrivning (valfritt)
+                </label>
+
+                <textarea id="edit-document-description"
+                          class="form-control"
+                          rows="3"
+                          maxlength="@DocumentConstraints.MaxDescriptionLength"
+                          @bind="description"></textarea>
+            </div>
+
+            <DocumentLocationPicker CourseId="@Document.CourseId"
+                                    InitialTarget="@initialTarget"
+                                    Disabled="@IsSaving"
+                                    OnTargetChanged="TargetChanged" />
+        </fieldset>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button"
+                class="btn btn-secondary"
+                disabled="@IsSaving"
+                @onclick="OnCancel">
+            Avbryt
+        </button>
+
+        <button type="submit"
+                class="btn btn-primary"
+                disabled="@(IsSaving || selectedTarget is null)">
+            @(IsSaving ? "Sparar..." : "Spara ändringar")
+        </button>
+    </div>
+</form>
+
+@code {
+    [Parameter, EditorRequired]
+    public DocumentDto Document { get; set; } = default!;
+
+    [Parameter]
+    public bool IsSaving { get; set; }
+
+    [Parameter]
+    public string? ErrorMessage { get; set; }
+
+    [Parameter]
+    public EventCallback<DocumentUpdateDto> OnSave { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private string name = string.Empty;
+    private string description = string.Empty;
+    private string? validationError;
+
+    private DocumentTarget? initialTarget;
+    private DocumentTarget? selectedTarget;
+
+    private string? displayError => validationError ?? ErrorMessage;
+
+    protected override void OnInitialized()
+    {
+        name = Document.Name;
+        description = Document.Description;
+
+        initialTarget = Document.ActivityId is int activityId
+            ? new DocumentTarget(ActivityId: activityId)
+            : Document.ModuleId is int moduleId
+                ? new DocumentTarget(ModuleId: moduleId)
+                : null;
+    }
+
+    private void TargetChanged(DocumentTarget? target)
+    {
+        selectedTarget = target;
+        validationError = null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (IsSaving)
+            return;
+
+        validationError = null;
+
+        string trimmedName = name.Trim();
+        string trimmedDescription = description.Trim();
+
+        if (trimmedName.Length == 0 ||
+            trimmedName.Length > DocumentConstraints.MaxNameLength)
+        {
+            validationError =
+                $"Ange ett namn med 1–{DocumentConstraints.MaxNameLength} tecken.";
+            return;
+        }
+
+        if (trimmedDescription.Length >
+            DocumentConstraints.MaxDescriptionLength)
+        {
+            validationError =
+                $"Beskrivningen får innehålla högst " +
+                $"{DocumentConstraints.MaxDescriptionLength} tecken.";
+            return;
+        }
+
+        if (selectedTarget is not { } target)
+        {
+            validationError = "Välj en placering för dokumentet.";
+            return;
+        }
+
+        var dto = new DocumentUpdateDto(
+            trimmedName,
+            trimmedDescription,
+            target);
+
+        await OnSave.InvokeAsync(dto);
+    }
+}

@@ -4,6 +4,7 @@ using LMS.Blazor.Client.Services.ApiProxy;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using Microsoft.AspNetCore.Components.Forms;
+using System.Net.Http.Json;
 
 namespace LMS.Blazor.Client.Services;
 
@@ -63,6 +64,30 @@ public sealed class DocumentService(IApiProxyClient apiProxy)
             cancellationToken);
 
         return (document, null);
+    }
+
+    public async Task<(object? Data, string? ErrorMessage)> UpdateAsync(
+        int id,
+        DocumentUpdateDto dto,
+        CancellationToken cancellationToken)
+    {
+        using var content = JsonContent.Create(dto);
+
+        return await apiProxy.SendAndHandleErrorAsync<object>(
+            HttpMethod.Put,
+            $"documents/{id}",
+            content,
+            cancellationToken);
+    }
+
+    public Task<(object? Data, string? ErrorMessage)> DeleteAsync(
+        int id,
+        CancellationToken cancellationToken) 
+    {
+        return apiProxy.SendAndHandleErrorAsync<object>(
+            HttpMethod.Delete,
+            $"documents/{id}",
+            cancellationToken: cancellationToken);
     }
 
     private static void AddId(

@@ -9,6 +9,7 @@ erDiagram
   Course |o--o{ ApplicationUser : "enrolls (students)"
   Module ||--o{ Activity : "has"
   Module ||--o{ Assignment : "has"
+  Activity ||--o{ Assignment : "has"
   ActivityType ||--o{ Activity : "classifies"
   Assignment ||--o{ Submission : "receives"
   ApplicationUser ||--o{ Submission : "submits"
@@ -60,6 +61,7 @@ erDiagram
   Assignment {
     int Id PK
     int ModuleId FK
+    int ActivityId FK "activity in the same module"
     string Name
     string Description
     datetime Deadline "nullable, null = no deadline"
@@ -111,7 +113,7 @@ erDiagram
 
 An **activity** is a session in the module schedule (lecture, e-learning, exercise). It has a start and end time and takes up time in the schedule.
 
-An **assignment** is a task for the students with an optional deadline. It is not shown as a block in the schedule, only by its deadline.
+An **assignment** is a task for the students with an optional deadline. It always belongs to an activity in the same module, for example the exercise session where it is introduced. It is not shown as a block in the schedule, only by its deadline. `ModuleId` is kept on the assignment for queries and is always copied from the activity on the server.
 
 | Example | Modelled as | `Deadline` | `RequiresSubmission` |
 |---|---|---|---|
@@ -132,6 +134,10 @@ Submission status is calculated, not stored. For an assignment that requires sub
 | A module is within the course period and does not overlap other modules in the course | `ModuleService` |
 | An activity is within the module period and does not overlap other activities in the module | `ActivityService` |
 | Assignments may overlap each other and activities; the deadline is optional | `AssignmentService` |
+| An assignment belongs to an activity in the same module and can only be moved within that module | `AssignmentService` |
+| The deadline may be after the module end (the UI shows a warning) but not after the course end | `AssignmentService` + Blazor |
+| An assignment with submissions cannot be deleted | `AssignmentService` |
+| An activity with assignments cannot be deleted | Database (`Restrict`); a service check is needed when activity delete is added |
 | Submissions are only accepted for assignments that require submission | `SubmissionService` |
 | A student belongs to exactly one course | `UserService` |
 | Access to course, document and submission data depends on role and course membership, even if an id or URL is manipulated | Services |
