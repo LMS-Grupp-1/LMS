@@ -1,0 +1,99 @@
+﻿@using LMS.Shared.DTOs.AssignmentDtos
+@using LMS.Shared.DTOs.FeedbackDtos
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);" role="dialog">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content shadow-lg border-0">
+
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title d-flex align-items-center gap-2">
+                        <span>Feedback för uppgift</span>
+                    </h5>
+                    <button type="button" class="btn-close" aria-label="Stäng" @onclick="CloseModal"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    @if (Assignment != null)
+                    {
+                        <div class="card bg-light border-0 mb-4">
+                            <div class="card-body">
+                                <h5 class="card-title fw-bold mb-0">
+                                    @Assignment.Name
+                                </h5>
+                                <span class="text-muted">@Assignment.ModuleName</span>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!feedbacks.Any())
+                    {
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-chat-square-dots display-4 text-secondary opacity-50 mb-3 d-block"></i>
+                            <p class="fw-semibold fs-5 mb-1">Ingen feedback än</p>
+                            <small>Det finns ingen registrerad feedback för denna inlämning för tillfället.</small>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="fw-bold text-secondary">Kommentarer</span>
+                            <span class="badge bg-secondary rounded-pill">Totalt: @feedbacks.Count()</span>
+                        </div>
+
+                        <div class="feedback-list d-flex flex-column gap-3">
+                            @foreach (var fb in feedbacks)
+                            {
+                                <div class="card border border-1 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-person-circle text-primary fs-5"></i>
+                                                <span class="fw-semibold">@fb.TeacherName</span>
+                                            </div>
+                                            <small class="text-muted d-flex align-items-center gap-1">
+                                                <i class="bi bi-clock"></i>
+                                                @fb.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                                            </small>
+                                        </div>
+                                        <p class="card-text text-dark mb-0 style-whitespace-pre">@fb.Comment</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary px-4" @onclick="CloseModal">Stäng</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .style-whitespace-pre {
+        white-space: pre-line;
+    }
+</style>
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public StudentAssignmentDto? Assignment { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private IEnumerable<FeedbackForStudentDto> feedbacks => Assignment?.Feedbacks 
+                                        ?? Enumerable.Empty<FeedbackForStudentDto>();
+
+    private bool validSubmission => Assignment?.Id != null && Assignment.Id > 0;
+
+
+    private async Task CloseModal()
+    {
+        IsOpen = false;
+        await OnClose.InvokeAsync();
+    }
+}

@@ -28,7 +28,7 @@ public class FeedbackService : IFeedbackService
             Id = f.Id,
             SubmissionId = f.SubmissionId,
             TeacherId = f.TeacherId,
-            TeacherName = f.Teacher?.UserName ?? string.Empty,
+            TeacherName = f.Teacher != null ? $"{f.Teacher.FirstName} {f.Teacher.LastName}" : string.Empty,
             Comment = f.Comment,
             CreatedAt = f.CreatedAt
         });

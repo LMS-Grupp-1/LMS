@@ -19,7 +19,8 @@ namespace LMS.Infrastructure.Repositories
 				.Include(assignment => assignment.Submissions
 					.Where(submission => submission.StudentId == studentId))
 					.ThenInclude(submission => submission.Feedbacks)
-				.Where(assignment => assignment.Module.CourseId == courseId)
+						.ThenInclude(feedback => feedback.Teacher)
+                .Where(assignment => assignment.Module.CourseId == courseId)
 				.OrderBy(assignment => assignment.Deadline == null)
 				.ThenBy(assignment => assignment.Deadline)
 				.ThenBy(assignment => assignment.Name)

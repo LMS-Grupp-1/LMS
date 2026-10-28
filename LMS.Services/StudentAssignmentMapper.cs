@@ -1,5 +1,6 @@
 ﻿using Domain.Models.Entities;
 using LMS.Shared.DTOs.AssignmentDtos;
+using LMS.Shared.DTOs.FeedbackDtos;
 
 namespace LMS.Services
 {	
@@ -16,7 +17,16 @@ namespace LMS.Services
 				? AssignmentStatusCalculator.ToSwedishTime(localDeadline)
 				: null;
 
-			return new StudentAssignmentDto(
+            var feedbackDtos = latest?.Feedbacks?
+                .Select(f => new FeedbackForStudentDto(
+                    f.Id,
+                    f.Teacher != null ? $"{f.Teacher.FirstName} {f.Teacher.LastName}" : "Unknown Teacher",
+                    f.Comment,
+                    f.CreatedAt
+                ))
+                .ToList() ?? new List<FeedbackForStudentDto>();
+
+            return new StudentAssignmentDto(
 				assignment.Id,
 				assignment.Name,
 				assignment.Description,
@@ -27,7 +37,8 @@ namespace LMS.Services
 				AssignmentStatusCalculator.Calculate(
 					assignment.RequiresSubmission, deadline, latest?.SubmittedAt, now),
 				latest?.SubmittedAt,
-				(latest?.Feedbacks is not null && latest.Feedbacks.Any()));
+                feedbackDtos.Any(),
+				feedbackDtos);
 		}
 	}
 }

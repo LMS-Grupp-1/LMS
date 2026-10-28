@@ -10,6 +10,7 @@
 @using LMS.Shared.DTOs.AssignmentDtos
 @using Microsoft.AspNetCore.Components.Forms
 @using LMS.Blazor.Client.Helpers
+@using LMS.Blazor.Client.Components.Feedbacks
 
 @inject IAssignmentService AssignmentService
 @inject NavigationManager NavigationManager
@@ -88,10 +89,12 @@ else
 
                         @if (assignment.HasFeedback)
                         {
-                            <small class="text-muted d-block">
-                                <i class="bi bi-chat-left-text"></i>
-                                Läraren har lämnat feedback på din inlämning.
-                            </small>
+                            <a href="javascript:void(0);" 
+                               class="text-decoration-none d-flex align-items-center gap-1 text-primary small mt-1" 
+                               @onclick="() => OpenStudentFeedbackModal(assignment)">
+                                <i class="bi bi-chat-left-text-fill"></i>
+                                <span>Läraren har lämnat feedback på din inlämning.</span>
+                            </a>
                         }
                         
                         @if (assignment.RequiresSubmission)
@@ -138,12 +141,20 @@ else
     </div>
 }
 
+<StudentFeedbackListDialog IsOpen="isModalOpen"
+                 Assignment="selectedAssignment"
+                 OnClose="CloseModal" />
+
 @code {
     private List<StudentAssignmentDto> assignments = [];
     private bool isLoading = true;
     private string? errorMessage;
     private int? expandedId;
     private readonly CancellationTokenSource componentCancellation = new();
+
+    // Feedback
+    private bool isModalOpen = false;
+    private StudentAssignmentDto? selectedAssignment;
 
     protected override async Task OnInitializedAsync()
     {
@@ -271,5 +282,18 @@ else
     {
         componentCancellation.Cancel();
         componentCancellation.Dispose();
+    }
+
+    // Feedback
+    private void OpenStudentFeedbackModal(StudentAssignmentDto assignment)
+    {
+        selectedAssignment = assignment;
+        isModalOpen = true;
+    }
+    
+    private async Task CloseModal()
+    {
+        isModalOpen = false;
+        selectedAssignment = null;
     }
 }
