@@ -59,7 +59,7 @@ namespace LMS.Infrastructure.Repositories
                     assignment.Name,
                     assignment.Deadline,
                     assignment.Submissions.Count,
-                    assignment.Submissions.Count(s => s.Feedback != null)
+                    assignment.Submissions.Count(s => s.Feedbacks != null)
                 ))
                 .ToListAsync();
         }

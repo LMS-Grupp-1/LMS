@@ -4,7 +4,7 @@ using LMS.Shared.DTOs.DashboardDtos;
 
 namespace Domain.Contracts;
 
-public interface ICourseRepository
+public interface ICourseRepository : IBaseRepository<Course>
 {
 	Task<IEnumerable<Course>> GetAllAsync(bool trackChanges);
     Task<IEnumerable<CourseDto>> GetAllWithCountsAsync(bool trackChanges);
@@ -13,9 +13,7 @@ public interface ICourseRepository
     Task<Course?> GetByIdAsync(int id, bool trackChanges);
 	Task<Course?> GetForStudentAsync(string userId, bool trackChanges);
 	Task<bool> NameExistsAsync(string name, int? excludedId = null);
-	Task AddAsync(Course model);
-	void Update(Course model);
-	void Delete(Course model);
+
 	Task<IReadOnlyList<ApplicationUser>> GetStudentsAsync(int courseId);
 	Task<CourseStatisticsDto?> GetCourseStatisticsAsync(int courseId);
 }

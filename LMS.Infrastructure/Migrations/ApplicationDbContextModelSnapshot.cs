@@ -328,8 +328,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubmissionId")
-                        .IsUnique();
+                    b.HasIndex("SubmissionId");
 
                     b.HasIndex("TeacherId");
 
@@ -611,8 +610,8 @@ namespace LMS.Infrastructure.Migrations
             modelBuilder.Entity("Domain.Models.Entities.Feedback", b =>
                 {
                     b.HasOne("Domain.Models.Entities.Submission", "Submission")
-                        .WithOne("Feedback")
-                        .HasForeignKey("Domain.Models.Entities.Feedback", "SubmissionId")
+                        .WithMany("Feedbacks")
+                        .HasForeignKey("SubmissionId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
@@ -751,7 +750,7 @@ namespace LMS.Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Models.Entities.Submission", b =>
                 {
-                    b.Navigation("Feedback");
+                    b.Navigation("Feedbacks");
                 });
 #pragma warning restore 612, 618
         }

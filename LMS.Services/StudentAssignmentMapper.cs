@@ -27,7 +27,7 @@ namespace LMS.Services
 				AssignmentStatusCalculator.Calculate(
 					assignment.RequiresSubmission, deadline, latest?.SubmittedAt, now),
 				latest?.SubmittedAt,
-				latest?.Feedback is not null);
+				(latest?.Feedbacks is not null && latest.Feedbacks.Any()));
 		}
 	}
 }

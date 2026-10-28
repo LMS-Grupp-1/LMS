@@ -12,7 +12,7 @@ public class ActivityRepository(ApplicationDbContext context)
 {
 	public async Task<IEnumerable<Activity>> GetActivityByModuleIdAsync(int moduleId)
 	{
-		return await _context.Activities
+		return await Set
 			.Include(activity => activity.ActivityType)
 			.Where(activity => activity.ModuleId == moduleId)
 			.OrderBy(activity => activity.StartDate)
@@ -23,7 +23,7 @@ public class ActivityRepository(ApplicationDbContext context)
     {
         var today = DateTimeOffset.UtcNow;
 
-        IQueryable<Activity> query = _context.Activities
+        IQueryable<Activity> query = Set
             .Where(a => a.StartDate >= today)
             .OrderBy(a => a.StartDate);
 
@@ -47,7 +47,7 @@ public class ActivityRepository(ApplicationDbContext context)
 
     public async Task<IReadOnlyList<ActivityOverviewDto>> GetLatestActivitiesByCourseIdAsync(int courseId, int? count = null)
     {
-        IQueryable<Activity> query = _context.Activities
+        IQueryable<Activity> query = Set
             .Where(a => a.Module.CourseId == courseId)
             .OrderByDescending(a => a.StartDate);
         if (count.HasValue && count.Value > 0)
@@ -71,7 +71,7 @@ public class ActivityRepository(ApplicationDbContext context)
         int take,
         CancellationToken cancellationToken = default)
     {
-        return await _context.Activities
+        return await Set
             .AsNoTracking()
             .Where(activity => activity.Module.CourseId == courseId && activity.EndDate >= now)
             .OrderBy(activity => activity.StartDate)
@@ -94,7 +94,7 @@ public class ActivityRepository(ApplicationDbContext context)
         int? excludedActivityId = null,
         CancellationToken cancellationToken = default)
     {
-        var query = _context.Activities
+        var query = Set
             .AsNoTracking()
             .Where(activity => activity.ModuleId == moduleId);
 

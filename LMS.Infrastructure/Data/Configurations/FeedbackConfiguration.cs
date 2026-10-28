@@ -13,19 +13,16 @@ namespace LMS.Infrastructure.Data.Configurations
 				.IsRequired()
 				.HasMaxLength(AssignmentConstraints.FeedbackCommentMaxLength);
 
-			// At most one feedback per submission.
-			builder.HasOne(feedback => feedback.Submission)
-				.WithOne(submission => submission.Feedback)
-				.HasForeignKey<Feedback>(feedback => feedback.SubmissionId)
-				.OnDelete(DeleteBehavior.Restrict);
+            // A submission have many feedbacks.
+            builder.HasOne(feedback => feedback.Submission)
+            .WithMany(submission => submission.Feedbacks)
+            .HasForeignKey(feedback => feedback.SubmissionId)
+            .OnDelete(DeleteBehavior.Restrict);
 
-			builder.HasIndex(feedback => feedback.SubmissionId)
-				.IsUnique();
-
-			builder.HasOne(feedback => feedback.Teacher)
-				.WithMany()
-				.HasForeignKey(feedback => feedback.TeacherId)
-				.OnDelete(DeleteBehavior.Restrict);
-		}
+            builder.HasOne(feedback => feedback.Teacher)
+                .WithMany()
+                .HasForeignKey(feedback => feedback.TeacherId)
+                .OnDelete(DeleteBehavior.Restrict);
+        }
 	}
 }

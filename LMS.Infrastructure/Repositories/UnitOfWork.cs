@@ -16,6 +16,8 @@ public class UnitOfWork : IUnitOfWork
 	public IAssignmentRepository Assignments { get; }
 	public ISubmissionRepository Submissions { get; }
 
+    public IFeedbackRepository Feedbacks { get; }
+
     public UnitOfWork(ApplicationDbContext context,
                 IUserRepository userRepository,
                       ICourseRepository courseRepository,
@@ -23,7 +25,8 @@ public class UnitOfWork : IUnitOfWork
                       IActivityRepository activityRepository,
                       IDocumentRepository documentRepository,
                       IAssignmentRepository assignmentRepository,
-                      ISubmissionRepository submissionRepository)
+                      ISubmissionRepository submissionRepository,
+                      IFeedbackRepository feedbackRepository)
     {
         _context = context;
         Users = userRepository;
@@ -33,6 +36,7 @@ public class UnitOfWork : IUnitOfWork
         Documents = documentRepository;
         Assignments = assignmentRepository;
 		Submissions = submissionRepository;
+        Feedbacks = feedbackRepository;
 	}
 
     public async Task<int> CompleteAsync()

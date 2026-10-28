@@ -16,6 +16,6 @@
 		// Set by the server when the file is uploaded, never by the client.
 		public DateTimeOffset SubmittedAt { get; set; }
 
-		public Feedback? Feedback { get; set; }
-	}
+        public ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
+    }
 }

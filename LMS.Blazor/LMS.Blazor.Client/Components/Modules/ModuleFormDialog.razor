@@ -167,7 +167,7 @@
         catch (Exception ex)
         {
             // This catches true network dropouts or unexpected client-side exceptions
-            submitErrorMessage = $"Ett oväntat fel uppstod: {ex.Message}";
+            submitErrorMessage = ex.Message;
         }
         finally
         {

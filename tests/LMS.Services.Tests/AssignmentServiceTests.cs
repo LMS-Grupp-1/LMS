@@ -119,8 +119,11 @@ namespace LMS.Services.Tests
 			var latestSubmission = new Submission
 			{
 				SubmittedAt = new DateTimeOffset(2026, 11, 11, 9, 0, 0, TimeSpan.Zero),
-				Feedback = new Feedback { Comment = "Good" }
-			};
+                Feedbacks = new List<Feedback>
+				{
+					new Feedback { Comment = "Good" }
+				}
+            };
 
 			var assignment = new Assignment
 			{
