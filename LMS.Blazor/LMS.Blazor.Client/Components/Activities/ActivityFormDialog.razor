@@ -155,7 +155,7 @@
 
             if (!string.IsNullOrEmpty(responseErrorMessage))
             {
-                submitErrorMessage = $"Det gick inte att uppdatera aktiviteten. {responseErrorMessage}";
+                submitErrorMessage = responseErrorMessage;
                 return;
             }
             else
@@ -177,7 +177,7 @@
 
             if (!string.IsNullOrEmpty(responseErrorMessage))
             {
-                submitErrorMessage = $"Det gick inte att skapa aktiviteten. {responseErrorMessage}";
+                submitErrorMessage = responseErrorMessage;
                 return;
             }
             else

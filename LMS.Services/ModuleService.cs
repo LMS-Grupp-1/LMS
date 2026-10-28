@@ -20,7 +20,7 @@ public class ModuleService : IModuleService
     {
         var course = await _unitOfWork.Courses.GetByIdAsync(courseId,false);
         if (course == null)  
-            throw new EntityNotFoundException("Kurs", courseId);
+            throw new EntityNotFoundException("Course", courseId);
 
         var modules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
 
@@ -58,7 +58,7 @@ public class ModuleService : IModuleService
         var moduleToUpdate = await _unitOfWork.Modules.GetByIdAsync(moduleId);
         if (moduleToUpdate == null || moduleToUpdate.CourseId != courseId)
         {
-            throw new EntityNotFoundException("Mudul", moduleId);
+            throw new EntityNotFoundException("Module", moduleId);
         }
 
         await ValidateModuleAsync(courseId, dto, moduleId);
@@ -78,7 +78,7 @@ public class ModuleService : IModuleService
         var module = await _unitOfWork.Modules.GetByIdAsync(moduleId);
         if (module == null || module.CourseId != courseId)
         {
-            throw new EntityNotFoundException("Mudul", moduleId);
+            throw new EntityNotFoundException("Module", moduleId);
         }
 
         _unitOfWork.Modules.Delete(module);
@@ -89,19 +89,19 @@ public class ModuleService : IModuleService
     {
         if (dto.StartDate > dto.EndDate)
         {
-            throw new BadRequestException("Modulens startdatum får inte vara efter slutdatum.");
+            throw new BadRequestException("Module start date can not be after the end date.");
         }
 
         var course = await _unitOfWork.Courses.GetByIdAsync(courseId, false);
         if (course == null)
         {
-            throw new EntityNotFoundException("Kurs", courseId);
+            throw new EntityNotFoundException("Course", courseId);
         }
 
         // Module dates must be within course dates
         if (dto.StartDate < course.StartDate || dto.EndDate > course.EndDate)
         {
-            throw new BadRequestException($"Modulens datum måste ligga inom kursens tidsram ({course.StartDate.ToShortDateString()} - {course.EndDate.ToShortDateString()}).");
+            throw new BadRequestException($"Module date must be within the course timeframe. ({course.StartDate.ToShortDateString()} - {course.EndDate.ToShortDateString()}).");
         }
 
         var existingModules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
@@ -118,7 +118,7 @@ public class ModuleService : IModuleService
             bool isOverlapping = dto.StartDate <= existing.EndDate && dto.EndDate >= existing.StartDate;
             if (isOverlapping)
             {
-                throw new BadRequestException($"Modulen överlappar med en befintlig modul: '{existing.Name}' ({existing.StartDate.ToShortDateString()} - {existing.EndDate.ToShortDateString()}).");
+                throw new BadRequestException($"Module overlaps with an existing module: '{existing.Name}' ({existing.StartDate.ToShortDateString()} - {existing.EndDate.ToShortDateString()}).");
             }
         }
     }

@@ -17,16 +17,9 @@ public class ModuleRepository : BaseRepository<Module>, IModuleRepository
 
     public async Task<IEnumerable<Module>> GetModulesByCourseIdAsync(int courseId)
     {
-        return await _context.Modules
+        return await Set
             .Where(m => m.CourseId == courseId)
             .OrderBy(m => m.StartDate)
             .ToListAsync();
-    }
-
-    public override async Task<Module?> GetByIdAsync(int id)
-    {
-        return await _context.Modules
-            .Include(m => m.Course)
-            .FirstOrDefaultAsync(m => m.Id == id);
     }
 }

@@ -2,6 +2,7 @@
 @using System.Net
 @using LMS.Blazor.Client.Services
 @using LMS.Shared.DTOs.AssignmentDtos
+@using LMS.Blazor.Client.Components.Feedbacks
 @implements IAsyncDisposable
 
 @inject ISubmissionService SubmissionService
@@ -72,6 +73,7 @@ else
                     <th>Status</th>
                     <th>Inlämnad</th>
                     <th class="text-end">Fil</th>
+                    <th class="text-end">Feedbacks</th>
                 </tr>
             </thead>
             <tbody>
@@ -88,10 +90,6 @@ else
                         <td>@FormatDate(row.Deadline)</td>
                         <td>
                             <span class="badge @statusClass">@statusText</span>
-                            @if (row.HasFeedback)
-                            {
-                                <i class="bi bi-chat-left-text ms-1" title="Feedback finns"></i>
-                            }
                         </td>
                         <td>
                             @if (row.SubmittedAt is { } submittedAt)
@@ -115,6 +113,13 @@ else
                                 </button>
                             }
                         </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-1" 
+                                    disabled="@(row.SubmittedAt is null)"
+                                    @onclick="() => OpenFeedbacksModal(row)">
+                                Bedöma
+                            </button>
+                        </td>
                     </tr>
                 }
             </tbody>
@@ -126,6 +131,10 @@ else
         <div class="text-muted">Inga inlämningar matchar filtret.</div>
     }
 }
+
+<FeedbackListDialog IsOpen="isModalOpen"
+                 Submission="selectedSubmission"
+                 IsOpenChanged="CloseModal" />
 
 @code {
     [Parameter, EditorRequired]
@@ -154,11 +163,16 @@ else
     private const string Missing = "missing";
     private const string NotYetSubmitted = "not-yet-submitted";
 
+    // Handle feedback
+    private TeacherSubmissionRowDto? selectedSubmission;
+    private bool isModalOpen = false;
+
     private static string Category(TeacherSubmissionRowDto row) => row switch
     {
         { Status: AssignmentStatus.Submitted } => OnTime,
         { Status: AssignmentStatus.Late, SubmissionId: not null } => SubmittedLate,
-        { Status: AssignmentStatus.Late } => Missing,
+        {
+            Status: AssignmentStatus.Late } => Missing,
         _ => NotYetSubmitted
     };
 
@@ -184,6 +198,12 @@ else
 
     protected override async Task OnParametersSetAsync()
     {
+
+        await LoadTeacherSubmissionRowsAsync();
+    }
+
+    private async Task LoadTeacherSubmissionRowsAsync()
+    {
         // Load again only when the course changes, for example in the course picker.
         if (CourseId == loadedCourseId)
             return;
@@ -193,7 +213,7 @@ else
         loadError = null;
         selectedAssignmentId = 0;
         selectedStatus = string.Empty;
-
+        
         try
         {
             var result = await SubmissionService.GetForCourseAsync(CourseId, componentCancellation.Token);
@@ -284,6 +304,25 @@ else
             {
                 // The browser has already closed the connection.
             }
+        }
+    }
+
+    // Handle Feedback
+    private void OpenFeedbacksModal(TeacherSubmissionRowDto row)
+    {
+        selectedSubmission = row;
+        
+        isModalOpen = true;
+    }
+
+    private async Task CloseModal(bool hasFeedChanged)
+    {
+        isModalOpen = false;
+        selectedSubmission = null;
+    
+        if (hasFeedChanged)
+        {
+            await LoadTeacherSubmissionRowsAsync();
         }
     }
 }

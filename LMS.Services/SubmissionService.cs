@@ -129,7 +129,8 @@ namespace LMS.Services
 					if (status is not null && rowStatus != status)
 						continue;
 
-					rows.Add(new TeacherSubmissionRowDto(
+                    var feedbackCount = latest?.Feedbacks?.Count ?? 0;
+                    rows.Add(new TeacherSubmissionRowDto(
 						assignment.Id,
 						assignment.Name,
 						assignment.Module.Name,
@@ -140,7 +141,8 @@ namespace LMS.Services
 						latest?.Id,
 						latest?.SubmittedAt,
 						latest?.Document.FileName,
-						latest?.Feedback is not null));
+                        feedbackCount > 0,
+                        feedbackCount));
 				}
 			}
 

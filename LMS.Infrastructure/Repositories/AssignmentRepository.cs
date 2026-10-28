@@ -19,8 +19,9 @@ namespace LMS.Infrastructure.Repositories
 				.Include(assignment => assignment.Module)				
 				.Include(assignment => assignment.Submissions
 					.Where(submission => submission.StudentId == studentId))
-					.ThenInclude(submission => submission.Feedback)
-				.Where(assignment => assignment.Module.CourseId == courseId)
+					.ThenInclude(submission => submission.Feedbacks)
+						.ThenInclude(feedback => feedback.Teacher)
+                .Where(assignment => assignment.Module.CourseId == courseId)
 				.OrderBy(assignment => assignment.Deadline == null)
 				.ThenBy(assignment => assignment.Deadline)
 				.ThenBy(assignment => assignment.Name)
@@ -35,7 +36,7 @@ namespace LMS.Infrastructure.Repositories
 				// Filtered include: other students' submissions are never loaded.
 				.Include(assignment => assignment.Submissions
 					.Where(submission => submission.StudentId == studentId))
-					.ThenInclude(submission => submission.Feedback)
+					.ThenInclude(submission => submission.Feedbacks)
 				.FirstOrDefaultAsync(assignment => assignment.Id == id);
 		}
 
@@ -48,7 +49,7 @@ namespace LMS.Infrastructure.Repositories
 				.Include(assignment => assignment.Submissions)
 					.ThenInclude(submission => submission.Document)
 				.Include(assignment => assignment.Submissions)
-					.ThenInclude(submission => submission.Feedback)
+					.ThenInclude(submission => submission.Feedbacks)
 				.Where(assignment =>
 					assignment.Module.CourseId == courseId &&
 					assignment.RequiresSubmission)

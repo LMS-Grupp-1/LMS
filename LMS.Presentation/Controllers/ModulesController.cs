@@ -1,6 +1,5 @@
 ﻿using global::LMS.Shared.DTOs.ModulesDtos;
 using LMS.Shared.Constants;
-using LMS.Shared.DTOs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;

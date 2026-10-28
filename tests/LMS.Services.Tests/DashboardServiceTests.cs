@@ -275,8 +275,11 @@ namespace LMS.Services.Tests
 				assignment.Submissions.Add(new Submission
 				{
 					SubmittedAt = submittedAt.Value,
-					Feedback = withFeedback ? new Feedback { Comment = "Good" } : null
-				});
+					Feedbacks = withFeedback ? new List<Feedback>
+						{
+							new Feedback { Comment = "Good" }
+						} : new List<Feedback>()
+                });
 			}
 
 			return assignment;

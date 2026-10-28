@@ -484,8 +484,11 @@ namespace LMS.Services.Tests
 					ContentType = "application/pdf",
 					BlobPath = $"blob-{id}"
 				},
-				Feedback = withFeedback ? new Feedback { Comment = "Good" } : null
-			};
+				Feedbacks = withFeedback ? new List<Feedback>
+					{
+						new Feedback { Comment = "Good" }
+					} : new List<Feedback>()
+            };
 
 		// The course exists, and has the given assignments and students.
 		private void SetupTeacherOverview(List<Assignment> assignments, List<ApplicationUser> students)
