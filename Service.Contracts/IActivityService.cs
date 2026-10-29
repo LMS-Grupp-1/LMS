@@ -10,6 +10,11 @@ public interface IActivityService
 
     Task UpdateActivityAsync(int moduleId, int activityId, ActivityFormDto dto);
 
+    Task DeleteActivityAsync(
+        int moduleId,
+        int activityId,
+        ActivityDeleteRequestDto request);
+
     Task<ActivityDeletionPreviewDto> GetDeletionPreviewAsync(
         int moduleId,
         int activityId);

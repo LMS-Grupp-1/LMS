@@ -9,6 +9,7 @@ namespace LMS.Shared.DTOs.ActivityDtos;
         IReadOnlyList<ActivityDeletionDocumentDto> Documents,
         IReadOnlyList<ActivityDeletionAssignmentDto> Assignments)
     {
+        public string Version { get; init; } = string.Empty;
         public bool RequiresAdditionalConfirmation =>
             Assignments.Any(assignment =>
                 assignment.SubmissionCount > 0 ||

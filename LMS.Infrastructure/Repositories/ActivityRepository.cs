@@ -20,38 +20,6 @@ public class ActivityRepository(ApplicationDbContext context)
 			.ToListAsync();
 	}
 
-    public async Task<ActivityDeletionPreviewDto?> GetDeletionPreviewAsync(
-        int moduleId,
-        int activityId)
-    {
-        return await Set
-            .AsNoTracking()
-            .Where(activity => activity.Id == activityId && activity.ModuleId == moduleId)
-            .Select(activity => new ActivityDeletionPreviewDto(
-                activity.Id,
-                activity.Name,
-                activity.Documents
-                    .OrderBy(document => document.Name)
-                    .ThenBy(document => document.Id)
-                    .Select(document => new ActivityDeletionDocumentDto(
-                        document.Id,
-                        document.Name,
-                        document.FileName))
-                    .ToList(),
-                activity.Assignments
-                    .OrderBy(assignment => assignment.Name)
-                    .ThenBy(assigment => assigment.Id)
-                    .Select(assignment => new ActivityDeletionAssignmentDto(
-                        assignment.Id,
-                        assignment.Name,
-                        assignment.Submissions.Count(),
-                        assignment.Submissions
-                            .SelectMany(submission => submission.Feedbacks)
-                            .Count()))
-                    .ToList()))
-            .SingleOrDefaultAsync();
-    }
-
 	public async Task<Activity?> GetWithModuleAndCourseAsync(int id)
 	{
 		return await _context.Activities
@@ -150,5 +118,21 @@ public class ActivityRepository(ApplicationDbContext context)
                 activity.StartDate < endDate &&
                 activity.EndDate > startDate,
             cancellationToken);
+    }
+
+    public async Task<Activity?> GetForDeletionAsync(
+        int moduleId,
+        int activityId)
+    {
+        return await Set
+            .AsTracking()
+            .Include(activity => activity.Documents)
+            .Include(activity => activity.Assignments)
+                .ThenInclude(assignment => assignment.Submissions)
+                    .ThenInclude(submission => submission.Feedbacks)
+            .AsSingleQuery()
+            .SingleOrDefaultAsync(activity =>
+                activity.Id == activityId &&
+                activity.ModuleId == moduleId);
     }
 }
