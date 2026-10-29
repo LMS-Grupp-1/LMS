@@ -127,7 +127,7 @@
         try
         {
             using var content = JsonContent.Create(moduleModel);
-        
+
             string? responseErrorMessage;
 
             if (IsEditMode && ModuleToEdit != null)
@@ -152,7 +152,15 @@
             // If the backend returned a validation error or 404, display it in the UI banner
             if (!string.IsNullOrEmpty(responseErrorMessage))
             {
-                submitErrorMessage = responseErrorMessage;
+                submitErrorMessage = responseErrorMessage switch
+                {
+                    "The module period must include all exisiting activities." =>
+                        "Modulens datum måste omfatta alla befintliga aktiviteter." +
+                        "Ändra aktiviteternas datum först om du vill förkorta modulens period.",
+
+                    _ => responseErrorMessage
+                };
+
                 return;
             }
             else
