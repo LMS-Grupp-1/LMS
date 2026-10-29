@@ -6,4 +6,5 @@ public interface IUserRepository
 {
     Task<IEnumerable<UserDto>> GetUsersWithCoursesAsync();
     Task<IEnumerable<UserDto>> GetStudentsByCourseIdAsync(int courseId);
+    Task<IReadOnlyList<UserLookupDto>> GetUsersByCourseIdAsync(int courseId, string? role = null);
 }

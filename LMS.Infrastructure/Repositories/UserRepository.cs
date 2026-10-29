@@ -58,4 +58,26 @@ public class UserRepository : IUserRepository
                           CourseName = c != null ? c.Name : "Kurs finns inte"
                       }).ToListAsync();
     }
+
+    public async Task<IReadOnlyList<UserLookupDto>> GetUsersByCourseIdAsync(int courseId, string? role = null)
+    {
+        var query = _context.Users.Where(u => u.CourseId == courseId);
+
+        if (!string.IsNullOrEmpty(role))
+        {
+            // Only join and check roles table if a specific role is requested
+            query = query.Where(u => _context.UserRoles
+                .Where(ur => ur.UserId == u.Id)
+                .Join(_context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+                .Any(rName => rName == role));
+        }
+
+        return await query
+            .OrderBy(u => u.FirstName)
+            .Select(u => new UserLookupDto(
+                u.Id,
+                u.FirstName + " " + u.LastName
+            ))
+            .ToListAsync();
+    }
 }

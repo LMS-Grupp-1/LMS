@@ -1,0 +1,217 @@
+﻿@using LMS.Shared.DTOs.NotificationDtos
+@using LMS.Shared.Constants
+@using LMS.Blazor.Client.Services.ApiProxy
+@implements IDisposable
+@inject IApiProxyClient ApiProxy
+
+@if (IsOpen)
+{
+    <div class="dropdown-menu dropdown-menu-end show shadow p-2" 
+         style="position: absolute; right: 0; top: 100%; width: 350px; max-height: 450px; overflow-y: auto; z-index: 1050;">
+
+        <div class="d-flex justify-content-between align-items-center px-2 py-1 border-bottom mb-2">
+            <span class="fw-bold">Notifieringar</span>
+            
+            <div class="d-flex align-items-center gap-2">
+                @if (UnreadCount > 0)
+                {
+                    <button class="btn btn-link btn-sm text-decoration-none p-0" @onclick="MarkAllAsRead">
+                        Markera alla som lästa
+                    </button>
+                }
+                <button type="button" class="btn-close" aria-label="Stäng" @onclick="CloseDialog"></button>
+            </div>
+        </div>
+
+        @if (notifications == null)
+        {
+            <div class="text-center py-3 text-muted small">Laddar notifieringar...</div>
+        }
+        else if (!notifications.Any())
+        {
+            <div class="text-center py-3 text-muted small">Inga notifieringar att visa.</div>
+        }
+        else
+        {
+            <div class="list-group list-group-flush">
+                @foreach (var item in notifications)
+                {
+                    <div class="list-group-item list-group-item-action border-0 rounded mb-1 p-2 @(item.IsRead ? "bg-light text-muted" : "bg-white fw-semibold")"
+                         style="cursor: pointer;"
+                         title="@(item.IsRead ? "" : "Markera som läst")"
+                         @onclick="() => HandleNotificationClick(item)">
+                        <div class="d-flex align-items-start">
+                            <div class="me-2 fs-5">
+                                <i class="@GetNotificationIcon(item.NotificationType)"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="small fw-bold text-truncate me-1">@item.Title</span>
+                                    <small class="text-muted text-nowrap" style="font-size: 0.7rem;">@GetFormattedTime(item.CreatedAt)</small>
+                                </div>
+                                <p class="mb-0 small text-secondary text-break" style="font-size: 0.8rem;">@item.Message</p>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+    [Parameter] public EventCallback<int> OnUnreadCountChanged { get; set; }
+
+    private IReadOnlyList<NotificationDto> serverNotifications = Array.Empty<NotificationDto>();
+    private List<NotificationDto> notifications = new(); // For UI changing IsRead=true.
+    public int UnreadCount { get; private set; }
+
+    private PeriodicTimer? _timer;
+    private CancellationTokenSource? _cts;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await FetchNotificationsAsync();
+
+        // Initialize 60-second polling loop cleanly
+        _cts = new CancellationTokenSource();
+        _timer = new PeriodicTimer(TimeSpan.FromSeconds(60));
+        _ = PollForNotificationsAsync(_cts.Token);
+    }
+
+    public async Task FetchNotificationsAsync()
+    {
+        try
+        {
+            serverNotifications = await ApiProxy.GetAsync<IReadOnlyList<NotificationDto>>("notifications")
+                ?? Array.Empty<NotificationDto>();
+            if (serverNotifications.Any())
+            {
+                notifications = serverNotifications.ToList();
+                UnreadCount = notifications.Count(n => !n.IsRead);
+                await OnUnreadCountChanged.InvokeAsync(UnreadCount);
+                StateHasChanged();
+            }
+            else
+            {
+                notifications = new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Notifications] Error fetching: {ex.Message}");
+        }
+    }
+
+    private async Task PollForNotificationsAsync(CancellationToken token)
+    {
+        try
+        {
+            while (_timer != null && await _timer.WaitForNextTickAsync(token))
+            {
+                await FetchNotificationsAsync();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected upon component disposal. It is normal to have it here.
+        }
+    }
+
+    private async Task MarkAllAsRead()
+    {
+        try
+        {
+            var (success, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                HttpMethod.Post,
+                "notifications/read-all",
+                null
+            );
+
+            if (success)
+            {
+                foreach (var notification in notifications)
+                {
+                    var index = notifications.FindIndex(n => n.Id == notification.Id);
+                    if (index != -1)
+                    {
+                        notifications[index] = notifications[index] with { IsRead = true };
+                    }
+                }
+
+                UnreadCount = 0;
+                await OnUnreadCountChanged.InvokeAsync(UnreadCount);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Notifications] Error marking all as read: {ex.Message}");
+        }
+    }
+
+    private async Task HandleNotificationClick(NotificationDto item)
+    {
+        if (!item.IsRead)
+        {
+            try
+            {
+                var (success, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                    HttpMethod.Post,
+                    $"notifications/{item.Id}/read",
+                    null
+                );
+
+                if (success)
+                {
+                    var index = notifications.FindIndex(n => n.Id == item.Id);
+                    if (index != -1)
+                    {
+                        notifications[index] = notifications[index] with { IsRead = true };
+                    }
+
+                    UnreadCount = Math.Max(0, UnreadCount - 1);
+                    await OnUnreadCountChanged.InvokeAsync(UnreadCount);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Notifications] Error marking as read: {ex.Message}");
+            }
+        }
+
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    private string GetNotificationIcon(string type) => type switch
+    {
+        NotificationTypes.NewAssignment => "bi bi-file-text text-warning",
+        NotificationTypes.NewFeedback => "bi bi-chat-square-text text-success",
+        NotificationTypes.NewMaterial => "bi bi-folder2-open text-primary",
+        NotificationTypes.NewSubmission => "bi bi-file-earmark-person text-warning",
+        _ => "bi bi-bell text-secondary"
+    };
+
+    private string GetFormattedTime(DateTimeOffset createdAt)
+    {
+        var span = DateTimeOffset.UtcNow - createdAt;
+        if (span.TotalMinutes < 1) return "Nu";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m sedan";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h sedan";
+        return createdAt.ToString("yyyy-MM-dd");
+    }
+
+    private async Task CloseDialog()
+    {
+        await IsOpenChanged.InvokeAsync(false);
+    }
+
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        _timer?.Dispose();
+        _cts?.Dispose();
+    }
+}

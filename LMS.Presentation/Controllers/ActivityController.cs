@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Contracts;
 
-namespace LMS.Presentation;
+namespace LMS.Presentation.Controllers;
 
 [ApiController]
 [Authorize]

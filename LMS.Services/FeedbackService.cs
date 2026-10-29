@@ -1,5 +1,6 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
+using LMS.Shared.Constants;
 using LMS.Shared.DTOs.FeedbackDtos;
 using Service.Contracts;
 using System;
@@ -45,6 +46,30 @@ public class FeedbackService : IFeedbackService
         };
 
         await _unitOfWork.Feedbacks.AddAsync(feedback);
+
+        // Create notification to the student
+        var submission = await _unitOfWork.Submissions.GetByIdAsync(dto.SubmissionId);
+        if (submission != null)
+        {
+            // Fetch the assignment separately if it wasn't eager-loaded
+            var assignment = await _unitOfWork.Assignments.GetByIdAsync(submission.AssignmentId);
+            string assignmentName = assignment?.Name ?? "inlämningen";
+
+            var notification = new Notification
+            {
+                UserId = submission.StudentId,
+                Title = "Ny feedback",
+                Message = $"Du har fått ny feedback på din inlämning för {assignmentName}.",
+                TargetId = submission.AssignmentId,
+                NotificationType = NotificationTypes.NewFeedback,
+                CreatedAt = DateTimeOffset.UtcNow,
+                IsRead = false
+            };
+
+            await _unitOfWork.Notifications.AddAsync(notification);
+        }
+
+
         await _unitOfWork.CompleteAsync();
     }
 }

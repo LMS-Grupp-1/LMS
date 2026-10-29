@@ -4,6 +4,7 @@ using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.AssignmentDtos;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using Service.Contracts;
 
@@ -13,7 +14,8 @@ namespace LMS.Services
 	IUnitOfWork uow,
 	IDocumentStorage storage,
 	TimeProvider timeProvider,
-	ILogger<SubmissionService> logger) : ISubmissionService
+	ILogger<SubmissionService> logger,
+    UserManager<ApplicationUser> userManager) : ISubmissionService
 	{
 		public async Task<StudentAssignmentDto> SubmitAsync(
 			int assignmentId,
@@ -24,8 +26,9 @@ namespace LMS.Services
 		{
 			var course = await uow.Courses.GetForStudentAsync(userId, trackChanges: false)
 				?? throw new StudentCourseNotFoundException();
+			var courseId = course.Id;
 
-			var assignment = await uow.Assignments.GetByIdForStudentAsync(assignmentId, userId);
+            var assignment = await uow.Assignments.GetByIdForStudentAsync(assignmentId, userId);
 			if (assignment is null || assignment.Module.CourseId != course.Id)
 			{
 				throw new AssignmentNotFoundException();
@@ -66,7 +69,30 @@ namespace LMS.Services
 			try
 			{
 				await uow.Submissions.AddAsync(submission);
-				await uow.CompleteAsync();
+
+                // Create notifications to the teachers associated with this course
+                var teachersInCourse = await uow.Users.GetUsersByCourseIdAsync(courseId, UserRoles.Teacher);
+                string assignmentName = assignment?.Name ?? "en uppgift";
+                var student = await userManager.FindByIdAsync(userId);
+                string studentName = student != null ? $"{student.FirstName} {student.LastName}" : "En student";
+                foreach (var teacher in teachersInCourse)
+                {
+                    var notification = new Notification
+                    {
+                        UserId = teacher.Id,
+                        Title = "Ny inlämning",
+                        Message = $"{studentName} har inlämnat {assignmentName}.",
+                        TargetId = submission.Id,
+                        NotificationType = NotificationTypes.NewSubmission,
+                        CreatedAt = DateTimeOffset.UtcNow,
+                        IsRead = false
+                    };
+
+                    await uow.Notifications.AddAsync(notification);
+                }
+
+                // Commit ALL changes (submission + notifications) in one atomic transaction
+                await uow.CompleteAsync();
 			}
 			catch
 			{

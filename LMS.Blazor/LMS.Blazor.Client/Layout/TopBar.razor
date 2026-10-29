@@ -1,8 +1,25 @@
 
+@using LMS.Blazor.Client.Components.Notifications
 
-<div class="top-row px-4 bg-white border-bottom">
+<div class="top-row px-4 bg-white border-bottom d-flex align-items-center justify-content-end">
     <AuthorizeView>
-        <button class="btn"><i class="bi bi-bell"></i></button>
+        <!-- Notification Bell with Dropdown Dialog -->
+        <div class="position-relative d-inline-block me-2">
+            <button class="btn position-relative" @onclick="ToggleNotifications">
+                <i class="bi bi-bell"></i>
+                @if (unreadCount > 0)
+                {
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">
+                            @(unreadCount > 9 ? "9+" : unreadCount.ToString())
+                    </span>
+                }
+            </button>
+
+            <NotificationBellDialog IsOpen="isNotificationOpen" 
+                    IsOpenChanged="((bool value) => isNotificationOpen = value)" 
+                    OnUnreadCountChanged="HandleUnreadCountChanged" />
+        </div>
+
         <button class="btn"><i class="bi bi-person-circle"></i> @context.User.Identity?.Name</button>
         
         <div class="nav-item px-3">
@@ -19,5 +36,17 @@
 </div>
 
 @code {
-    
+    private bool isNotificationOpen = false;
+    private int unreadCount = 0;
+
+    private void ToggleNotifications()
+    {
+        isNotificationOpen = !isNotificationOpen;
+    }
+
+    private void HandleUnreadCountChanged(int count)
+    {
+        unreadCount = count;
+        StateHasChanged();
+    }
 }
