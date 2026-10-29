@@ -16,7 +16,7 @@
 
 @if (isLoading)
 {
-    <p role="status">Hämtar moduler och aktiviteter...</p>
+    <p role="status">Hämtar kurser, moduler och aktiviteter...</p>
 }
 
 <div class="mb-3">
@@ -29,7 +29,7 @@
             disabled="@(Disabled || isLoading || targets.Count == 0)"
             @bind="targetIndex"
             @bind:after="NotifyTargetChangedAsync">
-        <option value="-1">Välj modul eller aktivitet...</option>
+        <option value="-1">Välj kurs, modul eller aktivitet...</option>
 
         @for (int index = 0; index < targets.Count; index++)
         {
@@ -77,7 +77,7 @@
 
             if (targets.Count == 0)
             {
-                error = "Kursen saknar moduler och aktiviteter " +
+                error = "Kursen saknar kurser, moduler och aktiviteter " +
                         "att koppla dokumentet till.";
             }
 
@@ -96,7 +96,7 @@
 
             error = ex is UnauthorizedAccessException
                 ? "Din session har gått ut. Logga in igen."
-                : "Modulerna och aktiviteterna kunde inte hämtas. " +
+                : "Kurserna, modulerna och aktiviteterna kunde inte hämtas. " +
                   "Stäng dialogen och försök igen.";
         }
         finally

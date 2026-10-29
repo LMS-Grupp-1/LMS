@@ -103,7 +103,7 @@
             ? new DocumentTarget(ActivityId: activityId)
             : Document.ModuleId is int moduleId
                 ? new DocumentTarget(ModuleId: moduleId)
-                : null;
+                : new DocumentTarget(CourseId: Document.CourseId);
     }
 
     private void TargetChanged(DocumentTarget? target)

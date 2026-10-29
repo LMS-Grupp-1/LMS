@@ -70,7 +70,7 @@ public class ActivityService : IActivityService
     public async Task UpdateActivityAsync(int moduleId, int activityId, ActivityFormDto dto)
     {
         var activity = await _unitOfWork.Activities.GetByIdAsync(activityId);
-        if (activity == null)
+        if (activity == null || activity.ModuleId != moduleId)
         {
             throw new EntityNotFoundException("Activity", activityId);
         }

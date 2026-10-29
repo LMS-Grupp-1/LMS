@@ -413,14 +413,13 @@ public sealed class DocumentService(
 
     private static void ValidateTarget(DocumentTarget target)
     {
-        if (target.CourseId.HasValue ||
-            CountTargets(target) != 1 ||
+        if (CountTargets(target) != 1 ||
             target.CourseId is <= 0 ||
             target.ModuleId is <= 0 ||
             target.ActivityId is <= 0)
         {
             throw new DocumentValidationException(
-                "Select one module or activity.");
+                "Select one course, module or activity.");
         }
     }
 }

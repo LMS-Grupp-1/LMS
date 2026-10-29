@@ -1,0 +1,49 @@
+﻿@using LMS.Shared.DTOs.ActivityDtos
+
+<p>
+    Vill du radera aktiviteten <strong>@Preview.ActivityName</strong>?
+    Åtgärden går inte att ångra.
+</p>
+
+@if (Preview.Documents.Count > 0)
+{
+    <h6>Dokument som också raderas</h6>
+
+    <ul>
+        @foreach (var document in Preview.Documents)
+        {
+            <li @key="document.Id">
+                @document.Name
+                <span class="text-muted">(@document.FileName)</span>
+            </li>
+        }
+    </ul>
+}
+
+@if (Preview.Assignments.Count > 0)
+{
+    <h6>Uppgifter som också raderas</h6>
+
+    <ul>
+        @foreach (var assignment in Preview.Assignments)
+        {
+            <li @key="assignment.Id">
+                @assignment.Name
+                <span class="text-muted">
+                    – @assignment.SubmissionCount inlämningar,
+                    @assignment.FeedbackCount feedbackposter
+                </span>
+            </li>
+        }
+    </ul>
+}
+
+@if (Preview.Documents.Count == 0 && Preview.Assignments.Count == 0)
+{
+    <p>Aktiviteten har inga kopplade dokument eller uppgifter.</p>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ActivityDeletionPreviewDto Preview { get; set; } = default!;
+}
