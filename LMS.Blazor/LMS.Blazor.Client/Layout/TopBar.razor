@@ -20,7 +20,10 @@
                     OnUnreadCountChanged="HandleUnreadCountChanged" />
         </div>
 
-        <button class="btn"><i class="bi bi-person-circle"></i> @context.User.Identity?.Name</button>
+        <button class="btn">
+            <i class="@(context.User.IsInRole("Student") ? "bi bi-person-circle" : "bi bi-person-fill-gear")"></i> 
+            @context.User.Identity?.Name
+        </button>
         
         <div class="nav-item px-3">
             <form action="Account/Logout" method="post">
