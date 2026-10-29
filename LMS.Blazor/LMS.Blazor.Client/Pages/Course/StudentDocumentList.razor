@@ -1,0 +1,209 @@
+﻿@page "/courses/{CourseId:int}/documents"
+@using LMS.Shared.DTOs.DocumentDtos;
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Components.Common
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject IApiProxyClient ApiProxy
+
+<div class="card border-0">
+    <div class="card-header border-0 py-3">
+        <h5 class="mb-0 text-dark">
+            <i class="bi bi-file-earmark-text me-2"></i>Alla dokument i kursen
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-warning">@errorMessage</div>
+        }
+
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (!documents.Any())
+        {
+            <div class="text-center p-4 text-muted">
+                <i class="bi bi-folder2-open fs-2 d-block mb-2"></i>
+                No documents available.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Namn</th>
+                            <th>Beskrivning</th>
+                            <th>Fil</th>
+                            <th>Storlek</th>
+                            <th>Uppladdad</th>
+                            <th class="text-end">Åtgärd</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var doc in documents)
+                        {
+                            <tr>
+                                <td>
+                                    <div>@doc.Name</div>
+                                    @if (!string.IsNullOrEmpty(doc.Location))
+                                    {
+                                        <small class="text-muted">@doc.Location</small>                    
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted text-truncate d-inline-block" style="max-width: 150px;">
+                                            @(string.IsNullOrEmpty(doc.Description) ? "-" : doc.Description)
+                                        </span>
+                                        @if (!string.IsNullOrEmpty(doc.Description) && doc.Description.Length > 15)
+                                        {
+                                            <button type="button" 
+                                                    class="btn btn-link btn-sm p-0 text-decoration-none text-nowrap" 
+                                                    @onclick="() => ShowDescription(doc.Description)">
+                                                se mer
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <code>@doc.FileName</code>
+                                </td>
+                                <td>@FormatFileSize(doc.SizeBytes)</td>
+                                <td>
+                                    <div>@doc.UploadedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                                    <small class="text-muted">Av @doc.UploadedByName</small>
+                                </td>
+                                <td class="text-end">
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        disabled="@(downloadingId is not null)"
+                                        aria-label="@($"Ladda ner {doc.Name}")"
+                                        @onclick="() => DownloadAsync(doc.Id, doc.FileName)">
+                                    @if (downloadingId == doc.Id)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-download"></i>
+                                    }
+                                </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<ConfirmDialog IsOpen="@isDescriptionModalOpen"
+               Title="Dokument beskrivning"
+               Message="@currentDescription"
+               ConfirmButtonText="Stäng"
+               ConfirmButtonClass="btn-primary"
+               OnConfirm="CloseDescriptionDialog"
+               OnCancel="CloseDescriptionDialog" />
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private IReadOnlyList<DocumentDto> documents { get; set; } = Array.Empty<DocumentDto>();
+    private bool isLoading = true;
+    private string? errorMessage = null;
+    private int? downloadingId;
+    private IJSObjectReference? downloadModule;
+
+    // Description dialog
+    private bool isDescriptionModalOpen = false;
+    private string currentDescription = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDocumentsAsync();
+    }
+
+    private async Task LoadDocumentsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            documents = await ApiProxy.GetAsync<IReadOnlyList<DocumentDto>>(
+                $"documents?courseId={CourseId}") ?? Array.Empty<DocumentDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DownloadAsync(int documentId, string fileName)
+    {
+        downloadingId = documentId;
+        errorMessage = null;
+
+        try
+        {            
+            // The API checks that the document belongs to the student's course.
+            downloadModule ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", Navigation.ToAbsoluteUri("js/documents.js").ToString());
+
+            var url = Navigation.ToAbsoluteUri($"api/proxy/documents/{documentId}/download").ToString();
+            var status = await downloadModule.InvokeAsync<int>("download", url, fileName);
+
+            if (status != 200)
+            {
+                errorMessage = "Filen kunde inte hämtas. Försök igen.";
+            }
+        }
+        catch (JSException)
+        {
+            errorMessage = "Filen kunde inte hämtas. Försök igen.";
+        }
+        finally
+        {
+            downloadingId = null;
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double len = bytes;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private void ShowDescription(string description)
+    {
+        currentDescription = description;
+        isDescriptionModalOpen = true;
+    }
+
+    private void CloseDescriptionDialog()
+    {
+        isDescriptionModalOpen = false;
+        currentDescription = string.Empty;
+}
+}

@@ -21,7 +21,7 @@
         </div>
 
         <button class="btn">
-            <i class="@(context.User.IsInRole("Student") ? "bi bi-person-circle" : "bi bi-person-fill-gear")"></i> 
+            <i class="@(context.User.IsInRole("Student") ? "bi bi-person-circle" : "bi bi-person-vcard")"></i> 
             @context.User.Identity?.Name
         </button>
         
