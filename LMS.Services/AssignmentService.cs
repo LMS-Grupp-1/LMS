@@ -1,8 +1,9 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
-using LMS.Shared.DTOs.AssignmentDtos;
 using LMS.Shared.Constants;
+using LMS.Shared.DTOs.AssignmentDtos;
+using LMS.Shared.DTOs.Users;
 using Service.Contracts;
 using System.Xml.Linq;
 
@@ -50,8 +51,9 @@ namespace LMS.Services
 
             // Create notifications to the students associated with this course
             int courseId = activity.Module.CourseId;
-            var studentsInCourse = await _uow.Users.GetUsersByCourseIdAsync(courseId, UserRoles.Student);
-			string asType = dto.RequiresSubmission ? "inlämningsuppgift" : "uppgift";
+            var studentsInCourse = await _uow.Users.GetUsersByCourseIdAsync(courseId, UserRoles.Student)
+									?? Array.Empty<UserLookupDto>();
+            string asType = dto.RequiresSubmission ? "inlämningsuppgift" : "uppgift";
 			string title = $"Ny {asType}";
             string msg = $"{dto.Name}: ni får den nya {asType}en i {activity.Module.Name}";
             foreach (var student in studentsInCourse)

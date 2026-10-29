@@ -4,7 +4,7 @@ using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.AssignmentDtos;
-using Microsoft.AspNetCore.Identity;
+using LMS.Shared.DTOs.Users;
 using Microsoft.Extensions.Logging;
 using Service.Contracts;
 
@@ -14,8 +14,7 @@ namespace LMS.Services
 	IUnitOfWork uow,
 	IDocumentStorage storage,
 	TimeProvider timeProvider,
-	ILogger<SubmissionService> logger,
-    UserManager<ApplicationUser> userManager) : ISubmissionService
+	ILogger<SubmissionService> logger) : ISubmissionService
 	{
 		public async Task<StudentAssignmentDto> SubmitAsync(
 			int assignmentId,
@@ -71,10 +70,11 @@ namespace LMS.Services
 				await uow.Submissions.AddAsync(submission);
 
                 // Create notifications to the teachers associated with this course
-                var teachersInCourse = await uow.Users.GetUsersByCourseIdAsync(courseId, UserRoles.Teacher);
+                var teachersInCourse = await uow.Users.GetUsersByCourseIdAsync(courseId, UserRoles.Teacher)
+                                                    ?? Array.Empty<UserLookupDto>();
                 string assignmentName = assignment?.Name ?? "en uppgift";
-                var student = await userManager.FindByIdAsync(userId);
-                string studentName = student != null ? $"{student.FirstName} {student.LastName}" : "En student";
+				var student = await uow.Users.FindByIdAsync(userId);
+				string studentName = student != null ? $"{student.FirstName} {student.LastName}" : "En student";
                 foreach (var teacher in teachersInCourse)
                 {
                     var notification = new Notification

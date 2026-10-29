@@ -4,6 +4,7 @@ using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
+using LMS.Shared.DTOs.Users;
 using Microsoft.Extensions.Logging;
 using Service.Contracts;
 using System.Xml.Linq;
@@ -135,7 +136,8 @@ public sealed class DocumentService(
                 document, cancellationToken);
 
             // Create notifications to the students associated with this course
-            var studentsInCourse = await unitOfWork.Users.GetUsersByCourseIdAsync(courseId.Value, UserRoles.Student);
+            var studentsInCourse = await unitOfWork.Users.GetUsersByCourseIdAsync(courseId.Value, UserRoles.Student)
+                                    ?? Array.Empty<UserLookupDto>();
             int targetId = target.ActivityId.HasValue
                 ? target.ActivityId.Value
                 : (target.ModuleId.HasValue

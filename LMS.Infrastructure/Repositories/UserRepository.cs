@@ -1,4 +1,5 @@
 ﻿using Domain.Contracts;
+using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.Users;
@@ -6,13 +7,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories;
 
-public class UserRepository : IUserRepository
+public class UserRepository : BaseRepository<ApplicationUser>, IUserRepository
 {
-    private readonly ApplicationDbContext _context;
-
-    public UserRepository(ApplicationDbContext context)
+    public UserRepository(ApplicationDbContext context) : base(context)
     {
-        _context = context;
+    }
+    public async Task<ApplicationUser?> FindByIdAsync(string id)
+    {
+        return await Set.FindAsync(id);
     }
 
     public async Task<IEnumerable<UserDto>> GetUsersWithCoursesAsync()
@@ -61,7 +63,7 @@ public class UserRepository : IUserRepository
 
     public async Task<IReadOnlyList<UserLookupDto>> GetUsersByCourseIdAsync(int courseId, string? role = null)
     {
-        var query = _context.Users.Where(u => u.CourseId == courseId);
+        var query = Set.Where(u => u.CourseId == courseId);
 
         if (!string.IsNullOrEmpty(role))
         {

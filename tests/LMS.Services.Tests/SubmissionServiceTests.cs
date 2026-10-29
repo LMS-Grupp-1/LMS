@@ -2,6 +2,7 @@
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.AssignmentDtos;
+using LMS.Shared.DTOs.Users;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Text;
@@ -163,8 +164,16 @@ namespace LMS.Services.Tests
 			SetupAssignment(assignment);
 			AddSubmissionToAssignmentWhenSaved(assignment);
 
-			// Act
-			var result = await _sut.SubmitAsync(
+            // Mock the teacher lookup so it doesn't return null when generating notifications
+            _uow.Setup(u => u.Users.GetUsersByCourseIdAsync(It.IsAny<int>(), It.IsAny<string>()))
+                .ReturnsAsync(Array.Empty<UserLookupDto>());
+
+            // Mock Notifications AddAsync to succeed when the notification is added
+            _uow.Setup(u => u.Notifications.AddAsync(It.IsAny<Notification>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _sut.SubmitAsync(
 				AssignmentId, StudentId, "report.pdf", CreateFile(), CancellationToken.None);
 
 			// Assert: the submission that was added has the right links and the server time.
@@ -204,8 +213,16 @@ namespace LMS.Services.Tests
 			SetupAssignment(assignment);
 			AddSubmissionToAssignmentWhenSaved(assignment);
 
-			// Act
-			var result = await _sut.SubmitAsync(
+            // Mock the teacher lookup so it doesn't return null when generating notifications
+            _uow.Setup(u => u.Users.GetUsersByCourseIdAsync(It.IsAny<int>(), It.IsAny<string>()))
+                .ReturnsAsync(Array.Empty<UserLookupDto>());
+
+            // Mock Notifications AddAsync to succeed when the notification is added
+            _uow.Setup(u => u.Notifications.AddAsync(It.IsAny<Notification>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _sut.SubmitAsync(
 				AssignmentId, StudentId, "report.pdf", CreateFile(), CancellationToken.None);
 
 			// Assert: a late submission is still saved, but marked as late.
@@ -223,7 +240,17 @@ namespace LMS.Services.Tests
 		{
 			// Arrange: a valid assignment, but CompleteAsync throws (for example a lost database connection).
 			SetupAssignment(CreateAssignment());
-			_uow
+
+            // Mock the teacher lookup so it returns an empty list (or a dummy teacher) 
+            // to prevent null references during notification generation.
+            _uow.Setup(u => u.Users.GetUsersByCourseIdAsync(It.IsAny<int>(), It.IsAny<string>()))
+                .ReturnsAsync(Array.Empty<UserLookupDto>());
+
+            // Mock Notifications AddAsync to succeed
+            _uow.Setup(u => u.Notifications.AddAsync(It.IsAny<Notification>()))
+                .Returns(Task.CompletedTask);
+
+            _uow
 				.Setup(u => u.CompleteAsync())
 				.ThrowsAsync(new InvalidOperationException("Database is down"));
 

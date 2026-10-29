@@ -2,6 +2,7 @@
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.AssignmentDtos;
+using LMS.Shared.DTOs.Users;
 using Moq;
 
 namespace LMS.Services.Tests
@@ -57,8 +58,16 @@ namespace LMS.Services.Tests
 			SetupActivity(CreateActivity(ActivityId, ModuleId));
 			var form = CreateForm(deadline: new DateTime(2026, 11, 10, 17, 0, 0));
 
-			// Act
-			await _sut.CreateAsync(form);
+            // Mock student lookup for the new notification logic so it returns an empty list safely
+            _uow.Setup(u => u.Users.GetUsersByCourseIdAsync(It.IsAny<int>(), It.IsAny<string>()))
+                .ReturnsAsync(Array.Empty<UserLookupDto>());
+
+            // Mock Notifications AddAsync to succeed when student notifications are registered
+            _uow.Setup(u => u.Notifications.AddAsync(It.IsAny<Notification>()))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            await _sut.CreateAsync(form);
 
 			// Assert: the saved assignment has the module and activity from the server side,
 			// and the name is trimmed.
@@ -113,7 +122,15 @@ namespace LMS.Services.Tests
 			SetupActivity(CreateActivity(ActivityId, ModuleId));
 			var form = CreateForm(deadline: CourseEnd.AddHours(17));
 
-			await _sut.CreateAsync(form);
+            // Mock student lookup for the new notification logic so it returns an empty list safely
+            _uow.Setup(u => u.Users.GetUsersByCourseIdAsync(It.IsAny<int>(), It.IsAny<string>()))
+                .ReturnsAsync(Array.Empty<UserLookupDto>());
+
+            // Mock Notifications AddAsync to succeed when student notifications are registered
+            _uow.Setup(u => u.Notifications.AddAsync(It.IsAny<Notification>()))
+                .Returns(Task.CompletedTask);
+
+            await _sut.CreateAsync(form);
 
 			_uow.Verify(u => u.CompleteAsync(), Times.Once);
 		}
@@ -128,7 +145,15 @@ namespace LMS.Services.Tests
 			SetupActivity(CreateActivity(ActivityId, ModuleId));
 			var form = CreateForm(deadline: ModuleEnd.AddDays(5).AddHours(17));
 
-			await _sut.CreateAsync(form);
+            // Mock student lookup for the new notification logic so it returns an empty list safely
+            _uow.Setup(u => u.Users.GetUsersByCourseIdAsync(It.IsAny<int>(), It.IsAny<string>()))
+                .ReturnsAsync(Array.Empty<UserLookupDto>());
+
+            // Mock Notifications AddAsync to succeed when student notifications are registered
+            _uow.Setup(u => u.Notifications.AddAsync(It.IsAny<Notification>()))
+                .Returns(Task.CompletedTask);
+
+            await _sut.CreateAsync(form);
 
 			_uow.Verify(u => u.CompleteAsync(), Times.Once);
 		}
