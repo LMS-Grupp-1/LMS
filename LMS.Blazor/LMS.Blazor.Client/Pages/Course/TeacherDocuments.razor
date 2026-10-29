@@ -75,7 +75,7 @@ else
         }
 
         <form @onsubmit="UploadAsync" @onsubmit:preventDefault>
-            <fieldset disabled="@isBusy || targets.Count == 0">
+            <fieldset disabled="@(isBusy || targets.Count == 0)">
                 <legend class="visually-hidden">
                     Uppgifter för dokumentet
                 </legend>
