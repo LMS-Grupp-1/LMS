@@ -163,6 +163,10 @@ public class ModuleServiceTests
         _unitOfWorkMock.Setup(u => u.Courses.GetByIdAsync(courseId, false)).ReturnsAsync(course);
         _unitOfWorkMock.Setup(u => u.Modules.GetModulesByCourseIdAsync(courseId)).ReturnsAsync(new List<Module> { existingModule });
 
+        _unitOfWorkMock
+            .Setup(u => u.Activities.GetActivityByModuleIdAsync(moduleId))
+            .ReturnsAsync(Array.Empty<Activity>());
+
         // Act
         await _sut.UpdateModuleAsync(courseId, moduleId, dto);
 

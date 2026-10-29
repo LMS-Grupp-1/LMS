@@ -75,7 +75,7 @@ else
         }
 
         <form @onsubmit="UploadAsync" @onsubmit:preventDefault>
-            <fieldset disabled="@isBusy || targets.Count == 0">
+            <fieldset disabled="@(isBusy || targets.Count == 0)">
                 <legend class="visually-hidden">
                     Uppgifter för dokumentet
                 </legend>
@@ -111,6 +111,7 @@ else
                     <select id="document-target"
                             class="form-select"
                             @bind="targetIndex">
+                    <option value="-1">Välj modul eller aktivitet</option>
                         @for (int index = 0; index < targets.Count; index++)
                         {
                             <option value="@index">

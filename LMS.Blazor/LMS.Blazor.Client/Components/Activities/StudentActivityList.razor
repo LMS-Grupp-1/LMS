@@ -1,0 +1,100 @@
+﻿@using System.Net
+@using LMS.Blazor.Client.Helpers
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.ActivityDtos
+@inject IApiProxyClient ApiProxy
+
+<h6 class="fw-bold text-secondary mb-2">AKTIVITETER</h6>
+
+@if (isLoading)
+{
+    <p class="text-muted" role="status">Laddar aktiviteter...</p>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-warning" role="alert">
+        @errorMessage
+    </div>
+}
+else if (activities.Count == 0)
+{
+    <p class="text-muted mb-0">
+        Det finns inga aktiviteter i den här modulen ännu.
+    </p>
+}
+else
+{
+    <ul class="list-group">
+        @foreach (var activity in activities)
+        {
+            <li class="list-group-item" @key="activity.Id">
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                    <span class="badge @ActivityTypeHelper.GetBadgeClass(activity.ActivityTypeId)">
+                        @ActivityTypeHelper.GetName(activity.ActivityTypeId)
+                    </span>
+
+                    <span class="fw-semibold">@activity.Name</span>
+                </div>
+
+                <div class="text-muted small">
+                    @activity.StartDate.ToString("yyyy-MM-dd HH:mm")
+                    –
+                    @activity.EndDate.ToString("yyyy-MM-dd HH:mm")
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(activity.Description))
+                {
+                    <p class="mt-2 mb-0">@activity.Description</p>
+                }
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    [Parameter]
+    public int ModuleId { get; set; }
+
+    private List<ActivityDto> activities = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+    private int? loadedModuleId;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (loadedModuleId == ModuleId)
+        {
+            return;
+        }
+
+        loadedModuleId = ModuleId;
+        isLoading = true;
+        errorMessage = null;
+        activities.Clear();
+
+        try
+        {
+            var result = await ApiProxy.GetAsync<IEnumerable<ActivityDto>>(
+                $"teacher/modules/{ModuleId}/activities");
+
+            activities = result?.ToList() ?? new List<ActivityDto>();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            errorMessage = "Din session har gått ut. Logga in igen.";
+        }
+        catch (HttpRequestException exception)
+            when (exception.StatusCode == HttpStatusCode.NotFound)
+        {
+            errorMessage = "Modulen kunde inte hittas.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Aktiviteterna kunde inte hämtas. Försök igen senare.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}
