@@ -1,5 +1,6 @@
 using Domain.Contracts;
 using Domain.Models.Entities;
+using LMS.Shared.DTOs.ActivityDtos;
 using LMS.Infrastructure.Data;
 using LMS.Shared.DTOs.DashboardDtos;
 using LMS.Shared.DTOs.CourseDtos;
@@ -18,6 +19,38 @@ public class ActivityRepository(ApplicationDbContext context)
 			.OrderBy(activity => activity.StartDate)
 			.ToListAsync();
 	}
+
+    public async Task<ActivityDeletionPreviewDto?> GetDeletionPreviewAsync(
+        int moduleId,
+        int activityId)
+    {
+        return await Set
+            .AsNoTracking()
+            .Where(activity => activity.Id == activityId && activity.ModuleId == moduleId)
+            .Select(activity => new ActivityDeletionPreviewDto(
+                activity.Id,
+                activity.Name,
+                activity.Documents
+                    .OrderBy(document => document.Name)
+                    .ThenBy(document => document.Id)
+                    .Select(document => new ActivityDeletionDocumentDto(
+                        document.Id,
+                        document.Name,
+                        document.FileName))
+                    .ToList(),
+                activity.Assignments
+                    .OrderBy(assignment => assignment.Name)
+                    .ThenBy(assigment => assigment.Id)
+                    .Select(assignment => new ActivityDeletionAssignmentDto(
+                        assignment.Id,
+                        assignment.Name,
+                        assignment.Submissions.Count(),
+                        assignment.Submissions
+                            .SelectMany(submission => submission.Feedbacks)
+                            .Count()))
+                    .ToList()))
+            .SingleOrDefaultAsync();
+    }
 
 	public async Task<Activity?> GetWithModuleAndCourseAsync(int id)
 	{

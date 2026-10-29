@@ -43,4 +43,17 @@ public class ActivityController : ControllerBase
 
         return Ok(true);
     }
+
+    [HttpGet("{activityId:int}/deletion-preview")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public async Task<ActionResult<ActivityDeletionPreviewDto>> GetDeletionPreview(
+        int moduleId,
+        int activityId)
+    {
+        var preview = await _service.ActivityService.GetDeletionPreviewAsync(
+            moduleId,
+            activityId);
+
+        return Ok(preview);
+    }
 }

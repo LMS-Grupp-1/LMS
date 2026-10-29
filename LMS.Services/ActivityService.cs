@@ -85,6 +85,21 @@ public class ActivityService : IActivityService
         await _unitOfWork.CompleteAsync();
     }
 
+    public async Task<ActivityDeletionPreviewDto> GetDeletionPreviewAsync(
+        int moduleId,
+        int activityId)
+    {
+        var preview = await _unitOfWork.Activities.GetDeletionPreviewAsync(
+            moduleId,
+            activityId);
+
+        if (preview is null)
+        {
+            throw new EntityNotFoundException("Activity", activityId);
+        }
+
+        return preview;
+    }
 
     private async Task ValidateActivityAsync(
         int moduleId,

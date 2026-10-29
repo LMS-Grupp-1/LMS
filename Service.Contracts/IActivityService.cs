@@ -9,4 +9,8 @@ public interface IActivityService
     Task CreateActivityAsync(int moduleId,ActivityFormDto dto);
 
     Task UpdateActivityAsync(int moduleId, int activityId, ActivityFormDto dto);
+
+    Task<ActivityDeletionPreviewDto> GetDeletionPreviewAsync(
+        int moduleId,
+        int activityId);
 }
