@@ -3,6 +3,7 @@ using LMS.Presentation.Models;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.DocumentExceptions;
 using Domain.Models.Documents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;

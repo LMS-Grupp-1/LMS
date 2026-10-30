@@ -1,6 +1,9 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.CourseExceptions;
+using Domain.Models.Exceptions.ModuleExceptions;
+using Domain.Models.Exceptions.AssignmentExceptions;
 using LMS.Shared.DTOs.AssignmentDtos;
 using Service.Contracts;
 

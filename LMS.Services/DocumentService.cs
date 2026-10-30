@@ -1,7 +1,7 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Documents;
 using Domain.Models.Entities;
-using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.DocumentExceptions;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using Microsoft.Extensions.Logging;

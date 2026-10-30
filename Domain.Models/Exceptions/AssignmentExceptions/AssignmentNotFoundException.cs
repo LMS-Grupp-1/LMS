@@ -1,4 +1,4 @@
-﻿namespace Domain.Models.Exceptions
+﻿namespace Domain.Models.Exceptions.AssignmentExceptions
 {
 	public sealed class AssignmentNotFoundException : NotFoundException
 	{

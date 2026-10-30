@@ -1,6 +1,9 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
-using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.AssignmentExceptions;
+using Domain.Models.Exceptions.CourseExceptions;
+using Domain.Models.Exceptions.DocumentExceptions;
+using Domain.Models.Exceptions.SubmissionExceptions;
 using LMS.Shared.DTOs.AssignmentDtos;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;

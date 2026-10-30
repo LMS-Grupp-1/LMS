@@ -1,4 +1,4 @@
-﻿using Domain.Models.Exceptions;
+﻿using Domain.Models.Exceptions.SubmissionExceptions;
 using LMS.Presentation.Models;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.AssignmentDtos;
