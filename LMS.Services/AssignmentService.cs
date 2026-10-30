@@ -1,8 +1,11 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
+using LMS.Shared.Constants;
 using LMS.Shared.DTOs.AssignmentDtos;
+using LMS.Shared.DTOs.Users;
 using Service.Contracts;
+using System.Xml.Linq;
 
 namespace LMS.Services
 {
@@ -44,8 +47,33 @@ namespace LMS.Services
 			};
 			ApplyForm(assignment, dto);
 
-			await _uow.Assignments.AddAsync(assignment);
-			await _uow.CompleteAsync();
+            await _uow.Assignments.AddAsync(assignment);
+
+            // Create notifications to the students associated with this course
+            int courseId = activity.Module.CourseId;
+            var studentsInCourse = await _uow.Users.GetUsersByCourseIdAsync(courseId, UserRoles.Student)
+									?? Array.Empty<UserLookupDto>();
+            string asType = dto.RequiresSubmission ? "inlämningsuppgift" : "uppgift";
+			string title = $"Ny {asType}";
+            string msg = $"{dto.Name}: ni får den nya {asType}en i {activity.Module.Name}";
+            foreach (var student in studentsInCourse)
+            {
+                var notification = new Notification
+                {
+                    UserId = student.Id,
+                    Title = title,
+                    Message = msg,
+                    NotificationType = NotificationTypes.NewAssignment,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    IsRead = false,
+                    TargetId = assignment.Id
+                };
+
+                await _uow.Notifications.AddAsync(notification);
+            }
+			Console.WriteLine($"New assignment saved and send notifications to {studentsInCourse.Count()} student(s).");
+
+            await _uow.CompleteAsync();
 		}
 
 		public async Task UpdateAsync(int id, AssignmentFormDto dto)

@@ -1,4 +1,5 @@
 ﻿using Domain.Contracts;
+using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.Users;
@@ -6,13 +7,14 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LMS.Infrastructure.Repositories;
 
-public class UserRepository : IUserRepository
+public class UserRepository : BaseRepository<ApplicationUser>, IUserRepository
 {
-    private readonly ApplicationDbContext _context;
-
-    public UserRepository(ApplicationDbContext context)
+    public UserRepository(ApplicationDbContext context) : base(context)
     {
-        _context = context;
+    }
+    public async Task<ApplicationUser?> FindByIdAsync(string id)
+    {
+        return await Set.FindAsync(id);
     }
 
     public async Task<IEnumerable<UserDto>> GetUsersWithCoursesAsync()
@@ -57,5 +59,35 @@ public class UserRepository : IUserRepository
                           CourseId = u.CourseId,
                           CourseName = c != null ? c.Name : "Kurs finns inte"
                       }).ToListAsync();
+    }
+
+    public async Task<IReadOnlyList<UserLookupDto>> GetUsersByCourseIdAsync(int courseId, string? role = null)
+    {
+        var query = Set.Where(u => u.CourseId == courseId);
+
+        if (!string.IsNullOrEmpty(role))
+        {
+            // Only join and check roles table if a specific role is requested
+            query = query.Where(u => _context.UserRoles
+                .Where(ur => ur.UserId == u.Id)
+                .Join(_context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+                .Any(rName => rName == role));
+        }
+
+        return await query
+            .OrderBy(u => u.FirstName)
+            .Select(u => new UserLookupDto(
+                u.Id,
+                u.FirstName + " " + u.LastName
+            ))
+            .ToListAsync();
+    }
+
+    public async Task<int?> GetUserCourseIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await Set
+            .Where(user => user.Id == userId)
+            .Select(user => user.CourseId)
+            .SingleOrDefaultAsync(cancellationToken);
     }
 }
