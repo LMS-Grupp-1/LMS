@@ -1,102 +1,141 @@
 ﻿@page "/users"
 @using Microsoft.AspNetCore.Authorization
-@using LMS.Blazor.Client.Services
+@using Microsoft.Extensions.Logging
 @using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.Constants
 @using LMS.Shared.DTOs.Users
-@using LMS.Blazor.Client.Components.Common
-@attribute [Authorize(Roles = "Teacher")]
+
+@attribute [Authorize(Roles = UserRoles.Teacher)]
+
 @inject NavigationManager Navigation
 @inject IApiProxyClient ApiProxy
-@inject ToastService ToastService
+@inject ILogger<Users> Logger
 
-<PageTitle>Användarhantering</PageTitle>
+<PageTitle>Användare</PageTitle>
 
-<div class="container mt-4">
-@if (!string.IsNullOrEmpty(errorMsg))
-{
-    <div class="text-danger my-2">
-        <i class="bi bi-exclamation-circle me-1"></i> @errorMsg
-    </div>
-}
-@if (users == null)
-{
-    <h3 class="mb-3">Administrera Användare</h3>
-    <p><em>Laddar användare...</em></p>
-}
-else if (!users.Any())
-{
-    <h3 class="mb-3">Administrera Användare</h3>
-    <p>Inga användare hittades.</p>
-}
-else
-{
-     <div class="d-flex justify-content-between align-items-center mb-3">
-        <h3>Administrera Användare</h3>
-        <button class="btn btn-primary" @onclick="NavigeraToCreateUser">
-            <i class="bi bi-plus-circle"></i> Lägga till en användare
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="h3 fw-bold text-dark mb-1">Användare</h1>
+            <p class="text-muted mb-0">
+                Hantera användare och deras kurskopplingar.
+            </p>
+        </div>
+
+        <button type="button"
+                class="btn btn-primary d-flex align-items-center gap-2 shadow-sm"
+                @onclick="NavigeraToCreateUser">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            Ny användare
         </button>
     </div>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Förnamn</th>
-                <th>Efternamn</th>
-                <th>E-post</th>
-                <th>Roll</th>
-                <th>Kopplad Kurs</th>
-                <th>Åtgärder</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var user in users)
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            @if (isLoading)
             {
-                <tr>
-                    <td>@user.FirstName</td>
-                    <td>@user.LastName</td>
-                    <td>@user.Email</td>
-                    <td>@user.Role</td>
-                    <td>
-                        @if (user.CourseId != null)
-                        {
-                            <NavLink href="@($"/teacher/courses/{user.CourseId}")">
-                                @user.CourseName
-                            </NavLink>
-                        }
-                        else
-                        {
-                            <span class="text-muted">Ingen kurs</span>
-                        }
-                    </td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditUser(user.Id)">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                        @* <button class="btn btn-sm btn-outline-danger" @onclick="() => PromptDeleteUser(user.Id, user.FirstName, user.LastName)">
-                            <i class="bi bi-trash"></i>
-                        </button> *@
-                    </td>
-                </tr>
+                <div class="p-4 text-muted" role="status">
+                    <span class="spinner-border spinner-border-sm me-2"
+                          aria-hidden="true"></span>
+                    Laddar användare...
+                </div>
             }
-        </tbody>
-    </table>   
-}
-</div>
+            else if (!string.IsNullOrWhiteSpace(errorMsg))
+            {
+                <div class="p-4">
+                    <div class="alert alert-danger" role="alert">
+                        @errorMsg
+                    </div>
 
-@* <ConfirmDialog IsOpen="showDeleteModal"
-               Title="@($"Ta bort användare: {deleteUserName}")"
-               Message="Är du säker på att du vill ta bort denna användare? Denna åtgärd går inte att ångra."
-               ConfirmButtonText="Ta bort"
-               ConfirmButtonClass="btn-danger"
-               OnCancel="CloseDeleteModal"
-               OnConfirm="ConfirmDeleteUserAsync" /> *@
+                    <button type="button"
+                            class="btn btn-outline-primary"
+                            @onclick="LoadUsersAsync">
+                        Försök igen
+                    </button>
+                </div>
+            }
+            else if (!users.Any())
+            {
+                <p class="p-4 mb-0 text-muted">
+                    Inga användare hittades.
+                </p>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <caption class="visually-hidden">
+                            Användare, roller och kopplade kurser
+                        </caption>
+
+                        <thead class="table-light text-secondary">
+                            <tr>
+                                <th scope="col" class="py-3 ps-4">Förnamn</th>
+                                <th scope="col" class="py-3">Efternamn</th>
+                                <th scope="col" class="py-3">E-post</th>
+                                <th scope="col" class="py-3">Roll</th>
+                                <th scope="col" class="py-3">Kurs</th>
+                                <th scope="col" class="py-3 text-end pe-4">
+                                    Åtgärder
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var user in users)
+                            {
+                                <tr @key="user.Id">
+                                    <td class="ps-4">@user.FirstName</td>
+                                    <td>@user.LastName</td>
+                                    <td>@user.Email</td>
+                                    <td>
+                                        @(user.Role switch
+                                        {
+                                            UserRoles.Teacher => "Lärare",
+                                            UserRoles.Student => "Student",
+                                            _ => user.Role
+                                        })
+                                    </td>
+                                    <td>
+
+                                        @if (user.CourseId is int courseId)
+                                        {
+                                            <a href="@($"/teacher/courses/{courseId}")"
+                                               class="text-decoration-none">
+                                                @user.CourseName
+                                            </a>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">
+                                                Ingen kurs
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                aria-label="@($"Redigera {user.FirstName} {user.LastName}")"
+                                                @onclick="() => EditUser(user.Id)">
+                                            <i class="bi bi-pencil"
+                                               aria-hidden="true"></i>
+                                            <span class="ms-1">Redigera</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
 
 @code {
     private IEnumerable<UserDto> users = Enumerable.Empty<UserDto>();
-    // private bool showDeleteModal = false;
-    // private string? userToDeleteId = null;
-    // private string? deleteUserName = null;
-    private string? errorMsg = null;
+    private string? errorMsg;
+    private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -105,16 +144,31 @@ else
 
     private async Task LoadUsersAsync()
     {
+        if (!RendererInfo.IsInteractive)
+        {
+            return;
+        }
+
+        isLoading = true;
         errorMsg = null;
+
         try
         {
             users = await ApiProxy.GetAsync<IEnumerable<UserDto>>(
-                "users"
-            ) ?? Enumerable.Empty<UserDto>();
+                "users") ?? Enumerable.Empty<UserDto>();
         }
-        catch (HttpRequestException ex)
+        catch (UnauthorizedAccessException)
         {
-            errorMsg = $"Kunde inte ladda användare. API response error: {ex.Message}";
+            errorMsg = "Din session har gått ut. Logga in igen.";
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(exception, "Could not load users.");
+            errorMsg = "Användarna kunde inte hämtas. Försök igen.";
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
@@ -127,37 +181,4 @@ else
     {
         Navigation.NavigateTo($"/users/edit/{id}");
     }
-
-    // private void PromptDeleteUser(string userId, string firstName, string lastName)
-    // {
-    //     userToDeleteId = userId;
-    //     deleteUserName = $"{firstName} {lastName}";
-    //     showDeleteModal = true;
-    // }
-
-    // private void CloseDeleteModal()
-    // {
-    //     showDeleteModal = false;
-    //     userToDeleteId = null;
-    //     deleteUserName = null;
-    // }
-
-    // private async Task ConfirmDeleteUserAsync()
-    // {
-    //     if (string.IsNullOrEmpty(userToDeleteId)) return;
-
-    //     var success = false;
-        
-    //     if (success)
-    //     {
-    //         CloseDeleteModal();
-    //         ToastService.ShowToast("Användaren har tagits bort framgångsrikt.", ToastType.Success);
-    //         await LoadUsersAsync(); 
-    //     }
-    //     else
-    //     {
-    //         CloseDeleteModal();
-    //         ToastService.ShowToast("Kunde inte ta bort användaren. Försök igen senare.", ToastType.Danger);
-    //     }
-    // }
 }

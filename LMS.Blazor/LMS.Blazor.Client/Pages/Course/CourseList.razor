@@ -13,11 +13,13 @@
 @inject ToastService ToastService
 @inject ILogger<CourseList> Logger
 
+<PageTitle>Kurser</PageTitle>
+
 <div class="container-fluid py-4">
     <!-- Header Section -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h2 class="fw-bold text-dark mb-1">Alla kurser</h2>
+            <h1 class="h3 fw-bold text-dark mb-1">Alla kurser</h1>
             <p class="text-muted mb-0">En översikt över alla aktiva och kommande kurser</p>
         </div>
         <button class="btn btn-primary d-flex align-items-center gap-2 shadow-sm" @onclick="NavToCreateCourse">
@@ -56,7 +58,7 @@
                         <tr>
                             <th class="py-3 ps-4">Kursnamn</th>
                             <th class="py-3">Period</th>
-                            <th class="py-3 text-center">Elever</th>
+                            <th class="py-3 text-center">Studenter</th>
                             <th class="py-3 text-center">Moduler</th>
                             <th class="py-3 text-end pe-4">Åtgärder</th>
                         </tr>
@@ -93,8 +95,11 @@
                             @foreach (var course in loadedCourses)
                             {
                                 <tr>
-                                    <td class="ps-4 fw-semibold text-dark">
-                                        @course.Name
+                                    <td class="ps-4 fw-semibold">
+                                        <a href="@($"/teacher/courses/{course.Id}")"
+                                            class="text-decoration-none">
+                                                @course.Name
+                                        </a>
                                     </td>
 
                                     <td class="text-secondary small">
