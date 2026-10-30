@@ -3,6 +3,7 @@ using Domain.Models.Entities;
 using Domain.Models.Exceptions;
 using LMS.Shared.DTOs.DocumentDtos;
 using LMS.Shared.DTOs.ModulesDtos;
+using LMS.Shared.DTOs.StatisticsDtos;
 using Service.Contracts;
 using Module = Domain.Models.Entities.Module;
 
@@ -122,6 +123,11 @@ public class ModuleService : IModuleService
 
         _unitOfWork.Modules.Delete(module);
         await _unitOfWork.CompleteAsync();
+    }
+
+    public async Task<ModuleStatisticsDto?> GetModuleStatisticsAsync(int moduleId, CancellationToken cancellationToken = default)
+    {
+        return await _unitOfWork.Modules.GetModuleStatisticsAsync(moduleId, cancellationToken);
     }
 
     private async Task ValidateModuleAsync(int courseId, CreateModuleDto dto, int? editModuleId)

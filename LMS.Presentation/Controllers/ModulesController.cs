@@ -1,4 +1,5 @@
 ﻿using global::LMS.Shared.DTOs.ModulesDtos;
+using LMS.Shared.DTOs.StatisticsDtos;
 using LMS.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -70,5 +71,13 @@ public class ModulesController : ControllerBase
         await _service.ModuleService.DeleteModuleAsync(courseId, moduleId);
 
         return Ok(true);
+    }
+
+    [HttpGet("{moduleId:int}/statistics")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public async Task<ActionResult<ModuleStatisticsDto?>> GetModuleStatistics(int moduleId, CancellationToken cancellationToken = default)
+    {
+        var dto = await _service.ModuleService.GetModuleStatisticsAsync(moduleId, cancellationToken);
+        return (dto);
     }
 }

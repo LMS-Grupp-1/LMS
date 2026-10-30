@@ -1,5 +1,6 @@
 ﻿@using LMS.Shared.DTOs.CourseDtos
 @using LMS.Shared.DTOs.ModulesDtos
+@using LMS.Shared.DTOs.StatisticsDtos
 @using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Blazor.Client.ViewModels.Modules
 @using LMS.Blazor.Client.Components.Common
@@ -100,9 +101,9 @@
                  OnModuleSaved="HandleModuleSaved" />
 
 <ConfirmDialog IsOpen="showDeleteModal"
-               Title="@($"Ta bort modul: {deleteModuleName}")"
-               Message="Är du säker på att du vill ta bort denna modul? Denna åtgärd går inte att ångra."
-               ConfirmButtonText="Ta bort"
+               Title="@($"TA BORT MODUL: {deleteModuleName}")"
+               Message="@deleteDialogMsg"
+               ConfirmButtonText="@(isDeletable ? "Ta bort" : "Stäng")"
                ConfirmButtonClass="btn-danger"
                OnCancel="CloseDeleteModal"
                OnConfirm="ConfirmDeleteAsync" />
@@ -114,7 +115,7 @@
     private IEnumerable<ModuleViewModel> modules = new List<ModuleViewModel>();
     private bool isLoading = true;
     private string? moduleListErrorMsg = null;
-    
+
     private ModuleDto? selectedModule = null; // null = Add mode, Has value = Edit mode
     private bool isModalOpen = false;
 
@@ -124,6 +125,11 @@
     private Dictionary<int, string> moduleErrorMsgs = new();
     private int? moduleToDeleteId = null;
     private string? deleteModuleName = null;
+
+    // Get Cascade counts in module
+    private ModuleStatisticsDto? moduleStats;
+    private string deleteDialogMsg = "";
+    private bool isDeletable = false;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -139,7 +145,7 @@
             var serviceModules = await ApiProxy.GetAsync<IEnumerable<ModuleDto>>(
                 $"modules/in-course/{CourseId}"
             ) ?? Enumerable.Empty<ModuleDto>();
-            
+
             modules = serviceModules.Select(m => new ModuleViewModel
             {
                 Id = m.Id,
@@ -187,7 +193,7 @@
             StartDate = mod.StartDate,
             EndDate = mod.EndDate
         };
-        
+
         isModalOpen = true;
     }
 
@@ -203,11 +209,51 @@
         await LoadModulesAsync(); // Refresh list after create or update
     }
 
-    private void PromptDeleteModule(int moduleId, string moduleName)
+    private async Task PromptDeleteModule(int moduleId, string moduleName)
     {
         moduleToDeleteId = moduleId;
         deleteModuleName = moduleName;
+        isDeletable = false;
+
+        // Get cascade counts in module
+        await LoadModuleStatistics();
+
         showDeleteModal = true;
+    }
+
+    private async Task LoadModuleStatistics()
+    {
+        try
+        {
+            if (moduleToDeleteId is not null)
+            {
+                moduleListErrorMsg = null;
+                deleteDialogMsg = "";
+                isDeletable = false;
+                moduleStats = await ApiProxy.GetAsync<ModuleStatisticsDto>(
+                    $"modules/{moduleToDeleteId.Value}/statistics");
+
+                if (moduleStats is null)
+                {
+                    moduleListErrorMsg = $"Kunde inte ladda modulstatistik för att kontrollera radering.";
+                    return;
+                }
+                if (moduleStats.ActivityCount == 0 && moduleStats.AssignmentCount == 0 && moduleStats.DocumentCount == 0)
+                {
+                    isDeletable = true;
+                    deleteDialogMsg = "Är du säker på att du vill ta bort denna modul?\nDenna åtgärd går inte att ångra!";
+                }
+                else
+                {
+                    isDeletable = false;
+                    deleteDialogMsg = $"Kan inte radera denna modul.\n\nModulen har {moduleStats.ActivityCount} aktivitet(er),\n{moduleStats.AssignmentCount} uppgift(er),\noch {moduleStats.DocumentCount} dokument.\n\nTa bort dem innan du kan radera modulen.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            moduleListErrorMsg = $"Kunde inte ladda modulstatistik: {ex.Message}";
+        }
     }
 
     private void CloseDeleteModal()
@@ -219,7 +265,16 @@
 
     private async Task ConfirmDeleteAsync()
     {
-        if (moduleToDeleteId == null) return;
+        if (moduleToDeleteId == null)
+        {
+            moduleListErrorMsg = "Ingen modul vald för att radera.";
+            return;
+        }
+        if (!isDeletable)
+        {
+            CloseDeleteModal();
+            return;
+        }
 
         int moduleId = moduleToDeleteId.Value;
         CloseDeleteModal();
@@ -230,10 +285,10 @@
         {
             var (success, responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
                 HttpMethod.Delete,
-                $"teacher/courses/{CourseId}/modules/{moduleId}"
+                $"modules/in-course/{CourseId}/{moduleId}"
             );
 
-            if (!string.IsNullOrEmpty(responseErrorMessage))
+            if (string.IsNullOrEmpty(responseErrorMessage))
             {
                 moduleErrorMsgs.Remove(moduleId);
                 await LoadModulesAsync();
