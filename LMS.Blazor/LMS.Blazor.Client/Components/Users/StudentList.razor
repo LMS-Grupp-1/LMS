@@ -2,64 +2,83 @@
 @using LMS.Shared.DTOs.Users
 @using LMS.Blazor.Client.ViewModels
 @using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Components.Common
 @inject NavigationManager Navigation
 @inject IApiProxyClient ApiProxy
 
 <div class="container-fluid px-0">
-@if (!string.IsNullOrEmpty(errorMsg))
-{
-    <div class="text-danger my-2">
-        <i class="bi bi-exclamation-circle me-1"></i> @errorMsg
-    </div>
-}
-@if (users == null)
-{
-    <h3 class="mb-3">Registrerade studenter</h3>
-    <p><em>Laddar studenter...</em></p>
-}
-else if (!users.Any())
-{
-    <h3 class="mb-3">Registrerade studentere</h3>
-    <p>Inga studenter registrerade på denna kurs.</p>
-}
-else
-{
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h5 class="fw-bold mb-1">Studenter</h5>
-            <p class="text-muted small mb-0">Visa studenter som är registrerade på denna kurs.</p>
-        </div>
-        <button class="btn btn-primary" @onclick="NavigeraToCreateUserForCourse">
-            <i class="bi bi-plus-circle me-1"></i> Lägg till student
-        </button>
-    </div>
+    <CourseSectionHeader Title="Studenter"
+                         Description="Studenter som är registrerade på den här kursen.">
+        <Actions>
+            <button type="button"
+                    class="btn btn-primary"
+                    @onclick="NavigeraToCreateUserForCourse">
+                <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
+                Lägg till student
+            </button>
+        </Actions>
+    </CourseSectionHeader>
 
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Förnamn</th>
-                <th>Efternamn</th>
-                <th>E-post</th>
-                <th>Åtgärder</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var user in users)
-            {
-                <tr>
-                    <td>@user.FirstName</td>
-                    <td>@user.LastName</td>
-                    <td>@user.Email</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => EditUser(user.Id)">
-                            <i class="bi bi-pencil"></i>
-                        </button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>   
-}
+    @if (!string.IsNullOrWhiteSpace(errorMsg))
+    {
+        <div class="alert alert-danger" role="alert">
+            @errorMsg
+        </div>
+    }
+    else if (users is null)
+    {
+        <p class="text-muted" role="status">Laddar studenter...</p>
+    }
+    else if (!users.Any())
+    {
+        <div class="bg-white border rounded p-4 text-muted">
+            Inga studenter är registrerade på den här kursen.
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <caption class="visually-hidden">
+                        Studenter registrerade på kursen
+                    </caption>
+
+                    <thead class="table-light text-secondary">
+                        <tr>
+                            <th scope="col" class="py-3 ps-4">Förnamn</th>
+                            <th scope="col" class="py-3">Efternamn</th>
+                            <th scope="col" class="py-3">E-post</th>
+                            <th scope="col" class="py-3 text-end pe-4">
+                                Åtgärder
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var user in users)
+                        {
+                            <tr @key="user.Id">
+                                <td class="ps-4">@user.FirstName</td>
+                                <td>@user.LastName</td>
+                                <td>@user.Email</td>
+                                <td class="text-end pe-4">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary"
+                                            aria-label="@($"Redigera {user.FirstName} {user.LastName}")"
+                                            @onclick="() => EditUser(user.Id)">
+                                        <i class="bi bi-pencil"
+                                           aria-hidden="true"></i>
+                                        <span class="ms-1">Redigera</span>
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
 </div>
 
 @code {
