@@ -42,7 +42,7 @@ public class ModulesController : ControllerBase
         return Ok(modules);
     }
 
-    [HttpPost]
+    [HttpPost("in-course/{courseId:int}")]
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> CreateModule(int courseId, [FromBody] CreateModuleDto dto)
     {
@@ -54,7 +54,7 @@ public class ModulesController : ControllerBase
         return Ok(true);
     }
 
-    [HttpPut("{moduleId:int}")]
+    [HttpPut("in-course/{courseId:int}/{moduleId:int}")]
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> UpdateModule(int courseId, int moduleId, [FromBody] CreateModuleDto dto)
     {
@@ -63,7 +63,7 @@ public class ModulesController : ControllerBase
         return Ok(true);
     }
 
-    [HttpDelete("{moduleId:int}")]
+    [HttpDelete("in-course/{courseId:int}/{moduleId:int}")]
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> DeleteModule(int courseId, int moduleId)
     {
