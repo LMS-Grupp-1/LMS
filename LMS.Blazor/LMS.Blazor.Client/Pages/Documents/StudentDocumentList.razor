@@ -2,15 +2,44 @@
 @using LMS.Shared.DTOs.DocumentDtos;
 @using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Blazor.Client.Components.Common
+@using LMS.Shared.MockData
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject IApiProxyClient ApiProxy
 
 <div class="card border-0">
     <div class="card-header border-0 py-3">
-        <h5 class="mb-0 text-dark">
+        <div class="mb-4">
+            <a href="my-course" class="text-primary"> 
+                <i class="bi bi-arrow-left-short me-1"></i><small>Tillbaka Min Kurs</small>
+            </a> 
+        </div>
+
+        <h3 class="mb-4 text-dark">
             <i class="bi bi-file-earmark-text me-2"></i>Alla dokument i kursen
-        </h5>
+        </h3>
+
+        <!-- Search and Sort Controls -->
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="input-group input-group-sm" style="width: 250px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" 
+                       class="form-control" 
+                       placeholder="Sök namn / filnamn..." 
+                       value="@searchTerm" 
+                       @oninput="OnSearchInput" />
+            </div>
+
+            <select class="form-select form-select-sm w-auto" @bind="sortBy">
+                <option value="name">Sortera på Namn</option>
+                <option value="filename">Sortera på Filnamn</option>
+                <option value="date">Sortera på Datum</option>
+            </select>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleSortOrder" title="Ändra sorteringsordning">
+                <i class="bi @(sortAscending ? "bi-sort-up" : "bi-sort-down")"></i>
+            </button>
+        </div>
     </div>
     <div class="card-body p-0">
         @if (!string.IsNullOrEmpty(errorMessage))
@@ -26,11 +55,11 @@
                 </div>
             </div>
         }
-        else if (!documents.Any())
+        else if (!PaginatedDocuments.Any())
         {
             <div class="text-center p-4 text-muted">
                 <i class="bi bi-folder2-open fs-2 d-block mb-2"></i>
-                No documents available.
+                Inga dokument hittades.
             </div>
         }
         else
@@ -48,7 +77,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach (var doc in documents)
+                        @foreach (var doc in PaginatedDocuments)
                         {
                             <tr>
                                 <td>
@@ -102,6 +131,28 @@
                     </tbody>
                 </table>
             </div>
+
+            @if (TotalPages > 1)
+            {
+                <nav class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+                    <span class="text-muted small">Sida @currentPage av @TotalPages (Totalt @ProcessedDocuments.Count() dokument)</span>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetPage(currentPage - 1)">Föregående</button>
+                        </li>
+                        @for (int i = 1; i <= TotalPages; i++)
+                        {
+                            var pageNum = i;
+                            <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                                <button class="page-link" @onclick="() => SetPage(pageNum)">@pageNum</button>
+                            </li>
+                        }
+                        <li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetPage(currentPage + 1)">Nästa</button>
+                        </li>
+                    </ul>
+                </nav>
+            }
         }
     </div>
 </div>
@@ -128,9 +179,29 @@
     private bool isDescriptionModalOpen = false;
     private string currentDescription = string.Empty;
 
+    // Search, Sort, Pagination
+    private string searchTerm = "";
+    private string sortBy = "date";
+    private bool sortAscending = true;
+    private int currentPage = 1;
+    private readonly int pageSize = 5;
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadDocumentsAsync();
+        // Check if the current URL contains ?mockdata=true, then Load from mock data
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var useMock = uri.Query.Contains("mockdata=true", StringComparison.OrdinalIgnoreCase);
+
+        if (useMock)
+        {
+            documents = MockDocuments.Documents;
+            isLoading = false;
+        }
+        else
+        {
+            // Load from API as normal
+            await LoadDocumentsAsync();
+        }
     }
 
     private async Task LoadDocumentsAsync()
@@ -205,5 +276,59 @@
     {
         isDescriptionModalOpen = false;
         currentDescription = string.Empty;
-}
+    }
+
+    // Search, Sort, Paginate
+    private IEnumerable<DocumentDto> ProcessedDocuments
+    {
+        get
+        {
+            var query = documents.AsEnumerable();
+
+            // Search Filter (matches Name or FileName)
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(d => 
+                    (d.Name != null && d.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (d.FileName != null && d.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+
+            // Sorting
+            query = sortBy switch
+            {
+                "name" => sortAscending ? query.OrderBy(d => d.Name) : query.OrderByDescending(d => d.Name),
+                "filename" => sortAscending ? query.OrderBy(d => d.FileName) : query.OrderByDescending(d => d.FileName),
+                "date" => sortAscending ? query.OrderBy(d => d.UploadedAt) : query.OrderByDescending(d => d.UploadedAt),
+                _ => query.OrderByDescending(d => d.UploadedAt)
+            };
+
+            return query;
+        }
+    }
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(ProcessedDocuments.Count() / (double)pageSize));
+
+    private IEnumerable<DocumentDto> PaginatedDocuments => ProcessedDocuments
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        currentPage = 1; // Reset to page 1 on new search
+    }
+
+    private void ToggleSortOrder()
+    {
+        sortAscending = !sortAscending;
+    }
+    
+    private void SetPage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            currentPage = page;
+        }
+    }
 }
