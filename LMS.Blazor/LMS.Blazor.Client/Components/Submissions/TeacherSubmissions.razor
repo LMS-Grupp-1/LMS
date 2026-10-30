@@ -3,11 +3,18 @@
 @using LMS.Blazor.Client.Services
 @using LMS.Shared.DTOs.AssignmentDtos
 @using LMS.Blazor.Client.Components.Feedbacks
+@using LMS.Blazor.Client.Components.Common
 @implements IAsyncDisposable
 
 @inject ISubmissionService SubmissionService
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
+
+@if (ShowHeading)
+{
+    <CourseSectionHeader Title="Inlämningar"
+                         Description="Följ studenternas inlämningar, ladda ner filer och ge feedback." />
+}
 
 @if (isLoading)
 {
@@ -64,8 +71,8 @@ else
     }
 
     <div class="table-responsive">
-        <table class="table table-sm align-middle">
-            <thead>
+        <table class="table table-hover align-middle">
+            <thead class="table-light text-secondary">
                 <tr>
                     <th>Student</th>
                     <th>Uppgift</th>
@@ -73,7 +80,7 @@ else
                     <th>Status</th>
                     <th>Inlämnad</th>
                     <th class="text-end">Fil</th>
-                    <th class="text-end">Feedbacks</th>
+                    <th class="text-end">Feedback</th>
                 </tr>
             </thead>
             <tbody>
@@ -117,7 +124,7 @@ else
                             <button class="btn btn-sm btn-outline-primary me-1" 
                                     disabled="@(row.SubmittedAt is null)"
                                     @onclick="() => OpenFeedbacksModal(row)">
-                                Bedöma
+                                Ge feedback
                             </button>
                         </td>
                     </tr>
@@ -139,6 +146,9 @@ else
 @code {
     [Parameter, EditorRequired]
     public int CourseId { get; set; }
+
+    [Parameter]
+    public bool ShowHeading { get; set; } = true;
 
     private List<TeacherSubmissionRowDto> rows = [];
     private List<(int Id, string Name)> assignmentOptions = [];
@@ -169,7 +179,8 @@ else
 
     private static string Category(TeacherSubmissionRowDto row) => row switch
     {
-        { Status: AssignmentStatus.Submitted } => OnTime,
+        {
+     Status: AssignmentStatus.Submitted } => OnTime,
         { Status: AssignmentStatus.Late, SubmissionId: not null } => SubmittedLate,
         {
             Status: AssignmentStatus.Late } => Missing,
