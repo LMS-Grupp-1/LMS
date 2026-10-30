@@ -7,8 +7,12 @@ public static class AzuriteExtensions
 {
 	private const int BlobPort = 10000;
 
-	// Local development only: starts Azurite in its own window if it is not already running.
-	// Requires Azurite to be installed globally: npm install -g azurite
+	// Where Visual Studio installs its own copy of Azurite, below each <version>\<edition> folder.
+	private static readonly string[] VisualStudioAzuritePath =
+		["Common7", "IDE", "Extensions", "Microsoft", "Azure Storage Emulator", "azurite.exe"];
+
+	// Local development only: starts Azurite if it is not already running.
+	// Uses the copy that ships with Visual Studio when it exists, otherwise a global npm install.
 	public static async Task EnsureAzuriteRunningAsync(this WebApplication app)
 	{
 		if (!app.Environment.IsDevelopment() || await IsListeningAsync())
@@ -19,33 +23,19 @@ public static class AzuriteExtensions
 		var dataFolder = Path.Combine(
 			Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
 			"azurite-lms");
-				
+
+		// Create the folder first so Azurite does not fail on a missing path.
+		Directory.CreateDirectory(dataFolder);
+
 		var azuriteArguments = $"--blobPort {BlobPort} --location \"{dataFolder}\"";
 
-		try
-		{
-			Process.Start(OperatingSystem.IsWindows()
-				? new ProcessStartInfo
-				{
-					// Windows: opens a separate window that keeps running after the API stops.
-					FileName = "cmd.exe",
-					Arguments = $"/k azurite {azuriteArguments}",
-					UseShellExecute = true // Opens a separate window that keeps running after the API stops.
-				}
-				: new ProcessStartInfo
-				{
-					// Linux and macOS: runs in the background and keeps running after the API stops.
-					// How to stop program in Linux: pkill -f azurite.
-					FileName = "/bin/sh",
-					Arguments = $"-c \"nohup azurite {azuriteArguments.Replace("\"", "\\\"")} > /dev/null 2>&1 &\"",
-					UseShellExecute = false
-				});
-		}
-		catch (Exception ex)
-		{
-			throw new InvalidOperationException(
-				"Could not start Azurite. Install it with 'npm install -g azurite' or start it manually.", ex);
-		}
+		var startInfo = CreateStartInfo(azuriteArguments)
+			?? throw new InvalidOperationException(
+				"Azurite was not found. Install the Azure development tools in Visual Studio, " +
+				"or run 'npm install -g azurite' (Rider, Linux and macOS). See README.md.");
+
+		app.Logger.LogInformation("Starting Azurite: {FileName}", startInfo.FileName);
+		Process.Start(startInfo);
 
 		// Wait up to 60 seconds for Azurite to start listening (first start on Windows can be slow).
 		for (var i = 0; i < 120 && !await IsListeningAsync(); i++)
@@ -56,9 +46,80 @@ public static class AzuriteExtensions
 		if (!await IsListeningAsync())
 		{
 			throw new InvalidOperationException(
-				$"Azurite did not start on port {BlobPort} within 60 seconds. Check that 'azurite' works in a new terminal " +
-				"(install with 'npm install -g azurite'), then restart Visual Studio so it picks up the updated PATH.");
+				$"Azurite was started but did not listen on port {BlobPort} within 60 seconds. " +
+				$"Check the Azurite window for errors, or whether another program uses port {BlobPort}.");
 		}
+	}
+
+	// Returns how to start Azurite on this machine, or null when it is not installed.
+	private static ProcessStartInfo? CreateStartInfo(string azuriteArguments)
+	{
+		if (OperatingSystem.IsWindows())
+		{
+			// 1. The copy that ships with Visual Studio: no Node needed.
+			var visualStudioAzurite = FindVisualStudioAzurite();
+			if (visualStudioAzurite is not null)
+			{
+				return new ProcessStartInfo(visualStudioAzurite, azuriteArguments)
+				{
+					// Opens a separate window that keeps running after the API stops.
+					UseShellExecute = true
+				};
+			}
+
+			// 2. A global npm install. cmd.exe always starts, so check the PATH first
+			// to fail fast instead of waiting 60 seconds for something that is not there.
+			if (!ExistsOnPath("azurite.cmd"))
+			{
+				return null;
+			}
+
+			return new ProcessStartInfo("cmd.exe", $"/k azurite {azuriteArguments}")
+			{
+				UseShellExecute = true
+			};
+		}
+
+		// Linux and macOS: a global npm install, run in the background.
+		// How to stop it: pkill -f azurite
+		if (!ExistsOnPath("azurite"))
+		{
+			return null;
+		}
+
+		return new ProcessStartInfo
+		{
+			FileName = "/bin/sh",
+			Arguments = $"-c \"nohup azurite {azuriteArguments.Replace("\"", "\\\"")} > /dev/null 2>&1 &\"",
+			UseShellExecute = false
+		};
+	}
+
+	// Looks in every installed version and edition, e.g. 18\Professional or 2022\Community.
+	private static string? FindVisualStudioAzurite()
+	{
+		var visualStudioRoot = Path.Combine(
+			Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+			"Microsoft Visual Studio");
+
+		if (!Directory.Exists(visualStudioRoot))
+		{
+			return null;
+		}
+
+		return Directory.EnumerateDirectories(visualStudioRoot)
+			.SelectMany(Directory.EnumerateDirectories)
+			.Select(editionFolder => Path.Combine([editionFolder, .. VisualStudioAzuritePath]))
+			.FirstOrDefault(File.Exists);
+	}
+
+	private static bool ExistsOnPath(string fileName)
+	{
+		var path = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+
+		return path
+			.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+			.Any(folder => File.Exists(Path.Combine(folder, fileName)));
 	}
 
 	private static async Task<bool> IsListeningAsync()
