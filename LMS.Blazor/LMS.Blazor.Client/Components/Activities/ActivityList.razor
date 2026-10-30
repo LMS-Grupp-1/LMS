@@ -171,7 +171,7 @@
         try
         {
             activities = await ApiProxy.GetAsync<IEnumerable<ActivityDto>>(
-                $"teacher/modules/{CurrentModule.Id}/activities"
+                $"activities/in-module/{CurrentModule.Id}"
             ) ?? Enumerable.Empty<ActivityDto>();
 
             // One call per module, grouped by activity on the client.

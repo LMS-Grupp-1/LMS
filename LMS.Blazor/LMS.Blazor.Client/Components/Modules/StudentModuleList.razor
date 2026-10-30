@@ -69,8 +69,6 @@
 </div>
 
 @code {
-    [Parameter]
-    public int CourseId { get; set; }
 
     private List<ModuleViewModel> modules = new();
     private HashSet<int> expandedModuleIds = new();
@@ -89,7 +87,7 @@
         try
         {
             var serviceModules = await ApiProxy.GetAsync<IEnumerable<ModuleDto>>(
-                $"teacher/courses/{CourseId}/modules"
+                $"modules/for-student"
             ) ?? Enumerable.Empty<ModuleDto>();
             
             modules = serviceModules.Select(m => new ModuleViewModel

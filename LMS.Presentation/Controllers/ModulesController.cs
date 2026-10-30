@@ -4,12 +4,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Service.Contracts;
+using System.Security.Claims;
 
 namespace LMS.Presentation.Controllers;
 
 [Authorize]
 [ApiController]
-[Route("api/teacher/courses/{courseId:int}/modules")]
+[Route("api/modules")]
 public class ModulesController : ControllerBase
 {
     private readonly IServiceManager _service;
@@ -19,10 +20,25 @@ public class ModulesController : ControllerBase
         _service = service;
     }
 
-    [HttpGet]
+    [Authorize(Roles = UserRoles.Teacher)]
+    [HttpGet("in-course/{courseId:int}")]
     public async Task<ActionResult<IEnumerable<ModuleDto>>> GetModules(int courseId)
     {
         var modules = await _service.ModuleService.GetModulesByCourseIdAsync(courseId);
+        return Ok(modules);
+    }
+
+    [HttpGet("for-student")]
+    public async Task<ActionResult<IEnumerable<ModuleDto>>> GetModulesForUser(CancellationToken cancellationToken = default)
+    {
+        // Extract userId from Claims in the HTTP layer
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        var modules = await _service.ModuleService.GetModulesForUserAsync(userId, cancellationToken);
         return Ok(modules);
     }
 

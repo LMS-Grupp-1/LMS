@@ -82,4 +82,12 @@ public class UserRepository : BaseRepository<ApplicationUser>, IUserRepository
             ))
             .ToListAsync();
     }
+
+    public async Task<int?> GetUserCourseIdAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await Set
+            .Where(user => user.Id == userId)
+            .Select(user => user.CourseId)
+            .SingleOrDefaultAsync(cancellationToken);
+    }
 }

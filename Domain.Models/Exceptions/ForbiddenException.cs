@@ -1,10 +1,16 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿namespace Domain.Models.Exceptions;
 
-namespace Domain.Models.Exceptions;
-    public abstract class ForbiddenException : Exception
+public class ForbiddenException : Exception
+{
+    public ForbiddenException() : base("You don't have permission to access this resource.")
     {
-    protected ForbiddenException(string message) : base(message)
-    { }
     }
+
+    public ForbiddenException(string message) : base(message)
+    {
+    }
+
+    protected ForbiddenException(string message, Exception innerException) : base(message, innerException)
+    {
+    }
+}
