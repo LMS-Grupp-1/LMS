@@ -1,0 +1,70 @@
+﻿<nav aria-label="Kursnavigation" class="mb-4">
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link @(IsContentActive ? "active fw-bold" : null)"
+               href="@Link(ContentTab)">
+                Kursinnehåll
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link @ActiveClass("submissions")"
+               href="@Link("submissions")"
+               aria-current="@CurrentPage("submissions")">
+                Inlämningar
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link @ActiveClass("students")"
+               href="@Link("students")"
+               aria-current="@CurrentPage("students")">
+                Studenter
+            </a>
+        </li>
+    </ul>
+
+    @if (IsContentActive)
+    {
+        <ul class="nav nav-pills flex-wrap gap-2 pt-3">
+            <li class="nav-item">
+                <a class="nav-link @ActiveClass("modules")"
+                   href="@Link("modules")"
+                   aria-current="@CurrentPage("modules")">
+                    Moduler och aktiviteter
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link @ActiveClass("documents")"
+                   href="@Link("documents")"
+                   aria-current="@CurrentPage("documents")">
+                    Kursmaterial
+                </a>
+            </li>
+        </ul>
+    }
+</nav>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    [Parameter]
+    public string ActiveTab { get; set; } = "modules";
+
+    [Parameter]
+    public string ContentTab { get; set; } = "modules";
+
+    private bool IsContentActive =>
+        ActiveTab is "modules" or "documents";
+
+    private string Link(string tab) =>
+        $"/teacher/courses/{CourseId}?tab={tab}";
+
+    private string? ActiveClass(string tab) =>
+        ActiveTab == tab ? "active fw-bold" : null;
+
+    private string? CurrentPage(string tab) =>
+        ActiveTab == tab ? "page" : null;
+}

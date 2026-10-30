@@ -21,13 +21,20 @@
 @inject IJSRuntime JS
 @inject ILogger<TeacherDocuments> Logger
 
-<PageTitle>Kursmaterial</PageTitle>
+@if (!isEmbedded)
+{
+    <PageTitle>Kursmaterial</PageTitle>
 
-<a href="/teacher/courses" class="d-inline-block mb-3">
-    Tillbaka till kurser
-</a>
+    <a href="/teacher/courses" class="d-inline-block mb-3">
+        Tillbaka till kurser
+    </a>
 
-<h1 class="h3">Kursmaterial</h1>
+    <h1 class="h3">Kursmaterial</h1>
+}
+else
+{
+    <h2 class="h4">Kursmaterial</h2>
+}
 <p>
     Ladda upp material till en modul eller en aktivitet.
     Materialet blir tillgängligt för kursens studenter.
@@ -63,89 +70,7 @@ else
         </div>
     }
 
-    <section class="border rounded p-3 my-4"
-             aria-labelledby="upload-heading">
-        <h2 id="upload-heading" class="h5">Ladda upp dokument</h2>
-
-        @if (targets.Count == 0)
-        {
-            <div class="alert alert-info" role="status">
-                Lägg till en modul eller aktivitet i kursen innan du laddar upp dokument.
-            </div>
-        }
-
-        <form @onsubmit="UploadAsync" @onsubmit:preventDefault>
-            <fieldset disabled="@(isBusy || targets.Count == 0)">
-                <legend class="visually-hidden">
-                    Uppgifter för dokumentet
-                </legend>
-
-                <div class="mb-3">
-                    <label for="document-name" class="form-label">
-                        Dokumentnamn
-                    </label>
-                    <input id="document-name"
-                           class="form-control"
-                           maxlength="@DocumentConstraints.MaxNameLength"
-                           @bind="name" />
-                    <div class="form-text">
-                        Högst @DocumentConstraints.MaxNameLength tecken.
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="document-description" class="form-label">
-                        Beskrivning (valfritt)
-                    </label>
-                    <textarea id="document-description"
-                              class="form-control"
-                              rows="3"
-                              maxlength="@DocumentConstraints.MaxDescriptionLength"
-                              @bind="description"></textarea>
-                </div>
-
-                <div class="mb-3">
-                    <label for="document-target" class="form-label">
-                        Koppla dokumentet till
-                    </label>
-                    <select id="document-target"
-                            class="form-select"
-                            @bind="targetIndex">
-                    <option value="-1">Välj modul eller aktivitet</option>
-                        @for (int index = 0; index < targets.Count; index++)
-                        {
-                            <option value="@index">
-                                @targets[index].Label
-                            </option>
-                        }
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label for="document-file" class="form-label">
-                        Välj fil
-                    </label>
-                    <InputFile @key="fileInputKey"
-                               id="document-file"
-                               class="form-control"
-                               accept="@AllowedExtensions"
-                               aria-describedby="document-file-help"
-                               OnChange="SelectFile" />
-
-                    <div id="document-file-help" class="form-text">
-                        Tillåtna filtyper: @AllowedExtensions.
-                        Högst @(DocumentConstraints.MaxFileSize / (1024 * 1024)) MB.
-                    </div>
-                </div>
-
-                <button type="submit" class="btn btn-primary">
-                    @(isUploading ? "Laddar upp..." : "Ladda upp dokument")
-                </button>
-            </fieldset>
-        </form>
-    </section>
-
-    <section aria-labelledby="documents-heading">
+    <section class="bg-white border rounded p-3 mb-4" aria-labelledby="documents-heading">
         <h2 id="documents-heading" class="h5">Uppladdade dokument</h2>
 
         @if (documents.Count == 0)
@@ -241,11 +166,96 @@ else
                OnConfirm="DeleteDocumentAsync"
                OnCancel="CloseDeleteDialog" />
     </section>
+
+    <section class="bg-white border rounded p-3 mb-4"
+             aria-labelledby="upload-heading">
+        <h2 id="upload-heading" class="h5">Ladda upp dokument</h2>
+
+        @if (targets.Count == 0)
+        {
+            <div class="alert alert-info" role="status">
+                Lägg till en modul eller aktivitet i kursen innan du laddar upp dokument.
+            </div>
+        }
+
+        <form @onsubmit="UploadAsync" @onsubmit:preventDefault>
+            <fieldset disabled="@(isBusy || targets.Count == 0)">
+                <legend class="visually-hidden">
+                    Uppgifter för dokumentet
+                </legend>
+
+                <div class="mb-3">
+                    <label for="document-name" class="form-label">
+                        Dokumentnamn
+                    </label>
+                    <input id="document-name"
+                           class="form-control"
+                           maxlength="@DocumentConstraints.MaxNameLength"
+                           @bind="name" />
+                    <div class="form-text">
+                        Högst @DocumentConstraints.MaxNameLength tecken.
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label for="document-description" class="form-label">
+                        Beskrivning (valfritt)
+                    </label>
+                    <textarea id="document-description"
+                              class="form-control"
+                              rows="3"
+                              maxlength="@DocumentConstraints.MaxDescriptionLength"
+                              @bind="description"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label for="document-target" class="form-label">
+                        Koppla dokumentet till
+                    </label>
+                    <select id="document-target"
+                            class="form-select"
+                            @bind="targetIndex">
+                    <option value="-1">Välj modul eller aktivitet</option>
+                        @for (int index = 0; index < targets.Count; index++)
+                        {
+                            <option value="@index">
+                                @targets[index].Label
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label for="document-file" class="form-label">
+                        Välj fil
+                    </label>
+                    <InputFile @key="fileInputKey"
+                               id="document-file"
+                               class="form-control"
+                               accept="@AllowedExtensions"
+                               aria-describedby="document-file-help"
+                               OnChange="SelectFile" />
+
+                    <div id="document-file-help" class="form-text">
+                        Tillåtna filtyper: @AllowedExtensions.
+                        Högst @(DocumentConstraints.MaxFileSize / (1024 * 1024)) MB.
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                    @(isUploading ? "Laddar upp..." : "Ladda upp dokument")
+                </button>
+            </fieldset>
+        </form>
+    </section>
 }
 
 @code {
     [Parameter]
     public int CourseId { get; set; }
+    
+    [Parameter]
+    public bool isEmbedded { get; set; }
 
     private readonly CancellationTokenSource lifetime = new();
 
