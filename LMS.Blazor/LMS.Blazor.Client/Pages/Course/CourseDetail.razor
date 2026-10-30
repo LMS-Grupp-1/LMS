@@ -10,17 +10,28 @@
 @using LMS.Blazor.Client.Components.Common
 @attribute [Authorize(Roles = "Teacher")]
 @inject IApiProxyClient ApiProxy
-@inject NavigationManager navigationManager
 @inject ToastService ToastService
 
 <div class="container p-0 my-4">
+
+    <nav aria-label="Brödsmulor" class="mb-3">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item">
+                <a href="/teacher/courses">Kurser</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                @(currentCourse?.Name ?? "Kurs")
+            </li>
+        </ol>
+    </nav>
+
     <div class="card px-0 pb-4 mb-4 border-0 bg-light">
         <div class="d-flex align-items-start gap-3">
             <div class="flex-shrink-0">
                 <AppIconBox Type="course" CustomClasses="theme-box-background" />
             </div>
             <div class="flex-grow-1">
-                <h5 class="fw-bold mb-2">@(currentCourse?.Name ?? (isLoading ? "Laddar kurs..." : "Kurs"))</h5>
+                <h1 class="h3 fw-bold mb-2">@(currentCourse?.Name ?? (isLoading ? "Laddar kurs..." : "Kurs"))</h1>
                 <p class="text-secondary">@(currentCourse?.Description ?? string.Empty)</p>
                 
                 @if (currentCourse != null)
@@ -44,33 +55,9 @@
         </div>
     </div>
 
-    <ul class="nav nav-tabs mb-4">
-        <li class="nav-item">
-            <button class="nav-link @GetActiveTabClass("overview")" @onclick='() => SetActiveTab("overview")'>
-                Översikt
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @GetActiveTabClass("modules")" @onclick='() => SetActiveTab("modules")'>
-                Moduler
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @GetActiveTabClass("submissions")" @onclick='() => SetActiveTab("submissions")'>
-                Inlämningar
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @GetActiveTabClass("students")" @onclick='() => SetActiveTab("students")'>
-                Studenter
-            </button>
-        </li>
-        <li class="nav-item">
-            <button class="nav-link @GetActiveTabClass("documents")" @onclick='() => SetActiveTab("documents")'>
-                Dokument
-            </button>
-        </li>
-    </ul>
+   <CourseNavigation CourseId="@CourseId"
+                     ActiveTab="@activeTab"
+                     ContentTab="@lastContentTab" />
 
     <div class="tab-content">
        @if (isLoading)
@@ -86,9 +73,6 @@
 
             @switch (activeTab)
             {
-                case "overview":
-                    <CourseOverview CourseId="CourseId" />
-                    break;
                 case "modules":
                     <ModuleList CourseId="CourseId" CurrentCourse="currentCourse" />
                     break;
@@ -99,7 +83,8 @@
                     <StudentList CourseId="CourseId" />
                     break;
                 case "documents":
-                    <TeacherDocuments CourseId="@CourseId" />
+                    <TeacherDocuments CourseId="@CourseId"
+                                      IsEmbedded="true" />
                     break;
             }
         }
@@ -115,11 +100,15 @@
     [Parameter]
     public int CourseId { get; set; }
 
+    [SupplyParameterFromQuery(Name = "tab")]
+    public string? Tab { get; set; }
+
     private int _loadedCourseId;
     private CourseDto? currentCourse;
     private string? loadError;
     private bool isLoading = true;
-    private string activeTab = "overview";
+    private string activeTab = "modules";
+    private string lastContentTab = "modules";
 
     // For Edit Course Modal
     private bool isModalOpen = false;
@@ -127,22 +116,36 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        CheckTabQueryParam();
+        activeTab = Tab?.ToLowerInvariant() switch
+        {
+            "documents" => "documents",
+            "submissions" => "submissions",
+            "students" => "students",
+            _ => "modules"
+        };
 
-        // Only fetch from API if the CourseId has actually changed!
-        if (CourseId != _loadedCourseId)
+        if (!RendererInfo.IsInteractive)
+        {
+            return;
+        }
+
+        bool courseChanged = CourseId != _loadedCourseId;
+
+        if (courseChanged)
+        {
+            lastContentTab = "modules";
+            CloseModal();
+        }
+
+        if (activeTab is "modules" or "documents")
+        {
+            lastContentTab = activeTab;
+        }
+
+        if (courseChanged)
         {
             _loadedCourseId = CourseId;
             await LoadCourseAsync();
-        }
-    }
-
-    private void CheckTabQueryParam()
-    {
-        var uri = navigationManager.ToAbsoluteUri(navigationManager.Uri);
-        if (uri.Query.Contains("tab=students"))
-        {
-            activeTab = "students";
         }
     }
 
@@ -180,16 +183,6 @@
         {
             isLoading = false;
         }
-    }
-
-    private void SetActiveTab(string tabName)
-    {
-        activeTab = tabName;
-    }
-
-    private string GetActiveTabClass(string tabName)
-    {
-        return activeTab == tabName ? "active fw-bold" : string.Empty;
     }
 
     private void OpenEditCourseDialog()
