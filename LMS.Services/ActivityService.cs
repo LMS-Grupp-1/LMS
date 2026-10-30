@@ -40,6 +40,43 @@ public class ActivityService : IActivityService
             a.EndDate));
     }
 
+    public async Task<IEnumerable<ActivityDto>> GetActivitesByModuleIdForUserAsync(int moduleId,
+        string userId, CancellationToken cancellationToken = default)
+    {
+        int? courseId = await _unitOfWork.Users.GetUserCourseIdAsync(userId, cancellationToken);
+        if (!courseId.HasValue)
+        {
+            throw new PropertyNotFoundException("The user has not been registered to any course yet.");
+        }
+
+        var course = await _unitOfWork.Courses.GetByIdAsync(courseId.Value, false);
+        if (course == null)
+            throw new EntityNotFoundException("Course", courseId.Value);
+
+        var module = await _unitOfWork.Modules.GetByIdAsync(moduleId);
+
+        if (module is null)
+        {
+            throw new ModuleNotFoundException(moduleId);
+        }
+
+        if (module.CourseId != course.Id)
+        {
+            throw new ForbiddenException("You don't have permission to access modules and activites in this course.");
+        }
+
+        var result = await _unitOfWork.Activities.GetActivityByModuleIdAsync(moduleId);
+
+        return result.Select(a => new ActivityDto(
+            a.Id,
+            a.ActivityType.Id,
+            a.ActivityType.Name,
+            a.Name,
+            a.Description,
+            a.StartDate,
+            a.EndDate));
+    }
+
     public async Task CreateActivityAsync(int moduleId, ActivityFormDto dto)
     {
         await ValidateActivityAsync(

@@ -4,12 +4,13 @@ using LMS.Shared.DTOs.ModulesDtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Service.Contracts;
+using System.Security.Claims;
 
-namespace LMS.Presentation;
+namespace LMS.Presentation.Controllers;
 
 [ApiController]
 [Authorize]
-[Route("api/teacher/modules/{moduleId:int}/activities")]
+[Route("api/activities/in-module/{moduleId:int}")]
 public class ActivityController : ControllerBase
 {
     private readonly IServiceManager _service;
@@ -20,9 +21,22 @@ public class ActivityController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = UserRoles.Teacher)]
     public async Task<ActionResult<IEnumerable<ActivityDto>>> GetActivites(int moduleId)
     {
         var activites = await _service.ActivityService.GetActivitesByModuleIdAsync(moduleId);
+        return Ok(activites);
+    }
+
+    [HttpGet("for-student")]
+    public async Task<ActionResult<IEnumerable<ActivityDto>>> GetActivitesForUser(int moduleId, CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+        var activites = await _service.ActivityService.GetActivitesByModuleIdForUserAsync(moduleId, userId);
         return Ok(activites);
     }
 

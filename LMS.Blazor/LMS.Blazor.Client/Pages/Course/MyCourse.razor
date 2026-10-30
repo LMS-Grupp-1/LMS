@@ -35,8 +35,14 @@ else if (course is not null)
         </small>
     </div>
 
+    <div class="mb-4"> 
+        <a href="@($"/courses/{course.Id}/documents")" class="text-primary text-decoration-none fw-semibold"> 
+            <i class="bi bi-folder2-open me-1"></i> Visa alla dokument
+        </a> 
+    </div>
+
     <h2 class="h5 fw-semibold mb-3">MODULER</h2>
-    <StudentModuleList CourseId="course.Id" />
+    <StudentModuleList />
 }
 
 @code {

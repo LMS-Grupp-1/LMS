@@ -137,7 +137,7 @@
         try
         {
             var serviceModules = await ApiProxy.GetAsync<IEnumerable<ModuleDto>>(
-                $"teacher/courses/{CourseId}/modules"
+                $"modules/in-course/{CourseId}"
             ) ?? Enumerable.Empty<ModuleDto>();
             
             modules = serviceModules.Select(m => new ModuleViewModel

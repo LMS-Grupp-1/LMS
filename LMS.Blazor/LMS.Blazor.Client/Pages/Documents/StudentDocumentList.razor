@@ -1,0 +1,334 @@
+﻿@page "/courses/{CourseId:int}/documents"
+@using LMS.Shared.DTOs.DocumentDtos;
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Components.Common
+@using LMS.Shared.MockData
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject IApiProxyClient ApiProxy
+
+<div class="card border-0">
+    <div class="card-header border-0 py-3">
+        <div class="mb-4">
+            <a href="my-course" class="text-primary"> 
+                <i class="bi bi-arrow-left-short me-1"></i><small>Tillbaka Min Kurs</small>
+            </a> 
+        </div>
+
+        <h3 class="mb-4 text-dark">
+            <i class="bi bi-file-earmark-text me-2"></i>Alla dokument i kursen
+        </h3>
+
+        <!-- Search and Sort Controls -->
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="input-group input-group-sm" style="width: 250px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                <input type="text" 
+                       class="form-control" 
+                       placeholder="Sök namn / filnamn..." 
+                       value="@searchTerm" 
+                       @oninput="OnSearchInput" />
+            </div>
+
+            <select class="form-select form-select-sm w-auto" @bind="sortBy">
+                <option value="name">Sortera på Namn</option>
+                <option value="filename">Sortera på Filnamn</option>
+                <option value="date">Sortera på Datum</option>
+            </select>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleSortOrder" title="Ändra sorteringsordning">
+                <i class="bi @(sortAscending ? "bi-sort-up" : "bi-sort-down")"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-warning">@errorMessage</div>
+        }
+
+        @if (isLoading)
+        {
+            <div class="text-center p-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        }
+        else if (!PaginatedDocuments.Any())
+        {
+            <div class="text-center p-4 text-muted">
+                <i class="bi bi-folder2-open fs-2 d-block mb-2"></i>
+                Inga dokument hittades.
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Namn</th>
+                            <th>Beskrivning</th>
+                            <th>Fil</th>
+                            <th>Storlek</th>
+                            <th>Uppladdad</th>
+                            <th class="text-end">Åtgärd</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var doc in PaginatedDocuments)
+                        {
+                            <tr>
+                                <td>
+                                    <div>@doc.Name</div>
+                                    @if (!string.IsNullOrEmpty(doc.Location))
+                                    {
+                                        <small class="text-muted">@doc.Location</small>                    
+                                    }
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="text-muted text-truncate d-inline-block" style="max-width: 150px;">
+                                            @(string.IsNullOrEmpty(doc.Description) ? "-" : doc.Description)
+                                        </span>
+                                        @if (!string.IsNullOrEmpty(doc.Description) && doc.Description.Length > 15)
+                                        {
+                                            <button type="button" 
+                                                    class="btn btn-link btn-sm p-0 text-decoration-none text-nowrap" 
+                                                    @onclick="() => ShowDescription(doc.Description)">
+                                                se mer
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                                <td>
+                                    <code>@doc.FileName</code>
+                                </td>
+                                <td>@FormatFileSize(doc.SizeBytes)</td>
+                                <td>
+                                    <div>@doc.UploadedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                                    <small class="text-muted">Av @doc.UploadedByName</small>
+                                </td>
+                                <td class="text-end">
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        disabled="@(downloadingId is not null)"
+                                        aria-label="@($"Ladda ner {doc.Name}")"
+                                        @onclick="() => DownloadAsync(doc.Id, doc.FileName)">
+                                    @if (downloadingId == doc.Id)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-download"></i>
+                                    }
+                                </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            @if (TotalPages > 1)
+            {
+                <nav class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+                    <span class="text-muted small">Sida @currentPage av @TotalPages (Totalt @ProcessedDocuments.Count() dokument)</span>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetPage(currentPage - 1)">Föregående</button>
+                        </li>
+                        @for (int i = 1; i <= TotalPages; i++)
+                        {
+                            var pageNum = i;
+                            <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                                <button class="page-link" @onclick="() => SetPage(pageNum)">@pageNum</button>
+                            </li>
+                        }
+                        <li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => SetPage(currentPage + 1)">Nästa</button>
+                        </li>
+                    </ul>
+                </nav>
+            }
+        }
+    </div>
+</div>
+
+<ConfirmDialog IsOpen="@isDescriptionModalOpen"
+               Title="Dokument beskrivning"
+               Message="@currentDescription"
+               ConfirmButtonText="Stäng"
+               ConfirmButtonClass="btn-primary"
+               OnConfirm="CloseDescriptionDialog"
+               OnCancel="CloseDescriptionDialog" />
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private IReadOnlyList<DocumentDto> documents { get; set; } = Array.Empty<DocumentDto>();
+    private bool isLoading = true;
+    private string? errorMessage = null;
+    private int? downloadingId;
+    private IJSObjectReference? downloadModule;
+
+    // Description dialog
+    private bool isDescriptionModalOpen = false;
+    private string currentDescription = string.Empty;
+
+    // Search, Sort, Pagination
+    private string searchTerm = "";
+    private string sortBy = "date";
+    private bool sortAscending = true;
+    private int currentPage = 1;
+    private readonly int pageSize = 5;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if the current URL contains ?mockdata=true, then Load from mock data
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var useMock = uri.Query.Contains("mockdata=true", StringComparison.OrdinalIgnoreCase);
+
+        if (useMock)
+        {
+            documents = MockDocuments.Documents;
+            isLoading = false;
+        }
+        else
+        {
+            // Load from API as normal
+            await LoadDocumentsAsync();
+        }
+    }
+
+    private async Task LoadDocumentsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            documents = await ApiProxy.GetAsync<IReadOnlyList<DocumentDto>>(
+                $"documents?courseId={CourseId}") ?? Array.Empty<DocumentDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DownloadAsync(int documentId, string fileName)
+    {
+        downloadingId = documentId;
+        errorMessage = null;
+
+        try
+        {            
+            // The API checks that the document belongs to the student's course.
+            downloadModule ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", Navigation.ToAbsoluteUri("js/documents.js").ToString());
+
+            var url = Navigation.ToAbsoluteUri($"api/proxy/documents/{documentId}/download").ToString();
+            var status = await downloadModule.InvokeAsync<int>("download", url, fileName);
+
+            if (status != 200)
+            {
+                errorMessage = "Filen kunde inte hämtas. Försök igen.";
+            }
+        }
+        catch (JSException)
+        {
+            errorMessage = "Filen kunde inte hämtas. Försök igen.";
+        }
+        finally
+        {
+            downloadingId = null;
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double len = bytes;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private void ShowDescription(string description)
+    {
+        currentDescription = description;
+        isDescriptionModalOpen = true;
+    }
+
+    private void CloseDescriptionDialog()
+    {
+        isDescriptionModalOpen = false;
+        currentDescription = string.Empty;
+    }
+
+    // Search, Sort, Paginate
+    private IEnumerable<DocumentDto> ProcessedDocuments
+    {
+        get
+        {
+            var query = documents.AsEnumerable();
+
+            // Search Filter (matches Name or FileName)
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(d => 
+                    (d.Name != null && d.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (d.FileName != null && d.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+
+            // Sorting
+            query = sortBy switch
+            {
+                "name" => sortAscending ? query.OrderBy(d => d.Name) : query.OrderByDescending(d => d.Name),
+                "filename" => sortAscending ? query.OrderBy(d => d.FileName) : query.OrderByDescending(d => d.FileName),
+                "date" => sortAscending ? query.OrderBy(d => d.UploadedAt) : query.OrderByDescending(d => d.UploadedAt),
+                _ => query.OrderByDescending(d => d.UploadedAt)
+            };
+
+            return query;
+        }
+    }
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(ProcessedDocuments.Count() / (double)pageSize));
+
+    private IEnumerable<DocumentDto> PaginatedDocuments => ProcessedDocuments
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        currentPage = 1; // Reset to page 1 on new search
+    }
+
+    private void ToggleSortOrder()
+    {
+        sortAscending = !sortAscending;
+    }
+    
+    private void SetPage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            currentPage = page;
+        }
+    }
+}

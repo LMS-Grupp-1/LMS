@@ -4,6 +4,7 @@ using Domain.Models.Entities;
 using Domain.Models.Exceptions.DocumentExceptions;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
+using LMS.Shared.DTOs.Users;
 using Microsoft.Extensions.Logging;
 using Service.Contracts;
 using System.Xml.Linq;
@@ -134,6 +135,31 @@ public sealed class DocumentService(
             await unitOfWork.Documents.AddAsync(
                 document, cancellationToken);
 
+            // Create notifications to the students associated with this course
+            var studentsInCourse = await unitOfWork.Users.GetUsersByCourseIdAsync(courseId.Value, UserRoles.Student)
+                                    ?? Array.Empty<UserLookupDto>();
+            int targetId = target.ActivityId.HasValue
+                ? target.ActivityId.Value
+                : (target.ModuleId.HasValue
+                    ? target.ModuleId.Value
+                    : courseId.Value);
+            foreach (var student in studentsInCourse)
+            {
+                var notification = new Notification
+                {
+                    UserId = student.Id,
+                    Title = "Nytt dokument",
+                    Message = $"{name} har tillagats i {selectedTarget.Label}",
+                    NotificationType = NotificationTypes.NewMaterial,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    IsRead = false,
+                    TargetId = targetId
+                };
+
+                await unitOfWork.Notifications.AddAsync(notification);
+            }
+
+            // Commit ALL changes (submission + notifications) in one atomic transaction
             await unitOfWork.CompleteAsync();
         }
         catch

@@ -134,7 +134,7 @@
             {
                 var (_, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
                     HttpMethod.Put,
-                    $"teacher/courses/{CourseId}/modules/{ModuleToEdit.Id}",
+                    $"modules/{ModuleToEdit.Id}",
                     content
                 );
                 responseErrorMessage = error;
@@ -143,7 +143,7 @@
             {
                 var (_, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
                     HttpMethod.Post,
-                    $"teacher/courses/{CourseId}/modules",
+                    $"modules/{CourseId}",
                     content
                 );
                 responseErrorMessage = error;

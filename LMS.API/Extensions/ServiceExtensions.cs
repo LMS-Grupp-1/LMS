@@ -17,6 +17,7 @@ public static class ServiceExtensions
 		services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 		services.AddScoped<ISubmissionRepository, SubmissionRepository>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
     }
 
     public static void AddServiceLayer(this IServiceCollection services)
@@ -55,6 +56,9 @@ public static class ServiceExtensions
 
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddLazy<IFeedbackService>();
+
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddLazy<INotificationService>();
 
         services.AddSingleton(TimeProvider.System);
 	}
