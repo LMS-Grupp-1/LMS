@@ -73,6 +73,7 @@ public class DocumentRepository : IDocumentRepository
     {
         return await _context.Documents
             .AsNoTracking()
+            .Include(document => document.Activity)
             .Where(document =>
                 document.CourseId == courseId ||
                 (document.Module != null &&
@@ -92,7 +93,8 @@ public class DocumentRepository : IDocumentRepository
                 document.UploadedBy.FirstName + " " +
                     document.UploadedBy.LastName,
                 courseId,
-                document.ModuleId,
+                document.ModuleId != null ? document.ModuleId 
+                    : (document.ActivityId != null ? document.Activity.ModuleId : null),
                 document.ActivityId,
                 document.CourseId != null
                     ? "Kursmaterial"
