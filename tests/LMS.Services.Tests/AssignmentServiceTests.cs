@@ -1,6 +1,6 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
-using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.CourseExceptions;
 using LMS.Shared.DTOs.AssignmentDtos;
 using Moq;
 

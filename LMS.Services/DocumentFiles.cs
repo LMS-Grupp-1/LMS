@@ -1,4 +1,4 @@
-﻿using Domain.Models.Exceptions;
+﻿using Domain.Models.Exceptions.DocumentExceptions;
 using LMS.Shared.Constants;
 
 namespace LMS.Services;

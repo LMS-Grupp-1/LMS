@@ -2,7 +2,7 @@
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Domain.Contracts;
-using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.DocumentExceptions;
 
 namespace LMS.Infrastructure.Storage;
 

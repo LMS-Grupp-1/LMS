@@ -1,6 +1,8 @@
 using Domain.Contracts;
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.ModuleExceptions;
+using Domain.Models.Exceptions.ActivityExceptions;
 using LMS.Shared.DTOs.ActivityDtos;
 using LMS.Shared.DTOs.ModulesDtos;
 using Service.Contracts;
