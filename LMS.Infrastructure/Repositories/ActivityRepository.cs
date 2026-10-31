@@ -1,5 +1,6 @@
 using Domain.Contracts;
 using Domain.Models.Entities;
+using LMS.Shared.DTOs.ActivityDtos;
 using LMS.Infrastructure.Data;
 using LMS.Shared.DTOs.DashboardDtos;
 using LMS.Shared.DTOs.CourseDtos;
@@ -117,5 +118,24 @@ public class ActivityRepository(ApplicationDbContext context)
                 activity.StartDate < endDate &&
                 activity.EndDate > startDate,
             cancellationToken);
+    }
+
+    public async Task<Activity?> GetForDeletionAsync(
+        int moduleId,
+        int activityId)
+    {
+        return await Set
+            .AsTracking()
+            .Include(activity => activity.Documents)
+            .Include(activity => activity.Assignments)
+                .ThenInclude(assignment => assignment.Submissions)
+                    .ThenInclude(submission => submission.Document)
+            .Include(activity => activity.Assignments)
+                .ThenInclude(assignment => assignment.Submissions)
+                    .ThenInclude(submission => submission.Feedbacks)
+            .AsSingleQuery()
+            .SingleOrDefaultAsync(activity =>
+                activity.Id == activityId &&
+                activity.ModuleId == moduleId);
     }
 }

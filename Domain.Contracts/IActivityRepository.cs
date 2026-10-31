@@ -1,6 +1,7 @@
 using Domain.Models.Entities;
 using LMS.Shared.DTOs.DashboardDtos;
 using LMS.Shared.DTOs.CourseDtos;
+using LMS.Shared.DTOs.ActivityDtos;
 
 namespace Domain.Contracts;
 
@@ -25,4 +26,6 @@ public interface IActivityRepository : IBaseRepository<Activity>
 		DateTime now,
 		int take,
 		CancellationToken cancellationToken = default);
+
+    Task<Activity?> GetForDeletionAsync(int moduleId, int activityId);
 }   

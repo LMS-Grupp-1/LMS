@@ -29,7 +29,7 @@
 
 <h1 class="h3">Kursmaterial</h1>
 <p>
-    Ladda upp material till en modul eller en aktivitet.
+    Ladda upp material till kursen, en modul eller en aktivitet.
     Materialet blir tillgängligt för kursens studenter.
 </p>
 
@@ -70,7 +70,7 @@ else
         @if (targets.Count == 0)
         {
             <div class="alert alert-info" role="status">
-                Lägg till en modul eller aktivitet i kursen innan du laddar upp dokument.
+                Det finns inga tillgängliga placeringar för dokumentet.
             </div>
         }
 
@@ -111,7 +111,9 @@ else
                     <select id="document-target"
                             class="form-select"
                             @bind="targetIndex">
-                    <option value="-1">Välj modul eller aktivitet</option>
+
+                        <option value="-1">Välj kurs, modul eller aktivitet</option>
+
                         @for (int index = 0; index < targets.Count; index++)
                         {
                             <option value="@index">
@@ -403,7 +405,7 @@ else
 
         if (targetIndex < 0 || targetIndex >= targets.Count)
         {
-            error = "Välj en modul eller aktivitet.";
+            error = "Välj kurs, modul eller aktivitet.";
             return;
         }
 

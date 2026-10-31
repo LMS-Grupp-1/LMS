@@ -71,7 +71,9 @@
                                     <i class="bi bi-pencil"></i>
                                     <span class="d-none d-md-inline ms-1">Redigera aktivitet</span>
                                 </button>
-                                <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteActivity(activity.Id)">
+                                <button type="button" class="btn btn-outline-danger btn-sm"
+                                aria-label="@($"Radera aktiviteten {activity.Name}")" 
+                                @onclick="() => OpenDeleteActivityDialog(activity)">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </div>
@@ -141,6 +143,15 @@
                       OnClose="CloseAssignmentModal"
                       OnSaved="HandleAssignmentSaved" />
 
+@if (activityToDelete is { } deletingActivity)
+{
+    <DeleteActivityDialog @key="deletingActivity.Id"
+                          ModuleId="@CurrentModule.Id"
+                          ActivityId="@deletingActivity.Id"
+                          OnDeleted="HandleActivityDeletedAsync"
+                          OnCancel="CloseDeleteActivityDialog" />
+}
+
 @code {
     [Parameter] public ModuleViewModel CurrentModule { get; set; } = default!;
 
@@ -150,6 +161,7 @@
 
     private ActivityDto? selectedActivity = null; // null = Add mode, Has value = Edit mode
     private bool isModalOpen = false;
+    private ActivityDto? activityToDelete;
 
     // Assignments grouped by activity, so each activity card can show its own.
     private ILookup<int, TeacherAssignmentDto> assignmentsByActivity =
@@ -216,7 +228,26 @@
         await LoadActivitiesAsync();
     }
 
-    private void DeleteActivity(int id) { /* Mock action */ }
+    private void OpenDeleteActivityDialog(ActivityDto activity)
+    {
+        activityToDelete = activity;
+    }
+
+    private void CloseDeleteActivityDialog()
+    {
+        activityToDelete = null;
+    }
+
+    private async Task HandleActivityDeletedAsync()
+    {
+        activityToDelete = null;
+
+        ToastService.ShowToast(
+            "Aktiviteten och dess kopplade innehåll har raderats.",
+            ToastType.Success);
+
+        await LoadActivitiesAsync();
+    }
 
     private void OpenAddAssignmentModal(int activityId)
     {

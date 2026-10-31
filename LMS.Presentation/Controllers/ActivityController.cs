@@ -57,4 +57,33 @@ public class ActivityController : ControllerBase
 
         return Ok(true);
     }
+
+    [HttpGet("{activityId:int}/deletion-preview")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public async Task<ActionResult<ActivityDeletionPreviewDto>> GetDeletionPreview(
+        int moduleId,
+        int activityId)
+    {
+        var preview = await _service.ActivityService.GetDeletionPreviewAsync(
+            moduleId,
+            activityId);
+
+        return Ok(preview);
+    }
+    
+
+    [HttpDelete("{activityId:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public async Task<IActionResult> DeleteActivity(
+        int moduleId,
+        int activityId,
+        [FromBody] ActivityDeleteRequestDto request)
+    {
+        await _service.ActivityService.DeleteActivityAsync(
+            moduleId,
+            activityId,
+            request);
+
+        return NoContent();
+    }
 }
