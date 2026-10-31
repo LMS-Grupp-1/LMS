@@ -1,8 +1,8 @@
 ﻿@page "/courses/{CourseId:int}/documents"
 @using LMS.Shared.DTOs.DocumentDtos;
+@using LMS.Shared.MockData
 @using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Blazor.Client.Components.Common
-@using LMS.Shared.MockData
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 @inject IApiProxyClient ApiProxy
@@ -18,142 +18,196 @@
         <h3 class="mb-4 text-dark">
             <i class="bi bi-file-earmark-text me-2"></i>Alla dokument i kursen
         </h3>
-
-        <!-- Search and Sort Controls -->
-        <div class="d-flex flex-wrap gap-2 align-items-center">
-            <div class="input-group input-group-sm" style="width: 250px;">
-                <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
-                <input type="text" 
-                       class="form-control" 
-                       placeholder="Sök namn / filnamn..." 
-                       value="@searchTerm" 
-                       @oninput="OnSearchInput" />
-            </div>
-
-            <select class="form-select form-select-sm w-auto" @bind="sortBy">
-                <option value="name">Sortera på Namn</option>
-                <option value="filename">Sortera på Filnamn</option>
-                <option value="date">Sortera på Datum</option>
-            </select>
-
-            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleSortOrder" title="Ändra sorteringsordning">
-                <i class="bi @(sortAscending ? "bi-sort-up" : "bi-sort-down")"></i>
-            </button>
-        </div>
     </div>
-    <div class="card-body p-0">
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="alert alert-warning">@errorMessage</div>
-        }
 
-        @if (isLoading)
-        {
-            <div class="text-center p-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+    <div class="card-body">
+        <div class="row">
+            <!-- Left Column: Tree Navigation -->
+            <div class="col-md-3 border-end pb-3">
+                
+                <button type="button" 
+                            class="list-group-item list-group-item-action p-2 @(selectedCourseId == null && selectedModuleId == null && selectedActivityId == null 
+                                ? "active bg-primary-subtle text-primary fw-bold" : "")"
+                            @onclick="SelectAllFilter">
+                        <i class="bi bi-folder2 me-2"></i>Alla
+                        <span class="badge bg-secondary float-end">@documents.Count</span>
+                    </button>
+                <div class="list-group list-group-flush">
+                    <!-- Root Course Node -->
+                    <button type="button" 
+                            class="list-group-item list-group-item-action @(selectedCourseId == CourseId && selectedModuleId == null && selectedActivityId == null ? "active fw-bold" : "")"
+                            @onclick="SelectCourseFilter">
+                        <i class="bi bi-book me-2"></i>Inom kursen
+                    </button>
+
+                    <!-- Modules & Activities -->
+                    @foreach (var moduleGroup in documents.GroupBy(d => new { d.ModuleId, ModuleName = GetModuleName(d) }))
+                    {
+                        if (moduleGroup.Key.ModuleId != null)
+                        {
+                            var modId = moduleGroup.Key.ModuleId.Value;
+                            <button type="button" 
+                                    class="list-group-item list-group-item-action ps-3 @(selectedModuleId == modId && selectedActivityId == null ? "active fw-bold" : "")"
+                                    @onclick="() => SelectModuleFilter(modId)">
+                                <i class="bi bi-stack me-2"></i>@moduleGroup.Key.ModuleName
+                            </button>
+
+                            @foreach (var activityGroup in moduleGroup.Where(d => d.ActivityId != null).GroupBy(d => d.ActivityId))
+                            {
+                                if (activityGroup != null && activityGroup.Key != null)
+                                {
+                                    var actId = activityGroup.Key.Value;
+                                    var actName = GetActivityName(activityGroup.First(), actId); // Or custom activity name field if available
+                                    <button type="button" 
+                                            class="list-group-item list-group-item-action ps-5 py-1 small @(selectedActivityId == actId ? "active fw-bold" : "")"
+                                            @onclick="() => SelectActivityFilter(actId)">
+                                        <i class="bi bi-calendar-check me-2"></i>@actName
+                                    </button>
+                                }
+                            }
+                        }
+                    }
                 </div>
             </div>
-        }
-        else if (!PaginatedDocuments.Any())
-        {
-            <div class="text-center p-4 text-muted">
-                <i class="bi bi-folder2-open fs-2 d-block mb-2"></i>
-                Inga dokument hittades.
-            </div>
-        }
-        else
-        {
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Namn</th>
-                            <th>Beskrivning</th>
-                            <th>Fil</th>
-                            <th>Storlek</th>
-                            <th>Uppladdad</th>
-                            <th class="text-end">Åtgärd</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var doc in PaginatedDocuments)
-                        {
-                            <tr>
-                                <td>
-                                    <div>@doc.Name</div>
-                                    @if (!string.IsNullOrEmpty(doc.Location))
-                                    {
-                                        <small class="text-muted">@doc.Location</small>                    
-                                    }
-                                </td>
-                                <td>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="text-muted text-truncate d-inline-block" style="max-width: 150px;">
-                                            @(string.IsNullOrEmpty(doc.Description) ? "-" : doc.Description)
-                                        </span>
-                                        @if (!string.IsNullOrEmpty(doc.Description) && doc.Description.Length > 15)
-                                        {
-                                            <button type="button" 
-                                                    class="btn btn-link btn-sm p-0 text-decoration-none text-nowrap" 
-                                                    @onclick="() => ShowDescription(doc.Description)">
-                                                se mer
-                                            </button>
-                                        }
-                                    </div>
-                                </td>
-                                <td>
-                                    <code>@doc.FileName</code>
-                                </td>
-                                <td>@FormatFileSize(doc.SizeBytes)</td>
-                                <td>
-                                    <div>@doc.UploadedAt.ToString("yyyy-MM-dd HH:mm")</div>
-                                    <small class="text-muted">Av @doc.UploadedByName</small>
-                                </td>
-                                <td class="text-end">
-                                    <button type="button"
-                                        class="btn btn-sm btn-outline-primary"
-                                        disabled="@(downloadingId is not null)"
-                                        aria-label="@($"Ladda ner {doc.Name}")"
-                                        @onclick="() => DownloadAsync(doc.Id, doc.FileName)">
-                                    @if (downloadingId == doc.Id)
-                                    {
-                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                                    }
-                                    else
-                                    {
-                                        <i class="bi bi-download"></i>
-                                    }
-                                </button>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
 
-            @if (TotalPages > 1)
-            {
-                <nav class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
-                    <span class="text-muted small">Sida @currentPage av @TotalPages (Totalt @ProcessedDocuments.Count() dokument)</span>
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
-                            <button class="page-link" @onclick="() => SetPage(currentPage - 1)">Föregående</button>
-                        </li>
-                        @for (int i = 1; i <= TotalPages; i++)
-                        {
-                            var pageNum = i;
-                            <li class="page-item @(currentPage == pageNum ? "active" : "")">
-                                <button class="page-link" @onclick="() => SetPage(pageNum)">@pageNum</button>
-                            </li>
-                        }
-                        <li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
-                            <button class="page-link" @onclick="() => SetPage(currentPage + 1)">Nästa</button>
-                        </li>
-                    </ul>
-                </nav>
-            }
-        }
+            <!-- Right Column: Search, Sort & Document Table -->
+            <div class="col-md-9">
+                <!-- Search and Sort Controls -->
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                    <div class="input-group input-group-sm" style="width: 250px;">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" 
+                               class="form-control" 
+                               placeholder="Sök namn / filnamn..." 
+                               value="@searchTerm" 
+                               @oninput="OnSearchInput" />
+                    </div>
+
+                    <select class="form-select form-select-sm w-auto" @bind="sortBy">
+                        <option value="name">Sortera på Namn</option>
+                        <option value="filename">Sortera på Filnamn</option>
+                        <option value="date">Sortera på Datum</option>
+                    </select>
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleSortOrder" title="Ändra sorteringsordning">
+                        <i class="bi @(sortAscending ? "bi-sort-up" : "bi-sort-down")"></i>
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-warning">@errorMessage</div>
+                }
+
+                @if (isLoading)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                }
+                else if (!PaginatedDocuments.Any())
+                {
+                    <div class="text-center p-4 text-muted">
+                        <i class="bi bi-folder2-open fs-2 d-block mb-2"></i>
+                        Inga dokument hittades.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Namn</th>
+                                    <th>Beskrivning</th>
+                                    <th>Fil</th>
+                                    <th>Storlek</th>
+                                    <th>Uppladdad</th>
+                                    <th class="text-end">Åtgärd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var doc in PaginatedDocuments)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div>@doc.Name</div>
+                                            @if (!string.IsNullOrEmpty(doc.Location))
+                                            {
+                                                <small class="text-muted">@doc.Location</small>                    
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="text-muted text-truncate d-inline-block" style="max-width: 150px;">
+                                                    @(string.IsNullOrEmpty(doc.Description) ? "-" : doc.Description)
+                                                </span>
+                                                @if (!string.IsNullOrEmpty(doc.Description) && doc.Description.Length > 15)
+                                                {
+                                                    <button type="button" 
+                                                            class="btn btn-link btn-sm p-0 text-decoration-none text-nowrap" 
+                                                            @onclick="() => ShowDescription(doc.Description)">
+                                                        se mer
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <code>@doc.FileName</code>
+                                        </td>
+                                        <td>@FormatFileSize(doc.SizeBytes)</td>
+                                        <td>
+                                            <div>@doc.UploadedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                                            <small class="text-muted">Av @doc.UploadedByName</small>
+                                        </td>
+                                        <td class="text-end">
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                disabled="@(downloadingId is not null)"
+                                                aria-label="@($"Ladda ner {doc.Name}")"
+                                                @onclick="() => DownloadAsync(doc.Id, doc.FileName)">
+                                                @if (downloadingId == doc.Id)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-download"></i>
+                                                }
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (TotalPages > 1)
+                    {
+                        <nav class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+                            <span class="text-muted small">Sida @currentPage av @TotalPages (Totalt @ProcessedDocuments.Count() dokument)</span>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                    <button class="page-link" @onclick="() => SetPage(currentPage - 1)">Föregående</button>
+                                </li>
+                                @for (int i = 1; i <= TotalPages; i++)
+                                {
+                                    var pageNum = i;
+                                    <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                                        <button class="page-link" @onclick="() => SetPage(pageNum)">@pageNum</button>
+                                    </li>
+                                }
+                                <li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
+                                    <button class="page-link" @onclick="() => SetPage(currentPage + 1)">Nästa</button>
+                                </li>
+                            </ul>
+                        </nav>
+                    }
+                }
+            </div>
+        </div>
     </div>
 </div>
 
@@ -186,6 +240,14 @@
     private int currentPage = 1;
     private readonly int pageSize = 5;
 
+    // Tree navigation
+    private int? selectedCourseId = null;
+    private int? selectedModuleId = null;
+    private int? selectedActivityId = null;
+    private Dictionary<int, List<DocumentDto>> DocumentsByModule => documents
+        .GroupBy(d => d.ModuleId ?? 0)
+        .ToDictionary(g => g.Key, g => g.ToList());
+
     protected override async Task OnInitializedAsync()
     {
         // Check if the current URL contains ?mockdata=true, then Load from mock data
@@ -194,7 +256,7 @@
 
         if (useMock)
         {
-            documents = MockDocuments.Documents;
+            documents = MockDocuments.AllDocuments;
             isLoading = false;
         }
         else
@@ -285,6 +347,20 @@
         {
             var query = documents.AsEnumerable();
 
+            // Tree Navigation Filter
+            if (selectedActivityId.HasValue)
+            {
+                query = query.Where(d => d.ActivityId == selectedActivityId);
+            }
+            else if (selectedModuleId.HasValue)
+            {
+                query = query.Where(d => d.ActivityId == null && d.ModuleId == selectedModuleId);
+            }
+            else if (selectedCourseId.HasValue)
+            {
+                query = query.Where(d => d.ActivityId == null && d.ModuleId == null && d.CourseId == selectedCourseId);
+            }
+
             // Search Filter (matches Name or FileName)
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -323,12 +399,77 @@
     {
         sortAscending = !sortAscending;
     }
-    
+
     private void SetPage(int page)
     {
         if (page >= 1 && page <= TotalPages)
         {
             currentPage = page;
         }
+    }
+
+    // Tree navigation
+    private void SelectAllFilter()
+    {
+        selectedCourseId = null;
+        selectedModuleId = null;
+        selectedActivityId = null;
+        currentPage = 1;
+    }
+
+    private void SelectCourseFilter()
+    {
+        selectedCourseId = CourseId;
+        selectedModuleId = null;
+        selectedActivityId = null;
+        currentPage = 1;
+    }
+
+    private void SelectModuleFilter(int moduleId)
+    {
+        selectedCourseId = null;
+        selectedModuleId = moduleId;
+        selectedActivityId = null;
+        currentPage = 1;
+    }
+
+    private void SelectActivityFilter(int activityId)
+    {
+        selectedCourseId = null;
+        selectedModuleId = null;
+        selectedActivityId = activityId;
+        currentPage = 1;
+    }
+
+    private string GetModuleName(DocumentDto doc)
+    {
+        // Dto.Location string follows like "Aktivitet: XYZ" or "Real module name":
+        if (!string.IsNullOrEmpty(doc.Location))
+        {
+            if (doc.Location.Contains("Aktivitet: "))
+            {
+                var mName = doc.Location.Split('/')[0].Trim();
+                return  !string.IsNullOrEmpty(mName) ? mName.Replace("Aktivitet: ", "") : $"Modul Id: {doc.ModuleId}";
+            }
+            return doc.Location.Replace("Modul: ", "");
+
+        }
+        return $"Modul Id: {doc.ModuleId}";
+    }
+
+    private string GetActivityName(DocumentDto doc, int activityId)
+    {
+        // If your location string contains a specific format, parse it out safely
+        if (!string.IsNullOrEmpty(doc.Location) && doc.Location.Contains("/"))
+        {
+            var parts = doc.Location.Split('/');
+            if (parts.Length > 1)
+            {
+                return parts[^1].Trim(); // Returns the last segment of the path (e.g., the activity name)
+            }
+        }
+
+        // Fallback if Location format doesn't match
+        return $"Aktivitet Id: {activityId}";
     }
 }

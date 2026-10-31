@@ -20,6 +20,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 	public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<Notification> Notifications => Set<Notification>();
 
+    public DbSet<SharedDocument> SharedDocuments => Set<SharedDocument>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

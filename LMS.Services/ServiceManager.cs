@@ -10,6 +10,7 @@ public class ServiceManager : IServiceManager
     private readonly Lazy<IModuleService> _moduleService;
     private readonly Lazy<IActivityService> _activityService;
     private readonly Lazy<IDocumentService> _documentService;
+    private readonly Lazy<ISharedDocumentService> _sharedDocumentService;
     private readonly Lazy<IAssignmentService> _assignmentService;
     private readonly Lazy<ISubmissionService> _submissionService;
     private readonly Lazy<IDashboardService> _dashboardService;
@@ -24,6 +25,7 @@ public class ServiceManager : IServiceManager
     public IModuleService ModuleService => _moduleService.Value;
     public IActivityService ActivityService => _activityService.Value;
     public IDocumentService DocumentService => _documentService.Value;
+    public ISharedDocumentService SharedDocumentService => _sharedDocumentService.Value;
     public IAssignmentService AssignmentService => _assignmentService.Value;
 	public ISubmissionService SubmissionService => _submissionService.Value;
 	public IDashboardService DashboardService => _dashboardService.Value;
@@ -37,6 +39,7 @@ public class ServiceManager : IServiceManager
 		Lazy<IModuleService> moduleService,
 		Lazy<IActivityService> activityService,
         Lazy<IDocumentService> documentService,
+        Lazy<ISharedDocumentService> sharedDocumentService,
         Lazy<IAssignmentService> assignmentService,
         Lazy<ISubmissionService> submissionService,
         Lazy<IDashboardService> dashboardService,
@@ -50,6 +53,7 @@ public class ServiceManager : IServiceManager
         _moduleService = moduleService;
         _activityService = activityService;
         _documentService = documentService;
+        _sharedDocumentService = sharedDocumentService;
         _assignmentService = assignmentService;
         _submissionService = submissionService;
         _dashboardService = dashboardService;

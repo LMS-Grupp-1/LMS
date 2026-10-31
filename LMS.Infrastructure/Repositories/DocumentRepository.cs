@@ -93,8 +93,7 @@ public class DocumentRepository : IDocumentRepository
                 document.UploadedBy.FirstName + " " +
                     document.UploadedBy.LastName,
                 courseId,
-                document.ModuleId != null ? document.ModuleId 
-                    : (document.ActivityId != null ? document.Activity.ModuleId : null),
+                document.ModuleId ?? (document.Activity != null ? document.Activity.ModuleId : null),
                 document.ActivityId,
                 document.CourseId != null
                     ? "Kursmaterial"

@@ -11,5 +11,8 @@ public interface IUnitOfWork : IDisposable
 	ISubmissionRepository Submissions { get; }
     IFeedbackRepository Feedbacks { get; }
     INotificationRepository Notifications { get; }
+
+    ISharedDocumentRepository SharedDocuments { get; }
+
     Task<int> CompleteAsync(); // Commits all changes to the database
 }

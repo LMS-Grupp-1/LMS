@@ -414,6 +414,76 @@ namespace LMS.Infrastructure.Migrations
                     b.ToTable("Notifications");
                 });
 
+            modelBuilder.Entity("Domain.Models.Entities.SharedDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BlobPath")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int?>("CourseId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ModuleId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("UploadedById")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlobPath")
+                        .IsUnique();
+
+                    b.HasIndex("CourseId");
+
+                    b.HasIndex("ModuleId");
+
+                    b.HasIndex("UploadedById");
+
+                    b.ToTable("SharedDocuments", t =>
+                        {
+                            t.HasCheckConstraint("CK_Documents_Size", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760")
+                                .HasName("CK_Documents_Size1");
+                        });
+                });
+
             modelBuilder.Entity("Domain.Models.Entities.Submission", b =>
                 {
                     b.Property<int>("Id")
@@ -701,6 +771,31 @@ namespace LMS.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Domain.Models.Entities.SharedDocument", b =>
+                {
+                    b.HasOne("Domain.Models.Entities.Course", "Course")
+                        .WithMany("SharedDocuments")
+                        .HasForeignKey("CourseId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Domain.Models.Entities.Module", "Module")
+                        .WithMany("SharedDocuments")
+                        .HasForeignKey("ModuleId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("Domain.Models.Entities.ApplicationUser", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedById")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Course");
+
+                    b.Navigation("Module");
+
+                    b.Navigation("UploadedBy");
+                });
+
             modelBuilder.Entity("Domain.Models.Entities.Submission", b =>
                 {
                     b.HasOne("Domain.Models.Entities.Assignment", "Assignment")
@@ -802,6 +897,8 @@ namespace LMS.Infrastructure.Migrations
 
                     b.Navigation("Modules");
 
+                    b.Navigation("SharedDocuments");
+
                     b.Navigation("Students");
                 });
 
@@ -812,6 +909,8 @@ namespace LMS.Infrastructure.Migrations
                     b.Navigation("Assignments");
 
                     b.Navigation("Documents");
+
+                    b.Navigation("SharedDocuments");
                 });
 
             modelBuilder.Entity("Domain.Models.Entities.Submission", b =>
