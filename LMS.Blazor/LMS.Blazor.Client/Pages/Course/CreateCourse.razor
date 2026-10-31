@@ -114,6 +114,8 @@
 
                 ToastService.ShowToast(
                     $"Kursen {createdCourse.Name} har skapats.", ToastType.Success);
+
+                    NavManager.NavigateTo($"/teacher/courses/{createdCourse.Id}");
             }
         catch (UnauthorizedAccessException ex)
         {

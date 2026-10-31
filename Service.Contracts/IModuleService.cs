@@ -1,4 +1,5 @@
 ﻿using LMS.Shared.DTOs.ModulesDtos;
+using LMS.Shared.DTOs.StatisticsDtos;
 
 namespace Service.Contracts;
 
@@ -9,4 +10,5 @@ public interface IModuleService
     Task CreateModuleAsync(int courseId, CreateModuleDto dto);
     Task UpdateModuleAsync(int courseId, int moduleId, CreateModuleDto dto);
     Task DeleteModuleAsync(int courseId, int moduleId);
+    Task<ModuleStatisticsDto?> GetModuleStatisticsAsync(int moduleId, CancellationToken cancellationToken = default);
 }

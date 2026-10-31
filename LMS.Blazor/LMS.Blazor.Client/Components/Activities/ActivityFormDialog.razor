@@ -147,7 +147,7 @@
             using var content = JsonContent.Create(activityModel);
             (bool? successData, string? responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
                 HttpMethod.Put,
-                $"teacher/modules/{CurrentModule.Id}/activities/{ActivityToEdit.Id}",
+                $"activities/in-module/{CurrentModule.Id}/{ActivityToEdit.Id}",
                 content
             );
 
@@ -169,7 +169,7 @@
 
             (bool? successData, string? responseErrorMessage) = await ApiProxy.SendAndHandleErrorAsync<bool>(
                 HttpMethod.Post,
-                $"teacher/modules/{CurrentModule.Id}/activities",
+                $"activities/in-module/{CurrentModule.Id}",
                 content
             );
 
