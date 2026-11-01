@@ -16,7 +16,7 @@
         </div>
 
         <h3 class="mb-4 text-dark">
-            <i class="bi bi-file-earmark-text me-2"></i>Alla dokument i kursen
+            <i class="bi bi-file-earmark-text me-2"></i>Alla kursmaterial
         </h3>
     </div>
 
@@ -26,48 +26,67 @@
             <div class="col-md-3 border-end pb-3">
                 
                 <button type="button" 
-                            class="list-group-item list-group-item-action p-2 @(selectedCourseId == null && selectedModuleId == null && selectedActivityId == null 
-                                ? "active bg-primary-subtle text-primary fw-bold" : "")"
-                            @onclick="SelectAllFilter">
-                        <i class="bi bi-folder2 me-2"></i>Alla
-                        <span class="badge bg-secondary float-end">@documents.Count</span>
-                    </button>
-                <div class="list-group list-group-flush">
-                    <!-- Root Course Node -->
-                    <button type="button" 
-                            class="list-group-item list-group-item-action @(selectedCourseId == CourseId && selectedModuleId == null && selectedActivityId == null ? "active fw-bold" : "")"
-                            @onclick="SelectCourseFilter">
-                        <i class="bi bi-book me-2"></i>Inom kursen
-                    </button>
+                        class="list-group-item list-group-item-action p-2 mb-2 @(selectedCourseId == null && selectedModuleId == null && selectedActivityId == null ? "active bg-primary-subtle text-primary fw-bold" : "")"
+                        @onclick="SelectAllFilter">
+                    <i class="bi bi-folder2 me-2"></i>Alla
+                    <span class="badge bg-secondary float-end">@documents.Count</span>
+                </button>
 
-                    <!-- Modules & Activities -->
+                
+                <div class="list-group list-group-flush">
+                    <!-- Root Course Node with Expand Toggle -->
+                    <div class="list-group-item pl-2 border-0">
+                        <button type="button" 
+                                    class="btn btn-link text-start text-decoration-none p-0 flex-grow-1 @(selectedCourseId == CourseId && selectedModuleId == null && selectedActivityId == null ? "fw-bold text-primary" : "text-dark")"
+                                    @onclick="SelectCourseFilter">
+                                <i class="bi bi-book me-2"></i>Inom kursen
+                         </button>
+                    </div>
+
+                    <!-- Modules & Activities with Expand Toggles -->
                     @foreach (var moduleGroup in documents.GroupBy(d => new { d.ModuleId, ModuleName = GetModuleName(d) }))
                     {
                         if (moduleGroup.Key.ModuleId != null)
                         {
                             var modId = moduleGroup.Key.ModuleId.Value;
-                            <button type="button" 
-                                    class="list-group-item list-group-item-action ps-3 @(selectedModuleId == modId && selectedActivityId == null ? "active fw-bold" : "")"
-                                    @onclick="() => SelectModuleFilter(modId)">
-                                <i class="bi bi-stack me-2"></i>@moduleGroup.Key.ModuleName
-                            </button>
+                            bool isModExpanded = expandedModuleId == modId;
+                            var activitiesInModule = moduleGroup.Where(d => d.ActivityId != null).GroupBy(d => d.ActivityId).ToList();
 
-                            @foreach (var activityGroup in moduleGroup.Where(d => d.ActivityId != null).GroupBy(d => d.ActivityId))
-                            {
-                                if (activityGroup != null && activityGroup.Key != null)
-                                {
-                                    var actId = activityGroup.Key.Value;
-                                    var actName = GetActivityName(activityGroup.First(), actId); // Or custom activity name field if available
-                                    <button type="button" 
-                                            class="list-group-item list-group-item-action ps-5 py-1 small @(selectedActivityId == actId ? "active fw-bold" : "")"
-                                            @onclick="() => SelectActivityFilter(actId)">
-                                        <i class="bi bi-calendar-check me-2"></i>@actName
+                            <div class="list-group-item px-0 border-0 mt-2">
+                                <div class="d-flex align-items-center">
+                                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 me-1" @onclick="() => ToggleModuleExpand(modId)">
+                                        <span style="font-size: 0.75rem;">@(isModExpanded ? "▼" : "▶")</span>
                                     </button>
+                                    <button type="button" 
+                                            class="btn btn-link text-start text-decoration-none p-0 flex-grow-1 @(selectedModuleId == modId && selectedActivityId == null ? "fw-bold text-primary" : "text-dark")"
+                                            @onclick="() => SelectModuleFilter(modId)">
+                                        <i class="bi bi-stack me-2"></i>@moduleGroup.Key.ModuleName
+                                    </button>
+                                </div>
+
+                                @if (isModExpanded)
+                                {
+                                    <div class="ms-4 mt-1 d-flex flex-column gap-1">
+                                        @foreach (var actGroup in activitiesInModule)
+                                        {
+                                            if (actGroup.Key != null)
+                                            {
+                                                var actId = actGroup.Key.Value;
+                                                var actName = GetActivityName(actGroup.First(), actId);
+                                                <button type="button" 
+                                                        class="btn btn-sm text-start py-1 px-2 @(selectedModuleId == modId && selectedActivityId == actId ? "btn-primary text-white" : "btn-light text-secondary")"
+                                                        @onclick="() => SelectActivityFilter(actId)">
+                                                    <i class="bi bi-calendar-check me-1"></i>@actName
+                                                </button>
+                                            }
+                                        }
+                                    </div>
                                 }
-                            }
+                            </div>
                         }
                     }
                 </div>
+
             </div>
 
             <!-- Right Column: Search, Sort & Document Table -->
@@ -247,6 +266,14 @@
     private Dictionary<int, List<DocumentDto>> DocumentsByModule => documents
         .GroupBy(d => d.ModuleId ?? 0)
         .ToDictionary(g => g.Key, g => g.ToList());
+    // Tree expansion
+    private bool isKursenExpanded = true;
+    private int? expandedModuleId = null;
+
+    private void ToggleModuleExpand(int moduleId)
+    {
+        expandedModuleId = expandedModuleId == moduleId ? null : moduleId;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -415,6 +442,9 @@
         selectedModuleId = null;
         selectedActivityId = null;
         currentPage = 1;
+
+        // If wants to reset expansion state when selecting "All", you can uncomment the following line:
+        // expandedModuleId = null;
     }
 
     private void SelectCourseFilter()

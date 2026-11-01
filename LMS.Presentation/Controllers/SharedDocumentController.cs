@@ -1,7 +1,10 @@
-﻿using LMS.Shared.Constants;
+﻿using Domain.Models.Exceptions;
+using LMS.Shared.Constants;
 using LMS.Shared.DTOs.ActivityDtos;
+using LMS.Shared.DTOs.ModulesDtos;
 using LMS.Shared.DTOs.SharedDocumentDtos;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Service.Contracts;
 using System.Security.Claims;
@@ -39,5 +42,76 @@ public class SharedDocumentController : ControllerBase
         }
         var sharedDocuments = await _service.SharedDocumentService.GetForUserAsync(userId, cancellationToken);
         return Ok(sharedDocuments);
+    }
+
+    // Binds the "File" part from multipart content
+    [HttpPost("for-student")]
+    public async Task<IActionResult> CreateSharedDocumentForUser(
+        [FromForm] UploadSharedDocumentDto dto,
+        [FromForm(Name = "File")] IFormFile file,
+        CancellationToken cancellationToken = default)
+    {
+        if (file is null || file.Length == 0)
+        {
+            throw new DocumentValidationException("The file cannot be empty.");
+        }
+        if (file.Length > DocumentConstraints.MaxFileSize)
+        {
+            throw new DocumentValidationException(
+                $"The file cannot exceed {DocumentConstraints.MaxFileSize} bytes.");
+        }
+        // Open the stream from file:
+        using var fileStream = file.OpenReadStream();
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        await _service.SharedDocumentService.CreateForUserAsync(userId, dto, fileStream, file.FileName, cancellationToken);
+        return Ok(true);
+    }
+
+    [HttpGet("{id:int}/download")]
+    public async Task<IActionResult> Download(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        if (id <= 0)
+            throw new DocumentValidationException(
+                "The document ID must be greater than zero.");
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+        bool isStudent = User.IsInRole(UserRoles.Student);
+
+        var document = await _service.SharedDocumentService.DownloadAsync(
+                id, userId, isStudent, cancellationToken);
+
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+        // ASP.NET Core disposes the stream after sending the response.
+        return File(
+            document.Content,
+            document.ContentType,
+            document.FileName);
+    }
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+        bool isStudent = User.IsInRole(UserRoles.Student);
+
+        await _service.SharedDocumentService.DeleteAsync(id, userId, isStudent, cancellationToken);
+        return Ok(true);
     }
 }

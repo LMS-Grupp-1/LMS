@@ -87,7 +87,7 @@ public class UserRepository : BaseRepository<ApplicationUser>, IUserRepository
     {
         return await Set
             .Where(user => user.Id == userId)
-            .Select(user => user.CourseId)
+            .Select(user => (int?)user.CourseId)
             .SingleOrDefaultAsync(cancellationToken);
     }
 }

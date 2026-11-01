@@ -15,6 +15,8 @@ public class SharedDocumentRepository(ApplicationDbContext context)
         return await Set
             .AsNoTracking()
             .Where(sd => sd.CourseId == courseId)
+            .Include(sd => sd.UploadedBy)
+            .Include(sd => sd.Module)
             .OrderByDescending(sd => sd.UploadedAt)
             .ToListAsync(cancellationToken);
     }

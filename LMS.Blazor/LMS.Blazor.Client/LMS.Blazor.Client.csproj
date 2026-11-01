@@ -18,8 +18,4 @@
     <ProjectReference Include="..\..\LMS.Shared\LMS.Shared.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="Pages\SharedDocuments\" />
-  </ItemGroup>
-
 </Project>
