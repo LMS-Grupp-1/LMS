@@ -18,6 +18,8 @@ public class UnitOfWork : IUnitOfWork
 
     public IFeedbackRepository Feedbacks { get; }
 
+    public INotificationRepository Notifications { get; }
+
     public UnitOfWork(ApplicationDbContext context,
                 IUserRepository userRepository,
                       ICourseRepository courseRepository,
@@ -26,7 +28,8 @@ public class UnitOfWork : IUnitOfWork
                       IDocumentRepository documentRepository,
                       IAssignmentRepository assignmentRepository,
                       ISubmissionRepository submissionRepository,
-                      IFeedbackRepository feedbackRepository)
+                      IFeedbackRepository feedbackRepository,
+                      INotificationRepository notificationRepository)
     {
         _context = context;
         Users = userRepository;
@@ -37,7 +40,8 @@ public class UnitOfWork : IUnitOfWork
         Assignments = assignmentRepository;
 		Submissions = submissionRepository;
         Feedbacks = feedbackRepository;
-	}
+        Notifications = notificationRepository;
+    }
 
     public async Task<int> CompleteAsync()
     {

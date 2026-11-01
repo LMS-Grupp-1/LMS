@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Domain.Models.Exceptions;
+namespace Domain.Models.Exceptions.ModuleExceptions;
     public sealed class ModuleNotFoundException : NotFoundException
     {
         public ModuleNotFoundException(int moduleId)
