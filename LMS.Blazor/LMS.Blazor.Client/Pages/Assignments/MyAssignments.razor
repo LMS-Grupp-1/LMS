@@ -6,6 +6,7 @@
 @using System.Net
 @using Microsoft.AspNetCore.Authorization
 @using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.AssignmentDtos
 @using Microsoft.AspNetCore.Components.Forms
@@ -13,6 +14,7 @@
 @using LMS.Blazor.Client.Components.Feedbacks
 
 @inject IAssignmentService AssignmentService
+@inject IApiProxyClient ApiProxy
 @inject NavigationManager NavigationManager
 
 <PageTitle>Mina uppgifter</PageTitle>
@@ -160,7 +162,7 @@ else
     {
         try
         {
-            var result = await AssignmentService.GetMyAssignmentsAsync(componentCancellation.Token);
+            var result = await ApiProxy.GetAsync<List<StudentAssignmentDto>>("assignments/my", componentCancellation.Token);
 
             // The server-side prerender service deliberately returns null.
             // Keep showing the loading state until WebAssembly runs this again.
