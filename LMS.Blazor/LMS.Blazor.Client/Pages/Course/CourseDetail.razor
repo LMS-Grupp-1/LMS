@@ -73,6 +73,9 @@
 
             @switch (activeTab)
             {
+                case "overview":
+                    <CourseOverview CourseId="@CourseId" @key="CourseId" />
+                    break;
                 case "modules":
                     <ModuleList CourseId="CourseId" CurrentCourse="currentCourse" />
                     break;
@@ -107,7 +110,7 @@
     private CourseDto? currentCourse;
     private string? loadError;
     private bool isLoading = true;
-    private string activeTab = "modules";
+    private string activeTab = "overview";
     private string lastContentTab = "modules";
 
     // For Edit Course Modal
@@ -118,10 +121,11 @@
     {
         activeTab = Tab?.ToLowerInvariant() switch
         {
+            "modules" => "modules",
             "documents" => "documents",
             "submissions" => "submissions",
             "students" => "students",
-            _ => "modules"
+            _ => "overview"
         };
 
         if (!RendererInfo.IsInteractive)

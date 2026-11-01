@@ -1,6 +1,12 @@
 ﻿<nav aria-label="Kursnavigation" class="mb-4">
     <ul class="nav nav-tabs">
         <li class="nav-item">
+            <a class="nav-link @ActiveClass("overview")"
+                href="@Link("overview")"
+                aria-current="@CurrentPage("overview")">
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link @(IsContentActive ? "active fw-bold" : null)"
                href="@Link(ContentTab)">
                 Kursinnehåll
@@ -51,7 +57,7 @@
     public int CourseId { get; set; }
 
     [Parameter]
-    public string ActiveTab { get; set; } = "modules";
+    public string ActiveTab { get; set; } = "overview";
 
     [Parameter]
     public string ContentTab { get; set; } = "modules";
