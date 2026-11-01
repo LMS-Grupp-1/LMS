@@ -53,11 +53,11 @@ public class SharedDocumentController : ControllerBase
     {
         if (file is null || file.Length == 0)
         {
-            throw new DocumentValidationException("The file cannot be empty.");
+            throw new BadRequestException("The file cannot be empty.");
         }
         if (file.Length > DocumentConstraints.MaxFileSize)
         {
-            throw new DocumentValidationException(
+            throw new BadRequestException(
                 $"The file cannot exceed {DocumentConstraints.MaxFileSize} bytes.");
         }
         // Open the stream from file:
@@ -79,7 +79,7 @@ public class SharedDocumentController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (id <= 0)
-            throw new DocumentValidationException(
+            throw new BadRequestException(
                 "The document ID must be greater than zero.");
 
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);

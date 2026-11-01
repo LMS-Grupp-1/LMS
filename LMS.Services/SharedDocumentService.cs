@@ -65,7 +65,7 @@ public class SharedDocumentService : ISharedDocumentService
         if (dto.Name.Length == 0 ||
             dto.Name.Length > DocumentConstraints.MaxNameLength)
         {
-            throw new DocumentValidationException(
+            throw new BadRequestException(
                 $"Name must contain between 1 and " +
                 $"{DocumentConstraints.MaxNameLength} characters.");
         }
@@ -73,7 +73,7 @@ public class SharedDocumentService : ISharedDocumentService
         if (dto.Description.Length >
             DocumentConstraints.MaxDescriptionLength)
         {
-            throw new DocumentValidationException(
+            throw new BadRequestException(
                 $"Description cannot exceed " +
                 $"{DocumentConstraints.MaxDescriptionLength} characters.");
         }
@@ -122,8 +122,7 @@ public class SharedDocumentService : ISharedDocumentService
 
         if (document is null)
         {
-            throw new DocumentNotFoundException(
-                "The document does not exist.");
+            throw new EntityNotFoundException("Document", id);
         }
 
         if (isStudent)
@@ -158,8 +157,7 @@ public class SharedDocumentService : ISharedDocumentService
         var document = await _unitOfWork.SharedDocuments.GetByIdAsync(id);
         if (document is null)
         {
-            throw new DocumentNotFoundException(
-                "The document does not exist.");
+            throw new EntityNotFoundException("Document", id);
         }
 
         if (isStudent && document.UploadedById != userId)

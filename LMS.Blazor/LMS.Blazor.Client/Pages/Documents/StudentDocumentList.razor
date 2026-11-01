@@ -267,7 +267,6 @@
         .GroupBy(d => d.ModuleId ?? 0)
         .ToDictionary(g => g.Key, g => g.ToList());
     // Tree expansion
-    private bool isKursenExpanded = true;
     private int? expandedModuleId = null;
 
     private void ToggleModuleExpand(int moduleId)
