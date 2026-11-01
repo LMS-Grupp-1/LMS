@@ -174,7 +174,7 @@ else
         @if (targets.Count == 0)
         {
             <div class="alert alert-info" role="status">
-                Lägg till en modul eller aktivitet i kursen innan du laddar upp dokument.
+                Det finns inga tillgängliga placeringar för dokumentet.
             </div>
         }
 
@@ -215,7 +215,7 @@ else
                     <select id="document-target"
                             class="form-select"
                             @bind="targetIndex">
-                    <option value="-1">Välj modul eller aktivitet</option>
+                    <option value="-1">Välj kurs, modul eller aktivitet</option>
                         @for (int index = 0; index < targets.Count; index++)
                         {
                             <option value="@index">
