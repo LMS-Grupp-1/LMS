@@ -19,8 +19,7 @@ internal class Program
         });
         builder.Services.AddScoped<IApiProxyClient, ApiProxyClient>();
 		builder.Services.AddScoped<IAssignmentService, AssignmentService>();
-		builder.Services.AddScoped<ISubmissionService, SubmissionService>();		
-		builder.Services.AddScoped<IDashboardService, DashboardService>();
+		builder.Services.AddScoped<ISubmissionService, SubmissionService>();
 
 		builder.Services.AddScoped<ToastService>();
         builder.Services.AddScoped<DocumentService>();
