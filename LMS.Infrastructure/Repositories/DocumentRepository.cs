@@ -110,17 +110,22 @@ public class DocumentRepository : IDocumentRepository
         int courseId,
         CancellationToken cancellationToken)
     {
-        var courseExists = await _context.Courses
-            .AnyAsync(
-                course => course.Id == courseId,
-                cancellationToken);
+        var courseName = await _context.Courses
+            .Where(course => course.Id == courseId)
+            .Select(course => course.Name)
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (!courseExists)
+        if (courseName is null)
         {
             return Array.Empty<DocumentTargetDto>();
         }
 
-        var targets = new List<DocumentTargetDto>();
+        var targets = new List<DocumentTargetDto>
+        {
+            new(
+                new DocumentTarget(CourseId: courseId),
+                "Kurs: " + courseName)
+        };
 
         var modules = await _context.Modules
             .AsNoTracking()

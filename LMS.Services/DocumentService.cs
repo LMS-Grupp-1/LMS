@@ -1,9 +1,10 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Documents;
 using Domain.Models.Entities;
-using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.DocumentExceptions;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
+using LMS.Shared.DTOs.Users;
 using Microsoft.Extensions.Logging;
 using Service.Contracts;
 using System.Xml.Linq;
@@ -134,6 +135,31 @@ public sealed class DocumentService(
             await unitOfWork.Documents.AddAsync(
                 document, cancellationToken);
 
+            // Create notifications to the students associated with this course
+            var studentsInCourse = await unitOfWork.Users.GetUsersByCourseIdAsync(courseId.Value, UserRoles.Student)
+                                    ?? Array.Empty<UserLookupDto>();
+            int targetId = target.ActivityId.HasValue
+                ? target.ActivityId.Value
+                : (target.ModuleId.HasValue
+                    ? target.ModuleId.Value
+                    : courseId.Value);
+            foreach (var student in studentsInCourse)
+            {
+                var notification = new Notification
+                {
+                    UserId = student.Id,
+                    Title = "Nytt dokument",
+                    Message = $"{name} har tillagats i {selectedTarget.Label}",
+                    NotificationType = NotificationTypes.NewMaterial,
+                    CreatedAt = DateTimeOffset.UtcNow,
+                    IsRead = false,
+                    TargetId = targetId
+                };
+
+                await unitOfWork.Notifications.AddAsync(notification);
+            }
+
+            // Commit ALL changes (submission + notifications) in one atomic transaction
             await unitOfWork.CompleteAsync();
         }
         catch
@@ -413,14 +439,13 @@ public sealed class DocumentService(
 
     private static void ValidateTarget(DocumentTarget target)
     {
-        if (target.CourseId.HasValue ||
-            CountTargets(target) != 1 ||
+        if (CountTargets(target) != 1 ||
             target.CourseId is <= 0 ||
             target.ModuleId is <= 0 ||
             target.ActivityId is <= 0)
         {
             throw new DocumentValidationException(
-                "Select one module or activity.");
+                "Select one course, module or activity.");
         }
     }
 }

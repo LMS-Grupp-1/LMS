@@ -75,7 +75,7 @@ else
         try
         {
             var result = await ApiProxy.GetAsync<IEnumerable<ActivityDto>>(
-                $"teacher/modules/{ModuleId}/activities");
+                $"activities/in-module/{ModuleId}/for-student");
 
             activities = result?.ToList() ?? new List<ActivityDto>();
         }
