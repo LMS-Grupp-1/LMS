@@ -36,7 +36,7 @@ else
     <h2 class="h4">Kursmaterial</h2>
 }
 <p>
-    Ladda upp material till en modul eller en aktivitet.
+    Ladda upp material till kursen, en modul eller en aktivitet.
     Materialet blir tillgängligt för kursens studenter.
 </p>
 
@@ -71,7 +71,8 @@ else
     }
 
     <section class="bg-white border rounded p-3 mb-4" aria-labelledby="documents-heading">
-        <h2 id="documents-heading" class="h5">Uppladdade dokument</h2>
+      
+      <h2 id="documents-heading" class="h5">Uppladdade dokument</h2>
 
         @if (documents.Count == 0)
         {
@@ -413,7 +414,7 @@ else
 
         if (targetIndex < 0 || targetIndex >= targets.Count)
         {
-            error = "Välj en modul eller aktivitet.";
+            error = "Välj kurs, modul eller aktivitet.";
             return;
         }
 

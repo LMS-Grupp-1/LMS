@@ -14,4 +14,5 @@ public interface IServiceManager
 
     ITeacherCourseOverviewService TeacherCourseOverviewService { get; }
     IFeedbackService FeedbackService { get; }
+    INotificationService NotificationService { get; }
 }
