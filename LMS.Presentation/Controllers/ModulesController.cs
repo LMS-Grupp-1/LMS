@@ -1,4 +1,5 @@
 ﻿using global::LMS.Shared.DTOs.ModulesDtos;
+using LMS.Shared.DTOs.StatisticsDtos;
 using LMS.Shared.Constants;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -42,7 +43,7 @@ public class ModulesController : ControllerBase
         return Ok(modules);
     }
 
-    [HttpPost]
+    [HttpPost("in-course/{courseId:int}")]
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> CreateModule(int courseId, [FromBody] CreateModuleDto dto)
     {
@@ -54,7 +55,7 @@ public class ModulesController : ControllerBase
         return Ok(true);
     }
 
-    [HttpPut("{moduleId:int}")]
+    [HttpPut("in-course/{courseId:int}/{moduleId:int}")]
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> UpdateModule(int courseId, int moduleId, [FromBody] CreateModuleDto dto)
     {
@@ -63,12 +64,20 @@ public class ModulesController : ControllerBase
         return Ok(true);
     }
 
-    [HttpDelete("{moduleId:int}")]
+    [HttpDelete("in-course/{courseId:int}/{moduleId:int}")]
     [Authorize(Roles = UserRoles.Teacher)]
     public async Task<IActionResult> DeleteModule(int courseId, int moduleId)
     {
         await _service.ModuleService.DeleteModuleAsync(courseId, moduleId);
 
         return Ok(true);
+    }
+
+    [HttpGet("{moduleId:int}/statistics")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public async Task<ActionResult<ModuleStatisticsDto?>> GetModuleStatistics(int moduleId, CancellationToken cancellationToken = default)
+    {
+        var dto = await _service.ModuleService.GetModuleStatisticsAsync(moduleId, cancellationToken);
+        return (dto);
     }
 }
