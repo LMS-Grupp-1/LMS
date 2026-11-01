@@ -1,4 +1,5 @@
 ﻿using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.DocumentExceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 

@@ -21,6 +21,7 @@ public class FeedbackRepository : BaseRepository<Feedback>, IFeedbackRepository
         return await Set
             .Where(f => f.SubmissionId == submissionId)
             .Include(f => f.Teacher)
+            .OrderByDescending(f => f.CreatedAt)
             .ToListAsync(cancellationToken);
     }
 }

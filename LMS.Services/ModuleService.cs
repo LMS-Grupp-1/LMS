@@ -1,7 +1,9 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Entities;
 using Domain.Models.Exceptions;
+using LMS.Shared.DTOs.DocumentDtos;
 using LMS.Shared.DTOs.ModulesDtos;
+using LMS.Shared.DTOs.StatisticsDtos;
 using Service.Contracts;
 using Module = Domain.Models.Entities.Module;
 
@@ -23,6 +25,31 @@ public class ModuleService : IModuleService
             throw new EntityNotFoundException("Course", courseId);
 
         var modules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId);
+
+        return modules.Select(m => new ModuleDto
+        {
+            Id = m.Id,
+            Name = m.Name,
+            Description = m.Description,
+            StartDate = m.StartDate,
+            EndDate = m.EndDate,
+            CourseId = m.CourseId
+        });
+    }
+
+    public async Task<IEnumerable<ModuleDto>> GetModulesForUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        int? courseId = await _unitOfWork.Users.GetUserCourseIdAsync(userId, cancellationToken);
+        if (!courseId.HasValue)
+        {
+            throw new PropertyNotFoundException("The user has not been registered to any course yet.");
+        }
+
+        var course = await _unitOfWork.Courses.GetByIdAsync(courseId.Value, false);
+        if (course == null)
+            throw new EntityNotFoundException("Course", courseId.Value);
+
+        var modules = await _unitOfWork.Modules.GetModulesByCourseIdAsync(courseId.Value);
 
         return modules.Select(m => new ModuleDto
         {
@@ -96,6 +123,11 @@ public class ModuleService : IModuleService
 
         _unitOfWork.Modules.Delete(module);
         await _unitOfWork.CompleteAsync();
+    }
+
+    public async Task<ModuleStatisticsDto?> GetModuleStatisticsAsync(int moduleId, CancellationToken cancellationToken = default)
+    {
+        return await _unitOfWork.Modules.GetModuleStatisticsAsync(moduleId, cancellationToken);
     }
 
     private async Task ValidateModuleAsync(int courseId, CreateModuleDto dto, int? editModuleId)
