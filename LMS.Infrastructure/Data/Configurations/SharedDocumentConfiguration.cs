@@ -35,17 +35,17 @@ namespace LMS.Infrastructure.Data.Configurations
             builder.HasOne(sd => sd.UploadedBy)
                 .WithMany()
                 .HasForeignKey(sd => sd.UploadedById)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(sd => sd.Course)
                 .WithMany(c => c.SharedDocuments)
                 .HasForeignKey(sd => sd.CourseId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(sd => sd.Module)
                 .WithMany(m => m.SharedDocuments)
                 .HasForeignKey(sd => sd.ModuleId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.ToTable(table =>
             {
