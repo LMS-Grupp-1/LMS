@@ -25,46 +25,35 @@ public class UsersService : IUsersService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task CreateUserAsync(CreateUserDto dto)
-    {
-        if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
-        {
-            throw new EntityNotFoundException("Role", dto.Role);
-        }
+	public async Task CreateUserAsync(CreateUserDto dto)
+	{
+		// Validate before anything is changed, so no transaction is started for invalid input.
+		if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
+		{
+			throw new EntityNotFoundException("Role", dto.Role);
+		}
 
-        if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
-        {
-            throw new BadRequestException("Student must be assigned to a course.");
-        }
+		if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
+		{
+			throw new BadRequestException("Student must be assigned to a course.");
+		}
 
-        var user = new ApplicationUser
-        {
-            UserName = dto.Email,
-            Email = dto.Email,
-            FirstName = dto.FirstName?.Trim() ?? string.Empty,
-            LastName = dto.LastName?.Trim() ?? string.Empty,
-            CourseId = dto.CourseId
-        };
+		var user = new ApplicationUser
+		{
+			UserName = dto.Email,
+			Email = dto.Email,
+			FirstName = dto.FirstName?.Trim() ?? string.Empty,
+			LastName = dto.LastName?.Trim() ?? string.Empty,
+			CourseId = dto.CourseId
+		};
 
-        var createResult = await _userManager.CreateAsync(user, dto.Password);
-        if (!createResult.Succeeded)
-        {
-            // Combine all ASP.NET Core Identity error descriptions into one readable string
-            var errorMessages = string.Join(" ", createResult.Errors.Select(e => e.Description));
-
-            throw new BadRequestException(errorMessages);
-        }
-
-        var addToRoleResult = await _userManager.AddToRoleAsync(user, dto.Role);
-        if (!addToRoleResult.Succeeded)
-        {
-            // Compensation / Rollback: Delete the user if role assignment fails
-            // await _userManager.DeleteAsync(user);
-
-            // Combine all ASP.NET Core Identity error descriptions into one readable string
-            throw new BadRequestException(string.Join(" ", addToRoleResult.Errors.Select(e => e.Description)));
-        }
-    }
+		// The user is only kept if the role could also be set, so there are never users without a role.
+		await _unitOfWork.ExecuteInTransactionAsync(async () =>
+		{
+			ThrowIfFailed(await _userManager.CreateAsync(user, dto.Password));
+			ThrowIfFailed(await _userManager.AddToRoleAsync(user, dto.Role));
+		});
+	}
 
 	public async Task UpdateUserAsync(UpdateUserDto dto)
 	{
