@@ -12,4 +12,5 @@ public interface IUnitOfWork : IDisposable
     IFeedbackRepository Feedbacks { get; }
     INotificationRepository Notifications { get; }
     Task<int> CompleteAsync(); // Commits all changes to the database
+	Task ExecuteInTransactionAsync(Func<Task> action);
 }
