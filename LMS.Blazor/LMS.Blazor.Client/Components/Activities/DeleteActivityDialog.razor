@@ -130,7 +130,7 @@
         try
         {
             preview = await ApiProxy.GetAsync<ActivityDeletionPreviewDto>(
-                $"teacher/modules/{ModuleId}/activities/{ActivityId}/deletion-preview");
+                $"activities/in-module/{ModuleId}/{ActivityId}/deletion-preview");
 
             if (preview is null)
             {
@@ -184,7 +184,7 @@
 
             var (_, responseError) = await ApiProxy.SendAndHandleErrorAsync<object>(
                 HttpMethod.Delete,
-                $"teacher/modules/{ModuleId}/activities/{ActivityId}",
+                $"activities/in-module/{ModuleId}/{ActivityId}",
                 content);
 
             if (!string.IsNullOrWhiteSpace(responseError))
