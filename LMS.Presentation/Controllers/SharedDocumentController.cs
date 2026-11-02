@@ -47,8 +47,8 @@ public class SharedDocumentController : ControllerBase
     // Binds the "File" part from multipart content
     [HttpPost("for-student")]
     public async Task<IActionResult> CreateSharedDocumentForUser(
+        IFormFile file,
         [FromForm] UploadSharedDocumentDto dto,
-        [FromForm(Name = "File")] IFormFile file,
         CancellationToken cancellationToken = default)
     {
         if (file is null || file.Length == 0)
