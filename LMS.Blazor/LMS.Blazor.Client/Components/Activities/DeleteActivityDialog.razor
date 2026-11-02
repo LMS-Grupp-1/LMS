@@ -184,7 +184,7 @@
 
             var (_, responseError) = await ApiProxy.SendAndHandleErrorAsync<object>(
                 HttpMethod.Delete,
-                $"teacher/modules/{ModuleId}/activities/{ActivityId}",
+                $"activities/in-module/{ModuleId}/{ActivityId}",
                 content);
 
             if (!string.IsNullOrWhiteSpace(responseError))
