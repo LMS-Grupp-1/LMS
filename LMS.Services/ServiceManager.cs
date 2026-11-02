@@ -16,6 +16,7 @@ public class ServiceManager : IServiceManager
     private readonly Lazy<ITeacherCourseOverviewService> _teacherCourseOverviewService;
     private readonly Lazy<IFeedbackService> _feedbackService;
     private readonly Lazy<INotificationService> _notificationService;
+    private readonly Lazy<ICourseInvitationService> _courseInvitationService;
 
 
     public IAuthService AuthService => _authService.Value;
@@ -30,6 +31,7 @@ public class ServiceManager : IServiceManager
     public ITeacherCourseOverviewService TeacherCourseOverviewService => _teacherCourseOverviewService.Value;
     public IFeedbackService FeedbackService => _feedbackService.Value;
     public INotificationService NotificationService => _notificationService.Value;
+    public ICourseInvitationService CourseInvitationService => _courseInvitationService.Value;
 
     public ServiceManager(Lazy<IAuthService> authService, 
 		Lazy<IUsersService> usersService, 
@@ -42,7 +44,8 @@ public class ServiceManager : IServiceManager
         Lazy<IDashboardService> dashboardService,
         Lazy<ITeacherCourseOverviewService> teacherCourseOverviewService,
         Lazy<IFeedbackService> feedbackService,
-        Lazy<INotificationService> notificationService)
+        Lazy<INotificationService> notificationService,
+        Lazy<ICourseInvitationService> courseInvitationService)
     {
         _authService = authService;
         _usersService = usersService;
@@ -56,5 +59,6 @@ public class ServiceManager : IServiceManager
         _teacherCourseOverviewService = teacherCourseOverviewService;
         _feedbackService = feedbackService;
         _notificationService = notificationService;
+        _courseInvitationService = courseInvitationService;
     }
 }

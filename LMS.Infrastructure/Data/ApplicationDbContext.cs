@@ -19,6 +19,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 	public DbSet<Submission> Submissions => Set<Submission>();
 	public DbSet<Feedback> Feedbacks => Set<Feedback>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<CourseInvitation> CourseInvitations => Set<CourseInvitation>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -1,0 +1,93 @@
+﻿
+
+@if (IsOpen)
+{
+	<div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <h5 class="card-title mb-3">
+                    <i class="bi bi-envelope-plus me-2 text-primary"></i>Bjud in ny student
+                </h5>
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        @successMessage
+                        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        @errorMessage
+                        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+                    </div>
+                }
+
+                <EditForm Model="@inviteModel" OnValidSubmit="HandleInviteAsync">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label for="studentEmail" class="form-label">Elevens E-postadress</label>
+                        <InputText id="studentEmail" 
+                                   class="form-control" 
+                                   placeholder="namn@exempel.se" 
+                                   @bind-Value="inviteModel.Email" />
+                        <ValidationMessage For="@(() => inviteModel.Email)" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Skickar inbjudan...</span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-send me-1"></i>
+                            <span>Skicka Inbjudan</span>
+                        }
+                    </button>
+                </EditForm>
+
+
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int CourseId { get; set; }
+
+    private InviteStudentDto inviteModel = new();
+    private bool isSubmitting = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    private async Task HandleInviteAsync()
+    {
+        isSubmitting = true;
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            inviteModel.CourseId = CourseId;
+
+            // Calls your backend API endpoint for inviting a student
+            await ApiProxy.PostAsync("courses/invite", inviteModel);
+
+            successMessage = $"Inbjudan har skickats till {inviteModel.Email}!";
+            inviteModel = new InviteStudentDto(); // Reset form
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Det gick inte att skicka inbjudan. Kontrollera e-postadressen och försök igen.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

@@ -11,5 +11,6 @@ public interface IUnitOfWork : IDisposable
 	ISubmissionRepository Submissions { get; }
     IFeedbackRepository Feedbacks { get; }
     INotificationRepository Notifications { get; }
+    ICourseInvitationRepository CourseInvitations { get; }
     Task<int> CompleteAsync(); // Commits all changes to the database
 }
