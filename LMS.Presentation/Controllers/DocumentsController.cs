@@ -3,6 +3,7 @@ using LMS.Presentation.Models;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.DocumentExceptions;
 using Domain.Models.Documents;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -125,6 +126,37 @@ public sealed class DocumentsController(IServiceManager serviceManager)
                 document.Content,
                 document.ContentType,
                 document.FileName);
+        });
+    }
+
+    [HttpPut("{id:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public Task<IActionResult> Update(
+        int id,
+        [FromBody] DocumentUpdateDto dto,
+        CancellationToken cancellationToken)
+    {
+        return ExecuteAsync(async actor =>
+        {
+            await _documents.UpdateAsync(
+                id, dto, actor, cancellationToken);
+
+            return NoContent();
+        });
+    }
+
+    [HttpDelete("{id:int}")]
+    [Authorize(Roles = UserRoles.Teacher)]
+    public Task<IActionResult> Delete(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        return ExecuteAsync(async actor =>
+        {
+            await _documents.DeleteAsync(
+                id, actor, cancellationToken);
+
+            return NoContent();
         });
     }
 

@@ -9,6 +9,7 @@ erDiagram
   Course |o--o{ ApplicationUser : "enrolls (students)"
   Module ||--o{ Activity : "has"
   Module ||--o{ Assignment : "has"
+  Activity ||--o{ Assignment : "has"
   ActivityType ||--o{ Activity : "classifies"
   Assignment ||--o{ Submission : "receives"
   ApplicationUser ||--o{ Submission : "submits"
@@ -21,6 +22,9 @@ erDiagram
   Activity |o--o{ Document : "holds"
   Assignment |o--o{ Document : "holds"
   ApplicationUser ||--o{ Notification : "receives"
+  ApplicationUser ||--o{ SharedDocument : "shares (student)"
+  Course |o--o{ SharedDocument : "holds"
+  Module |o--o{ SharedDocument : "labels"
 
   ApplicationUser {
     string Id PK "Identity"
@@ -60,6 +64,7 @@ erDiagram
   Assignment {
     int Id PK
     int ModuleId FK
+    int ActivityId FK "activity in the same module"
     string Name
     string Description
     datetime Deadline "nullable, null = no deadline"
@@ -94,6 +99,20 @@ erDiagram
     string Comment
     datetime CreatedAt
   }
+  SharedDocument {
+    int Id PK
+    string Name
+    string Description
+    string FileName "original file name"
+    string ContentType
+    long SizeBytes
+    string BlobPath "path in Blob Storage, unique"
+    datetime UploadedAt
+    string UploadedById FK
+    int CourseId FK "nullable in the database, always set by the service"
+    int ModuleId FK "nullable, label only"
+    int GroupId "nullable, label only (1-4)"
+  }
   Notification {
     int Id PK
     string UserId FK
@@ -111,7 +130,7 @@ erDiagram
 
 An **activity** is a session in the module schedule (lecture, e-learning, exercise). It has a start and end time and takes up time in the schedule.
 
-An **assignment** is a task for the students with an optional deadline. It is not shown as a block in the schedule, only by its deadline.
+An **assignment** is a task for the students with an optional deadline. It always belongs to an activity in the same module, for example the exercise session where it is introduced. It is not shown as a block in the schedule, only by its deadline. `ModuleId` is kept on the assignment for queries and is always copied from the activity on the server.
 
 | Example | Modelled as | `Deadline` | `RequiresSubmission` |
 |---|---|---|---|
@@ -124,6 +143,12 @@ An **assignment** is a task for the students with an optional deadline. It is no
 
 Submission status is calculated, not stored. For an assignment that requires submission, a student has **submitted** if a submission exists, **not submitted** if not and the deadline has not passed, and is **late** if not and the deadline has passed.
 
+## Documents and shared documents
+
+A **document** is course material uploaded by a teacher to a course, module, activity or assignment, or a file handed in by a student as a submission.
+
+A **shared document** is a file a student shares with the rest of their course. Everyone in the course can see and download it. The module and group are only labels shown in the list; they do not limit who can see the document.
+
 ## Business rules
 
 | Rule | Enforced in |
@@ -132,9 +157,15 @@ Submission status is calculated, not stored. For an assignment that requires sub
 | A module is within the course period and does not overlap other modules in the course | `ModuleService` |
 | An activity is within the module period and does not overlap other activities in the module | `ActivityService` |
 | Assignments may overlap each other and activities; the deadline is optional | `AssignmentService` |
+| An assignment belongs to an activity in the same module and can only be moved within that module | `AssignmentService` |
+| The deadline may be after the module end (the UI shows a warning) but not after the course end | `AssignmentService` + Blazor |
+| An assignment with submissions cannot be deleted | `AssignmentService` |
+| An activity with assignments cannot be deleted | Database (`Restrict`); a service check is needed when activity delete is added |
 | Submissions are only accepted for assignments that require submission | `SubmissionService` |
 | A student belongs to exactly one course | `UserService` |
 | Access to course, document and submission data depends on role and course membership, even if an id or URL is manipulated | Services |
 | File uploads validate file type and file size | `DocumentService` |
+| A student can only share documents in their own course; everyone in the course can see them | `SharedDocumentService` |
+| A student can only delete their own shared documents; a teacher can delete any | `SharedDocumentService` |
 
 Invalid dates and overlaps are always rejected server-side, not only in the Blazor UI.

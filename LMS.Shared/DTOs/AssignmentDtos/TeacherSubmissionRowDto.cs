@@ -11,5 +11,6 @@
 		int? SubmissionId,
 		DateTimeOffset? SubmittedAt,
 		string? FileName,
-		bool HasFeedback);
+		bool HasFeedback,
+		int FeedbackCount);
 }

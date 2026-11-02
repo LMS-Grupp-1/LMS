@@ -1,10 +1,11 @@
 ﻿
-using System;
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
 using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
+using LMS.Shared.DTOs.StatisticsDtos;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
 using Module = Domain.Models.Entities.Module;
 
 namespace LMS.Infrastructure.Repositories;
@@ -17,16 +18,23 @@ public class ModuleRepository : BaseRepository<Module>, IModuleRepository
 
     public async Task<IEnumerable<Module>> GetModulesByCourseIdAsync(int courseId)
     {
-        return await _context.Modules
+        return await Set
             .Where(m => m.CourseId == courseId)
             .OrderBy(m => m.StartDate)
             .ToListAsync();
     }
 
-    public override async Task<Module?> GetByIdAsync(int id)
+    public async Task<ModuleStatisticsDto?> GetModuleStatisticsAsync(int moduleId, CancellationToken cancellationToken = default)
     {
-        return await _context.Modules
-            .Include(m => m.Course)
-            .FirstOrDefaultAsync(m => m.Id == id);
+        return await Set
+            .AsNoTracking()
+            .Where(m => m.Id == moduleId)
+            .Select(m => new ModuleStatisticsDto(
+                m.Activities.Count(),
+                m.Assignments.Count(),
+                m.Documents.Count(),
+                m.SharedDocuments.Count()
+            ))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }

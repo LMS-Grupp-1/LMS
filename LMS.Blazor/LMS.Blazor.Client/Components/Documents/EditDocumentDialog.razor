@@ -1,0 +1,134 @@
+﻿@using System.Net
+@using LMS.Blazor.Client.Services
+@using LMS.Shared.DTOs.DocumentDtos
+@using Microsoft.Extensions.Logging
+
+@implements IDisposable
+
+@inject DocumentService Documents
+@inject ILogger<EditDocumentDialog> Logger
+
+<div class="modal fade show d-block"
+     tabindex="-1"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="edit-document-title"
+     style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="edit-document-title" class="modal-title h5">
+                    Redigera dokument
+                </h2>
+
+                <button type="button"
+                        class="btn-close"
+                        aria-label="Stäng"
+                        disabled="@isSaving"
+                        @onclick="OnCancel">
+                </button>
+            </div>
+
+            <DocumentEditForm Document="Document"
+                              IsSaving="isSaving"
+                              ErrorMessage="@error"
+                              OnSave="SaveAsync"
+                              OnCancel="OnCancel" />
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public DocumentDto Document { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnSaved { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private readonly CancellationTokenSource lifetime = new();
+
+    private bool isSaving;
+    private string? error;
+
+    private async Task SaveAsync(DocumentUpdateDto dto)
+    {
+        if (isSaving)
+            return;
+
+        isSaving = true;
+        error = null;
+
+        try
+        {
+            var (_, errorMessage) = await Documents.UpdateAsync(
+                Document.Id, dto, lifetime.Token);
+
+            if (lifetime.IsCancellationRequested)
+                return;
+
+            if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                Logger.LogWarning(
+                    "The API rejected update of document {DocumentId}: {ErrorMessage}",
+                    Document.Id,
+                    errorMessage);
+
+                error = "Dokumentet kunde inte sparas. " +
+                        "Kontrollera uppgifterna och att placeringen finns kvar.";
+                return;
+            }
+        }
+        catch (OperationCanceledException)
+            when (lifetime.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(
+                ex,
+                "Could not confirm update of document {DocumentId}.",
+                Document.Id);
+
+            error = UserMessage(ex);
+            return;
+        }
+        finally
+        {
+            isSaving = false;
+        }
+
+        if (!lifetime.IsCancellationRequested)
+            await OnSaved.InvokeAsync();
+    }
+
+    private static string UserMessage(Exception exception)
+    {
+        if (exception is UnauthorizedAccessException)
+            return "Din session har gått ut. Logga in igen.";
+
+        return exception is HttpRequestException http
+            ? http.StatusCode switch
+            {
+                HttpStatusCode.Forbidden =>
+                    "Du har inte behörighet att ändra materialet.",
+
+                HttpStatusCode.NotFound =>
+                    "Dokumentet eller placeringen kunde inte hittas.",
+
+                _ => "Ändringen kunde inte bekräftas. " +
+                     "Stäng dialogen och ladda om dokumentlistan innan du försöker igen."
+            }
+            : "Ändringen kunde inte bekräftas. " +
+              "Stäng dialogen och ladda om dokumentlistan innan du försöker igen.";
+    }
+
+    public void Dispose()
+    {
+        lifetime.Cancel();
+        lifetime.Dispose();
+    }
+}

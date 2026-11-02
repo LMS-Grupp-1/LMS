@@ -1,11 +1,11 @@
 ﻿@using System.Globalization
 @using System.Net
 @using LMS.Blazor.Client.Helpers
-@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Shared.DTOs.DashboardDtos
 @implements IAsyncDisposable
 
-@inject IDashboardService DashboardService
+@inject IApiProxyClient ApiProxy
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 
@@ -203,7 +203,7 @@ else if (dashboard is not null)
     {
         try
         {
-            var result = await DashboardService.GetStudentDashboardAsync(componentCancellation.Token);
+            var result = await ApiProxy.GetAsync<StudentDashboardDto>("dashboard/student", componentCancellation.Token);
 
             // The server-side prerender service deliberately returns null.
             // Keep showing the loading state until WebAssembly runs this again.

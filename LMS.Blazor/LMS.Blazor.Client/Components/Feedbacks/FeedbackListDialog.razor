@@ -1,0 +1,238 @@
+﻿@using LMS.Shared.DTOs.AssignmentDtos
+@using LMS.Shared.DTOs.FeedbackDtos
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Services
+@using System
+@using System.Net
+@using System.Net.Http.Json
+@inject IApiProxyClient ApiProxy
+@inject ToastService ToastService
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable mx-3 sm:mx-auto">
+            <div class="modal-content shadow-lg border-0 rounded-3">
+
+                <div class="modal-header border-bottom px-4 py-3 bg-white">
+                    <h5 class="modal-title fw-bold text-dark">Feedbackhantering</h5>
+                    <button type="button" class="btn-close" aria-label="Close" @onclick="CloseModal"></button>
+                </div>
+
+                <div class="modal-body p-4 bg-white space-y-4">
+
+                    @if (Submission != null)
+                    {
+                        <div class="card bg-light border-0 mb-4 p-3 rounded-3">
+                            <p class="mb-1 small"><strong>Inlämning:</strong> @Submission.ModuleName > @Submission.AssignmentName</p>
+                            <p class="mb-1 small"><strong>Student:</strong> @Submission.StudentName</p>
+                            <div class="text-muted small">
+                                <span><strong>Inlämnad:</strong> @Submission.SubmittedAt?.ToString("f")</span>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(errorMsg))
+                    {
+                        <div class="text-danger my-2">
+                            <i class="bi bi-exclamation-circle me-1"></i> @errorMsg
+                        </div>
+                    }
+
+                    @if (isLoading)
+                    {
+                        <div class="text-center py-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Laddar...</span>
+                            </div>
+                            <p class="mt-2 text-muted mb-0">Hämtar feedback...</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="card border border-primary-subtle bg-primary-subtle bg-opacity-10 p-3 mb-4 rounded-3">
+                            @if (!isAdding)
+                            {
+                                <button @onclick="ToggleAddForm" class="btn btn-primary btn-sm fw-semibold">
+                                    + Lägg till Feedback
+                                </button>
+                            }
+                            else
+                            {
+                                <div class="space-y-2">
+                                    <label class="form-label fw-bold text-dark small">Skriv ny feedback</label>
+                                
+                                    <textarea @bind="newComment" 
+                                              maxlength="2000" 
+                                              rows="4" 
+                                              class="form-control form-control-sm mb-2"
+                                              placeholder="Skriv din feedback här (max 2000 tecken)..."></textarea>
+                                
+                                    <div class="d-flex justify-content-between align-items-center text-muted small">
+                                        <span>@(2000 - (newComment?.Length ?? 0)) tecken kvar</span>
+                                        <div>
+                                            <button @onclick="CancelForm" class="btn btn-secondary btn-sm me-2">Avbryt</button>
+                                            <button @onclick="SubmitFeedback" class="btn btn-success btn-sm">Spara</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="feedback-list-section">
+                            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                                <h6 class="fw-bold text-secondary mb-0">Tidigare feedback</h6>
+                                <span class="badge bg-secondary">Totalt: @feedbacks.Count()</span>
+                            </div>
+
+                            @if (!feedbacks.Any())
+                            {
+                                <p class="text-muted fst-italic text-center py-4 small">Ingen feedback har lämnats för denna inlämning ännu.</p>
+                            }
+                            else
+                            {
+                                <div class="space-y-3">
+                                    @foreach (var feedback in feedbacks)
+                                    {
+                                        <div class="card border-0 shadow-sm p-3 mb-2 bg-light rounded-3">
+                                            <div class="d-flex justify-content-between align-items-center text-muted small mb-1">
+                                                <span class="fw-bold text-primary">Lärare: @feedback.TeacherName</span>
+                                                <span>@feedback.CreatedAt.ToString("g")</span>
+                                            </div>
+                                            <p class="text-dark mb-0 small whitespace-pre-line">@feedback.Comment</p>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+
+                </div>
+
+                <div class="modal-footer border-top bg-light px-4 py-3">
+                    <button type="button" class="btn btn-secondary btn-sm px-4" @onclick="CloseModal">Stäng</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public TeacherSubmissionRowDto? Submission { get; set; }
+    [Parameter] public EventCallback<bool> IsOpenChanged { get; set; }
+
+    private bool validSubmission => Submission != null && Submission.SubmissionId != null;
+    private int submissionId => Submission?.SubmissionId ?? 0;
+    private IEnumerable<FeedbackDto> feedbacks = Enumerable.Empty<FeedbackDto>();
+    private bool isLoading = false;
+    private string? errorMsg = null;
+    private bool hasFeedbackChanged = false;
+
+    private bool isAdding = false;
+    private string newComment = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen && validSubmission)
+        {
+            ClearState();
+
+            await LoadFeedbacksAsync();
+        }
+        else if (!IsOpen)
+        {
+            ClearState();
+        }
+    }
+
+    private async Task LoadFeedbacksAsync()
+    {
+        if (!validSubmission) return;
+
+        isLoading = true;
+        errorMsg = null;
+
+        try
+        {
+            feedbacks = await ApiProxy.GetAsync<IEnumerable<FeedbackDto>>(
+                    $"submissions/{submissionId}/feedbacks"
+                ) ?? Enumerable.Empty<FeedbackDto>();
+
+        }
+        catch (Exception ex)
+        {
+            errorMsg = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ToggleAddForm()
+    {
+        isAdding = true;
+        newComment = string.Empty;
+    }
+
+    private void CancelForm()
+    {
+        isAdding = false;
+        newComment = string.Empty;
+    }
+
+    private async Task SubmitFeedback()
+    {
+        if (string.IsNullOrWhiteSpace(newComment) || !validSubmission) return;
+        errorMsg = null;
+
+        var dto = new FeedbackFormDto
+        {
+            SubmissionId = submissionId,
+            Comment = newComment.Trim()
+        };
+        using var content = JsonContent.Create(dto);
+        var (success, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                    HttpMethod.Post,
+                    $"submissions/{submissionId}/feedbacks",
+                    content
+        );
+
+        if (string.IsNullOrWhiteSpace(error))
+        {
+            newComment = string.Empty;
+            isAdding = false;
+            hasFeedbackChanged = true;
+
+            ToastService.ShowToast("Feedback har sparas.", ToastType.Success);
+            await LoadFeedbacksAsync(); 
+        }
+        else
+        {
+            errorMsg = error;
+        }
+
+
+        newComment = string.Empty;
+        isAdding = false;
+    }
+
+    private async Task CloseModal()
+    {
+        IsOpen = false;
+        ClearState();
+
+        await IsOpenChanged.InvokeAsync(hasFeedbackChanged);
+    }
+
+    private void ClearState()
+    {
+        feedbacks = Enumerable.Empty<FeedbackDto>();
+        newComment = string.Empty;
+        isAdding = false;
+        errorMsg = null;
+        hasFeedbackChanged = false;
+    }
+}

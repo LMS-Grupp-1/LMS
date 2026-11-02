@@ -114,7 +114,7 @@ else
         }
         catch (HttpRequestException ex)
         {
-            errorMsg = $"Kunde inte ladda användare: {ex.Message}";
+            errorMsg = $"Kunde inte ladda användare. API response error: {ex.Message}";
         }
     }
 

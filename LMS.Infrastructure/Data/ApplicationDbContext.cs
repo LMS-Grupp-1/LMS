@@ -18,8 +18,11 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 	public DbSet<Assignment> Assignments => Set<Assignment>();
 	public DbSet<Submission> Submissions => Set<Submission>();
 	public DbSet<Feedback> Feedbacks => Set<Feedback>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
-	protected override void OnModelCreating(ModelBuilder builder)
+    public DbSet<SharedDocument> SharedDocuments => Set<SharedDocument>();
+
+    protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
 

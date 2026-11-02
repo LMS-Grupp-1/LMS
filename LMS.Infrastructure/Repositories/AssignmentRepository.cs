@@ -4,12 +4,13 @@ using LMS.Infrastructure.Data;
 using LMS.Shared.DTOs.CourseDtos;
 using LMS.Shared.DTOs.DashboardDtos;
 using Microsoft.EntityFrameworkCore;
+using LMS.Shared.DTOs.AssignmentDtos;
 
 namespace LMS.Infrastructure.Repositories
 {
-	public class AssignmentRepository(ApplicationDbContext context) : IAssignmentRepository
+	public class AssignmentRepository(ApplicationDbContext context)
+		: BaseRepository<Assignment>(context), IAssignmentRepository
 	{
-		private readonly ApplicationDbContext _context = context;
 
 		public async Task<IReadOnlyList<Assignment>> GetForStudentAsync(int courseId, string studentId)
 		{
@@ -18,8 +19,9 @@ namespace LMS.Infrastructure.Repositories
 				.Include(assignment => assignment.Module)				
 				.Include(assignment => assignment.Submissions
 					.Where(submission => submission.StudentId == studentId))
-					.ThenInclude(submission => submission.Feedback)
-				.Where(assignment => assignment.Module.CourseId == courseId)
+					.ThenInclude(submission => submission.Feedbacks)
+						.ThenInclude(feedback => feedback.Teacher)
+                .Where(assignment => assignment.Module.CourseId == courseId)
 				.OrderBy(assignment => assignment.Deadline == null)
 				.ThenBy(assignment => assignment.Deadline)
 				.ThenBy(assignment => assignment.Name)
@@ -34,7 +36,7 @@ namespace LMS.Infrastructure.Repositories
 				// Filtered include: other students' submissions are never loaded.
 				.Include(assignment => assignment.Submissions
 					.Where(submission => submission.StudentId == studentId))
-					.ThenInclude(submission => submission.Feedback)
+					.ThenInclude(submission => submission.Feedbacks)
 				.FirstOrDefaultAsync(assignment => assignment.Id == id);
 		}
 
@@ -47,7 +49,7 @@ namespace LMS.Infrastructure.Repositories
 				.Include(assignment => assignment.Submissions)
 					.ThenInclude(submission => submission.Document)
 				.Include(assignment => assignment.Submissions)
-					.ThenInclude(submission => submission.Feedback)
+					.ThenInclude(submission => submission.Feedbacks)
 				.Where(assignment =>
 					assignment.Module.CourseId == courseId &&
 					assignment.RequiresSubmission)
@@ -57,7 +59,33 @@ namespace LMS.Infrastructure.Repositories
 				.ToListAsync();
 		}
 
-        public async Task<IReadOnlyList<TeacherDashboardAssignmentDto>> GetActiveAssignmentsAsync(int? count = null)
+		public async Task<IReadOnlyList<TeacherAssignmentDto>> GetForModuleAsync(int moduleId)
+		{
+			return await _context.Assignments
+				.AsNoTracking()
+				.Where(assignment => assignment.ModuleId == moduleId)
+				.OrderBy(assignment => assignment.Deadline == null)
+				.ThenBy(assignment => assignment.Deadline)
+				.ThenBy(assignment => assignment.Name)				
+				.Select(assignment => new TeacherAssignmentDto(
+					assignment.Id,
+					assignment.Name,
+					assignment.Description,
+					assignment.Deadline,
+					assignment.RequiresSubmission,
+					assignment.ActivityId,
+					assignment.Activity.Name,
+					assignment.Submissions.Count()))
+				.ToListAsync();
+		}
+
+		public async Task<bool> HasSubmissionsAsync(int assignmentId)
+		{
+			return await _context.Submissions
+				.AnyAsync(submission => submission.AssignmentId == assignmentId);
+		}
+
+		public async Task<IReadOnlyList<TeacherDashboardAssignmentDto>> GetActiveAssignmentsAsync(int? count = null)
         {
             var currentDate = DateTime.Today;
 

@@ -16,7 +16,10 @@ public static class ServiceExtensions
         services.AddScoped<IDocumentRepository, DocumentRepository>();
 		services.AddScoped<IAssignmentRepository, AssignmentRepository>();
 		services.AddScoped<ISubmissionRepository, SubmissionRepository>();
-	}
+        services.AddScoped<IFeedbackRepository, FeedbackRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<ISharedDocumentRepository, SharedDocumentRepository>();
+    }
 
     public static void AddServiceLayer(this IServiceCollection services)
     {
@@ -51,6 +54,15 @@ public static class ServiceExtensions
 
         services.AddScoped<ITeacherCourseOverviewService, TeacherCourseOverviewService>();
         services.AddLazy<ITeacherCourseOverviewService>();
+
+        services.AddScoped<IFeedbackService, FeedbackService>();
+        services.AddLazy<IFeedbackService>();
+
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddLazy<INotificationService>();
+
+        services.AddScoped<ISharedDocumentService, SharedDocumentService>();
+        services.AddLazy<ISharedDocumentService>();
 
         services.AddSingleton(TimeProvider.System);
 	}

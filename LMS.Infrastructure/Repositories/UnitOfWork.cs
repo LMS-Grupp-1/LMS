@@ -1,5 +1,6 @@
 ﻿using Domain.Contracts;
 using LMS.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LMS.Infrastructure.Repositories;
@@ -16,6 +17,12 @@ public class UnitOfWork : IUnitOfWork
 	public IAssignmentRepository Assignments { get; }
 	public ISubmissionRepository Submissions { get; }
 
+    public IFeedbackRepository Feedbacks { get; }
+
+    public INotificationRepository Notifications { get; }
+
+    public ISharedDocumentRepository SharedDocuments { get; }
+
     public UnitOfWork(ApplicationDbContext context,
                 IUserRepository userRepository,
                       ICourseRepository courseRepository,
@@ -23,7 +30,10 @@ public class UnitOfWork : IUnitOfWork
                       IActivityRepository activityRepository,
                       IDocumentRepository documentRepository,
                       IAssignmentRepository assignmentRepository,
-                      ISubmissionRepository submissionRepository)
+                      ISubmissionRepository submissionRepository,
+                      IFeedbackRepository feedbackRepository,
+                      INotificationRepository notificationRepository,
+                      ISharedDocumentRepository sharedDocumentRepository)
     {
         _context = context;
         Users = userRepository;
@@ -33,14 +43,36 @@ public class UnitOfWork : IUnitOfWork
         Documents = documentRepository;
         Assignments = assignmentRepository;
 		Submissions = submissionRepository;
-	}
+        Feedbacks = feedbackRepository;
+        Notifications = notificationRepository;
+        SharedDocuments = sharedDocumentRepository;
+    }
 
     public async Task<int> CompleteAsync()
     {
         return await _context.SaveChangesAsync();
     }
 
-    public void Dispose()
+	public async Task ExecuteInTransactionAsync(Func<Task> action)
+	{
+		// EnableRetryOnFailure (Program.cs) does not allow a transaction started directly
+		// with BeginTransactionAsync. The execution strategy runs the whole block,
+		// and retries all of it, transaction included, on a transient failure.
+		var strategy = _context.Database.CreateExecutionStrategy();
+
+		await strategy.ExecuteAsync(async () =>
+		{
+			await using var transaction = await _context.Database.BeginTransactionAsync();
+
+			await action();
+
+			// Only reached when the action did not throw. If it throws, the transaction
+			// is disposed without commit, which rolls back every change made inside it.
+			await transaction.CommitAsync();
+		});
+	}
+
+	public void Dispose()
     {
         _context.Dispose();
     }

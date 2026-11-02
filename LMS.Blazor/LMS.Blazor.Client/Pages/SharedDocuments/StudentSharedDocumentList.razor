@@ -1,0 +1,660 @@
+﻿@page "/courses/{CourseId:int}/shared-documents"
+@using LMS.Shared.DTOs.SharedDocumentDtos;
+@using LMS.Shared.MockData
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Components.Common
+@using LMS.Blazor.Client.Components.SharedDocuments
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@inject IApiProxyClient ApiProxy
+@inject ToastService ToastService
+
+<div class="card border-0">
+    <div class="card-header border-0 py-3">
+        <div class="mb-4">
+            <a href="my-course" class="text-primary"> 
+                <i class="bi bi-arrow-left-short me-1"></i><small>Tillbaka Min Kurs</small>
+            </a> 
+        </div>
+
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="mb-4 text-dark">
+                <i class="bi bi-file-earmark-person me-2"></i>Alla grupp delade dokument
+            </h3>
+            <button class="btn btn-primary" @onclick="OpenUploadModal">
+                <i class="bi bi-upload"></i>
+                <span class="d-none d-md-inline ms-1">Ladda upp</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="row">
+            <!-- Left Column: Tree Navigation -->
+            <div class="col-md-3 border-end pb-3">
+                
+                <button type="button" 
+                            class="list-group-item list-group-item-action p-2 @(selectedCourseId == null && selectedModuleId == null && selectedGroupId == null 
+                                ? "active bg-primary-subtle text-primary fw-bold" : "")"
+                            @onclick="SelectAllFilter">
+                        <i class="bi bi-folder2 me-2"></i>Alla
+                        <span class="badge bg-secondary float-end">@documents.Count</span>
+                </button>
+                
+                <div class="list-group list-group-flush">
+                    <!-- Root: Kursen (Expandable) -->
+                    <div class="list-group-item px-0 border-0">
+                        <div class="d-flex align-items-center">
+                            <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 me-1" @onclick="ToggleKursenExpand">
+                                <span style="font-size: 0.75rem;">@(isKursenExpanded ? "▼" : "▶")</span>
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-link text-start text-decoration-none p-0 flex-grow-1 @(selectedModuleId == null && selectedGroupId == null && selectedCourseId == CourseId ? "fw-bold text-primary" : "text-dark")"
+                                    @onclick="SelectCourseFilter">
+                                <i class="bi bi-book me-2"></i>Kursen
+                            </button>
+                        </div>
+
+                        @if (isKursenExpanded)
+                        {
+                            <div class="ms-4 mt-1 d-flex flex-column gap-1">
+                                @foreach (var gId in documents.Where(d => d.ModuleId == null && d.GroupId != null).Select(d => d.GroupId!.Value).Distinct().OrderBy(g => g))
+                                {
+                                    <button type="button" 
+                                            class="btn btn-sm text-start py-1 px-2 @(selectedModuleId == null && selectedGroupId == gId ? "btn-primary text-white" : "btn-light text-secondary")"
+                                            @onclick="() => SelectCourseGroupFilter(gId)">
+                                        <i class="bi bi-people-fill me-1"></i>Grupp @gId
+                                    </button>
+                                }
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Modules & their Groups -->
+                    @foreach (var moduleGroup in documents.GroupBy(d => new { d.ModuleId, ModuleName = GetModuleName(d) }))
+                    {
+                        if (moduleGroup.Key.ModuleId != null)
+                        {
+                            var modId = moduleGroup.Key.ModuleId.Value;
+                            bool isModExpanded = expandedModuleId == modId;
+                            var activeGroupsInModule = moduleGroup.Where(d => d.GroupId != null).Select(d => d.GroupId!.Value).Distinct().OrderBy(g => g).ToList();
+
+                            <div class="list-group-item px-0 border-0 mt-2">
+                                <div class="d-flex align-items-center">
+                                    <button type="button" class="btn btn-sm btn-link text-decoration-none p-0 me-1" @onclick="() => ToggleModuleExpand(modId)">
+                                        <span style="font-size: 0.75rem;">@(isModExpanded ? "▼" : "▶")</span>
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-link text-start text-decoration-none p-0 flex-grow-1 @(selectedModuleId == modId && selectedGroupId == null ? "fw-bold text-primary" : "text-dark")"
+                                            @onclick="() => SelectModuleFilter(modId)">
+                                        <i class="bi bi-stack me-2"></i>@moduleGroup.Key.ModuleName
+                                    </button>
+                                </div>
+
+                                @if (isModExpanded)
+                                {
+                                    <div class="ms-4 mt-1 d-flex flex-column gap-1">
+                                        @foreach (var gId in activeGroupsInModule)
+                                        {
+                                            <button type="button" 
+                                                    class="btn sub-group-btn btn-sm text-start py-1 px-2 @(selectedModuleId == modId && selectedGroupId == gId ? "btn-primary text-white" : "btn-light text-secondary")"
+                                                    @onclick="() => SelectModuleGroupFilter(modId, gId)">
+                                                <i class="bi bi-people-fill me-1"></i>Grupp @gId
+                                            </button>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    }
+                </div>
+
+            </div>
+
+            <!-- Right Column: Search, Sort & Document Table -->
+            <div class="col-md-9">
+                <!-- Search and Sort Controls -->
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                    <div class="input-group input-group-sm" style="width: 250px;">
+                        <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                        <input type="text" 
+                               class="form-control" 
+                               placeholder="Sök namn / filnamn..." 
+                               value="@searchTerm" 
+                               @oninput="OnSearchInput" />
+                    </div>
+
+                    <select class="form-select form-select-sm w-auto" @bind="sortBy">
+                        <option value="name">Sortera på Namn</option>
+                        <option value="filename">Sortera på Filnamn</option>
+                        <option value="date">Sortera på Datum</option>
+                    </select>
+
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="ToggleSortOrder" title="Ändra sorteringsordning">
+                        <i class="bi @(sortAscending ? "bi-sort-up" : "bi-sort-down")"></i>
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-warning">@errorMessage</div>
+                }
+
+                @if (isLoading)
+                {
+                    <div class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                }
+                else if (!PaginatedDocuments.Any())
+                {
+                    <div class="text-center p-4 text-muted">
+                        <i class="bi bi-folder2-open fs-2 d-block mb-2"></i>
+                        Inga dokument hittades.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Namn</th>
+                                    <th>Beskrivning</th>
+                                    <th>Fil</th>
+                                    <th>Storlek</th>
+                                    <th>Uppladdad</th>
+                                    <th class="text-end">Åtgärd</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var doc in PaginatedDocuments)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div>@doc.Name</div>
+                                            @if (!string.IsNullOrEmpty(doc.Location))
+                                            {
+                                                <small class="text-muted">@doc.Location</small>                    
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="text-muted text-truncate d-inline-block" style="max-width: 150px;">
+                                                    @(string.IsNullOrEmpty(doc.Description) ? "-" : doc.Description)
+                                                </span>
+                                                @if (!string.IsNullOrEmpty(doc.Description) && doc.Description.Length > 15)
+                                                {
+                                                    <button type="button" 
+                                                            class="btn btn-link btn-sm p-0 text-decoration-none text-nowrap" 
+                                                            @onclick="() => ShowDescription(doc.Description)">
+                                                        se mer
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <code>@doc.FileName</code>
+                                        </td>
+                                        <td>@FormatFileSize(doc.SizeBytes)</td>
+                                        <td>
+                                            <div>@doc.UploadedAt.ToString("yyyy-MM-dd HH:mm")</div>
+                                            <small class="text-muted">Av @doc.UploadedByName</small>
+                                        </td>
+                                        <td class="text-end">
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-primary"
+                                                disabled="@(downloadingId is not null)"
+                                                aria-label="@($"Ladda ner {doc.Name}")"
+                                                @onclick="() => DownloadAsync(doc.Id, doc.FileName)">
+                                                @if (downloadingId == doc.Id)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-download"></i>
+                                                }
+                                            </button>
+
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-danger"
+                                                disabled="@(downloadingId is not null || deletingId is not null)"
+                                                aria-label="@($"Radera {doc.Name}")"
+                                                @onclick="() => ConfirmDelete(doc.Id, doc.Name)">
+                                                @if (deletingId == doc.Id)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-trash"></i>
+                                                }
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (TotalPages > 1)
+                    {
+                        <nav class="d-flex justify-content-between align-items-center p-3 border-top bg-light">
+                            <span class="text-muted small">Sida @currentPage av @TotalPages (Totalt @ProcessedDocuments.Count() dokument)</span>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                                    <button class="page-link" @onclick="() => SetPage(currentPage - 1)">Föregående</button>
+                                </li>
+                                @for (int i = 1; i <= TotalPages; i++)
+                                {
+                                    var pageNum = i;
+                                    <li class="page-item @(currentPage == pageNum ? "active" : "")">
+                                        <button class="page-link" @onclick="() => SetPage(pageNum)">@pageNum</button>
+                                    </li>
+                                }
+                                <li class="page-item @(currentPage == TotalPages ? "disabled" : "")">
+                                    <button class="page-link" @onclick="() => SetPage(currentPage + 1)">Nästa</button>
+                                </li>
+                            </ul>
+                        </nav>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<ConfirmDialog IsOpen="@isModalOpen"
+               Title="@ConfirmTitle"
+               Message="@ConfirmMessage"
+               ConfirmButtonText="@ConfirmButtonText"
+               ConfirmButtonClass="@ConfirmButtonClass"
+               OnConfirm="HandleOnConfirmAsync"
+               OnCancel="HandleOnCancel" />
+
+<SharedDocumentFormDialog IsOpen="@isUploadModalOpen"
+                CourseId = "@CourseId"
+                OnClose="CloseUploadModal"
+                OnDocumentUploaded="HandleDocumentSaved"/>
+
+@code {
+    [Parameter]
+    public int CourseId { get; set; }
+
+    private IReadOnlyList<SharedDocumentDto> documents { get; set; } = Array.Empty<SharedDocumentDto>();
+    private bool isLoading = true;
+    private string? errorMessage = null;
+    private int? downloadingId;
+    private IJSObjectReference? downloadModule;
+
+    // Description dialog
+    private bool isDescriptionModalOpen = false;
+    private string currentDescription = string.Empty;
+    // Delete dialog
+    private int? deletingId;
+    private bool isDeleteModalOpen = false;
+    private int documentToDeleteId;
+    private string deletingDocumentName = string.Empty;
+    private string deleteConfirmationMessage = string.Empty;
+    // Confirmation dialog for Description and Delete
+    private bool isModalOpen => isDescriptionModalOpen || isDeleteModalOpen;
+    private string ConfirmTitle => isDescriptionModalOpen ? "Dokument beskrivning" : "Ta bort dokument";
+    private string ConfirmMessage => isDescriptionModalOpen ? currentDescription : deleteConfirmationMessage;
+    private string ConfirmButtonText => isDescriptionModalOpen ? "Stäng" : "Ta bort";
+    private string ConfirmButtonClass => isDescriptionModalOpen ? "btn-primary" : "btn-danger";
+
+    // Search, Sort, Pagination
+    private string searchTerm = "";
+    private string sortBy = "date";
+    private bool sortAscending = true;
+    private int currentPage = 1;
+    private readonly int pageSize = 5;
+
+    // Tree navigation
+    private int? selectedCourseId = null;
+    private int? selectedModuleId = null;
+    private int? selectedGroupId = null;
+    private Dictionary<int, List<SharedDocumentDto>> DocumentsByModule => documents
+        .GroupBy(d => d.ModuleId ?? 0)
+        .ToDictionary(g => g.Key, g => g.ToList());
+
+    // Tree expansion and selection states
+    private bool isKursenExpanded = true;
+    private int? expandedModuleId = null;
+
+    // Upload shared-document
+    private bool isUploadModalOpen = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if the current URL contains ?mockdata=true, then Load from mock data
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var useMock = uri.Query.Contains("mockdata=true", StringComparison.OrdinalIgnoreCase);
+
+        if (useMock)
+        {
+            documents = MockSharedDocuments.AllDocuments;
+            isLoading = false;
+        }
+        else
+        {
+            // Load from API as normal
+            await LoadSharedDocumentsAsync();
+        }
+    }
+
+    private async Task LoadSharedDocumentsAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            documents = await ApiProxy.GetAsync<IReadOnlyList<SharedDocumentDto>>(
+                $"shared-documents/for-student") ?? Array.Empty<SharedDocumentDto>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DownloadAsync(int documentId, string fileName)
+    {
+        downloadingId = documentId;
+        errorMessage = null;
+
+        try
+        {            
+            // The API checks that the document belongs to the student's course.
+            downloadModule ??= await JS.InvokeAsync<IJSObjectReference>(
+                "import", Navigation.ToAbsoluteUri("js/documents.js").ToString());
+
+            var url = Navigation.ToAbsoluteUri($"api/proxy/shared-documents/{documentId}/download").ToString();
+            var status = await downloadModule.InvokeAsync<int>("download", url, fileName);
+
+            switch (status)
+            {
+                case 200:
+                    // Success, no action needed
+                    break;
+                case 403:
+                    errorMessage = "Filen kunde inte hämtas. Du har inte tillstånd att hämta den.";
+                    break;
+                case 404:
+                    errorMessage = "Filen kunde inte hittas. Den kan ha tagits bort.";
+                    break;
+                default:
+                    errorMessage = $"Filen kunde inte hämtas. Okänt fel (status: {status}).";
+                    break;
+            }
+        }
+        catch (JSException ex)
+        {
+            errorMessage = $"Filen kunde inte hämtas. {ex.Message}";
+        }
+        finally
+        {
+            downloadingId = null;
+        }
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        int order = 0;
+        double len = bytes;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len /= 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private void ShowDescription(string description)
+    {
+        currentDescription = description;
+        isDescriptionModalOpen = true;
+    }
+
+    private void CloseDescriptionDialog()
+    {
+        isDescriptionModalOpen = false;
+        currentDescription = string.Empty;
+    }
+
+    // Search, Sort, Paginate
+    private IEnumerable<SharedDocumentDto> ProcessedDocuments
+    {
+        get
+        {
+            var query = documents.AsEnumerable();
+
+            // Tree Navigation Filter
+            if (selectedModuleId.HasValue)
+            {
+                query = query.Where(d => d.ModuleId == selectedModuleId);
+                if (selectedGroupId.HasValue)
+                {
+                    query = query.Where(d => d.GroupId == selectedGroupId);
+                }
+            }
+            else if (selectedCourseId.HasValue)
+            {
+                query = query.Where(d => d.ModuleId == null);
+                if (selectedGroupId.HasValue)
+                {
+                    query = query.Where(d => d.GroupId == selectedGroupId);
+                }
+            }
+
+            // Search Filter (matches Name or FileName)
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                query = query.Where(d => 
+                    (d.Name != null && d.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)) ||
+                    (d.FileName != null && d.FileName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+                );
+            }
+
+            // Sorting
+            query = sortBy switch
+            {
+                "name" => sortAscending ? query.OrderBy(d => d.Name) : query.OrderByDescending(d => d.Name),
+                "filename" => sortAscending ? query.OrderBy(d => d.FileName) : query.OrderByDescending(d => d.FileName),
+                "date" => sortAscending ? query.OrderBy(d => d.UploadedAt) : query.OrderByDescending(d => d.UploadedAt),
+                _ => query.OrderByDescending(d => d.UploadedAt)
+            };
+
+            return query;
+        }
+    }
+
+    private int TotalPages => Math.Max(1, (int)Math.Ceiling(ProcessedDocuments.Count() / (double)pageSize));
+
+    private IEnumerable<SharedDocumentDto> PaginatedDocuments => ProcessedDocuments
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        currentPage = 1; // Reset to page 1 on new search
+    }
+
+    private void ToggleSortOrder()
+    {
+        sortAscending = !sortAscending;
+    }
+
+    private void SetPage(int page)
+    {
+        if (page >= 1 && page <= TotalPages)
+        {
+            currentPage = page;
+        }
+    }
+
+    // Tree navigation
+    private void SelectAllFilter()
+    {
+        selectedCourseId = null;
+        selectedModuleId = null;
+        selectedGroupId = null;
+        currentPage = 1;
+    }
+
+    private void SelectCourseFilter()
+    {
+        selectedCourseId = CourseId;
+        selectedModuleId = null;
+        selectedGroupId = null;
+        currentPage = 1;
+    }
+
+    private void SelectCourseGroupFilter(int groupId)
+    {
+        selectedCourseId = CourseId;
+        selectedModuleId = null;
+        selectedGroupId = groupId;
+        currentPage = 1;
+    }
+
+    private void SelectModuleFilter(int moduleId)
+    {
+        selectedCourseId = null;
+        selectedModuleId = moduleId;
+        selectedGroupId = null;
+        currentPage = 1;
+    }
+
+    private void SelectModuleGroupFilter(int moduleId, int groupId)
+    {
+        selectedCourseId = null;
+        selectedModuleId = moduleId;
+        selectedGroupId = groupId;
+        currentPage = 1;
+    }
+
+    // Tree expansion
+    private void ToggleKursenExpand() => isKursenExpanded = !isKursenExpanded;
+
+    private void ToggleModuleExpand(int moduleId)
+    {
+        expandedModuleId = expandedModuleId == moduleId ? null : moduleId;
+    }
+
+    private string GetModuleName(SharedDocumentDto doc)
+    {
+        // Dto.Location string follows like "Modul: ModuleName / Group i" or "Kursen / Group i":
+        if (!string.IsNullOrEmpty(doc.Location))
+        {
+            if (doc.Location.Contains("Modul: "))
+            {
+                var mName = doc.Location.Replace("Modul: ", "").Split('/')[0].Trim();
+                return  !string.IsNullOrEmpty(mName) ? mName : $"Modul Id: {doc.ModuleId}";
+            }
+            return doc.Location;
+
+        }
+        return $"Modul Id: {doc.ModuleId}";
+    }
+
+    // Upload document
+    private void OpenUploadModal()
+    {
+        isUploadModalOpen = true;
+    }
+
+    private void CloseUploadModal()
+    {
+        isUploadModalOpen = false;
+    }
+
+    private async Task HandleDocumentSaved(bool success)
+    {
+        if (success)
+        {
+            // Close the modal
+            isUploadModalOpen = false;
+
+            // Reload your document list from the server
+            await LoadSharedDocumentsAsync();
+        }
+    }
+
+    // Delete document
+    private void ConfirmDelete(int documentId, string documentName)
+    {
+        deletingId = documentId;
+        documentToDeleteId = documentId;
+        deletingDocumentName = documentName;
+        deleteConfirmationMessage = $"Är du säker på att du vill ta bort dokumentet \"{documentName}\"?";
+        isDeleteModalOpen = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        isDeleteModalOpen = false;
+        deletingId = null;
+        documentToDeleteId = 0;
+        deletingDocumentName = string.Empty;
+    }
+
+    private async Task DeleteDocumentAsync()
+    {
+        if (documentToDeleteId == 0)
+            return;
+        deletingId = documentToDeleteId;
+        errorMessage = null;
+
+        var (_, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+        HttpMethod.Delete, $"shared-documents/{documentToDeleteId}");
+
+        if (!string.IsNullOrWhiteSpace(error))
+        {
+            ToastService.ShowToast($"{error}", ToastType.Danger);
+            return;
+        }
+
+        ToastService.ShowToast($"Dokumentet {deletingDocumentName} har tagits bort.", ToastType.Success);
+
+        CloseDeleteDialog();
+
+        await LoadSharedDocumentsAsync();
+    }
+
+    private async Task HandleOnConfirmAsync()
+    {
+        if (isDeleteModalOpen)
+        {
+            await DeleteDocumentAsync();
+        }
+        else
+        {
+            CloseDescriptionDialog();
+        }
+    }
+
+    private void HandleOnCancel()
+    {
+        if (isDeleteModalOpen)
+        {
+            CloseDeleteDialog();
+        }
+        else
+        {
+            CloseDescriptionDialog();
+        }
+    }
+}

@@ -28,4 +28,15 @@ public interface IDocumentService
         int id,
         DocumentActor actor,
         CancellationToken cancellationToken);
+
+    Task UpdateAsync(
+        int id,
+        DocumentUpdateDto dto,
+        DocumentActor actor,
+        CancellationToken cancellationToken);
+
+    Task DeleteAsync(
+        int id,
+        DocumentActor actor,
+        CancellationToken cancellationToken);
 }

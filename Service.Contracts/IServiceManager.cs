@@ -13,4 +13,7 @@ public interface IServiceManager
 	IDashboardService DashboardService { get; }
 
     ITeacherCourseOverviewService TeacherCourseOverviewService { get; }
+    IFeedbackService FeedbackService { get; }
+    INotificationService NotificationService { get; }
+    ISharedDocumentService SharedDocumentService { get; }
 }

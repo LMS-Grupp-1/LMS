@@ -35,5 +35,11 @@ namespace Domain.Contracts
         Task AddAsync(
             Document document,
             CancellationToken cancellationToken);
+
+        Task<Document?> FindForManagementAsync(
+            int id,
+            CancellationToken cancellationToken);
+
+        void Delete(Document document);
     }
 }

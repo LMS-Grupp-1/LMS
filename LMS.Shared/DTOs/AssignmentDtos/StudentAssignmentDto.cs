@@ -1,4 +1,6 @@
-﻿namespace LMS.Shared.DTOs.AssignmentDtos
+﻿using LMS.Shared.DTOs.FeedbackDtos;
+
+namespace LMS.Shared.DTOs.AssignmentDtos
 {	
 	public record StudentAssignmentDto(
 		int Id,
@@ -10,5 +12,6 @@
 		bool RequiresSubmission,
 		AssignmentStatus Status,
 		DateTimeOffset? SubmittedAt,
-		bool HasFeedback);
+		bool HasFeedback,
+        IEnumerable<FeedbackForStudentDto> Feedbacks);
 }

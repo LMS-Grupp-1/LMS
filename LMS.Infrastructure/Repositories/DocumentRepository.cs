@@ -1,4 +1,5 @@
-﻿using Domain.Contracts;
+﻿using Azure.Storage.Blobs.Models;
+using Domain.Contracts;
 using Domain.Models.Entities;
 using LMS.Infrastructure.Data;
 using LMS.Shared.DTOs.DocumentDtos;
@@ -72,6 +73,7 @@ public class DocumentRepository : IDocumentRepository
     {
         return await _context.Documents
             .AsNoTracking()
+            .Include(document => document.Activity)
             .Where(document =>
                 document.CourseId == courseId ||
                 (document.Module != null &&
@@ -91,7 +93,7 @@ public class DocumentRepository : IDocumentRepository
                 document.UploadedBy.FirstName + " " +
                     document.UploadedBy.LastName,
                 courseId,
-                document.ModuleId,
+                document.ModuleId ?? (document.Activity != null ? document.Activity.ModuleId : null),
                 document.ActivityId,
                 document.CourseId != null
                     ? "Kursmaterial"
@@ -109,12 +111,12 @@ public class DocumentRepository : IDocumentRepository
         int courseId,
         CancellationToken cancellationToken)
     {
-        var courseExists = await _context.Courses
-            .AnyAsync(
-                course => course.Id == courseId,
-                cancellationToken);
+        var courseName = await _context.Courses
+            .Where(course => course.Id == courseId)
+            .Select(course => course.Name)
+            .SingleOrDefaultAsync(cancellationToken);
 
-        if (!courseExists)
+        if (courseName is null)
         {
             return Array.Empty<DocumentTargetDto>();
         }
@@ -123,7 +125,7 @@ public class DocumentRepository : IDocumentRepository
         {
             new(
                 new DocumentTarget(CourseId: courseId),
-                "Kursmaterial")
+                "Kurs: " + courseName)
         };
 
         var modules = await _context.Modules
@@ -182,5 +184,22 @@ public class DocumentRepository : IDocumentRepository
         await _context.Documents.AddAsync(
             document,
             cancellationToken);
+    }
+
+    public async Task<Document?> FindForManagementAsync(
+        int id,
+        CancellationToken cancellationToken)
+    {
+        return await _context.Documents
+            .Where(document =>
+            !_context.Submissions.Any(submission =>
+                submission.DocumentId == document.Id))
+            .SingleOrDefaultAsync(
+            document => document.Id == id,
+            cancellationToken);
+    }
+    public void Delete(Document document)
+    {
+        _context.Documents.Remove(document);
     }
 }
