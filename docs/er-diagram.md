@@ -139,7 +139,9 @@ Submission status is calculated, not stored. For an assignment that requires sub
 | An assignment with submissions cannot be deleted | `AssignmentService` |
 | An activity with assignments cannot be deleted | Database (`Restrict`); a service check is needed when activity delete is added |
 | Submissions are only accepted for assignments that require submission | `SubmissionService` |
-| A student belongs to exactly one course | `UserService` |
+| A student belongs to exactly one course | `UsersService` |
+| A user has exactly one role; changing the role removes every other role | `UsersService` |
+| Creating or updating a user saves the user and the role in one transaction: everything or nothing | `UsersService` + `UnitOfWork` |
 | Access to course, document and submission data depends on role and course membership, even if an id or URL is manipulated | Services |
 | File uploads validate file type and file size | `DocumentService` |
 
