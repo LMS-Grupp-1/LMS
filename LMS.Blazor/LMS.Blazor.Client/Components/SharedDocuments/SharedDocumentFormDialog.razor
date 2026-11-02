@@ -1,0 +1,304 @@
+﻿@using LMS.Shared.Constants
+@using LMS.Shared.DTOs.SharedDocumentDtos
+@using LMS.Shared.DTOs.ModulesDtos
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Blazor.Client.Services
+@inject IApiProxyClient ApiProxy
+@inject ToastService ToastService
+
+@if (IsOpen)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content p-4">
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2 id="upload-heading" class="h5 mb-0">Ladda upp dokument</h2>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+
+                @if (!isValid)
+                {
+                    <div class="alert alert-info" role="status">
+                        Välj antingen att ladda upp för hela kursen, eller välj en modul samt en grupp.
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(errorMsg))
+                {
+                    <div class="alert alert-danger" role="alert">@errorMsg</div>
+                }
+
+                <form @onsubmit="UploadAsync">
+                    <fieldset disabled="@isBusy">
+                        <div class="mb-3">
+                            <label for="document-name" class="form-label">
+                                Dokumentnamn
+                            </label>
+                            <input id="document-name"
+                                   class="form-control"
+                                   maxlength="@DocumentConstraints.MaxNameLength"
+                                   @bind="document.Name" />
+                            <div class="form-text">
+                                Högst @DocumentConstraints.MaxNameLength tecken.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="document-description" class="form-label">
+                                Beskrivning
+                            </label>
+                            <textarea id="document-description"
+                                      class="form-control"
+                                      rows="3"
+                                      maxlength="@DocumentConstraints.MaxDescriptionLength"
+                                      @bind="document.Description"></textarea>
+                        </div>
+
+                        <div class="row g-3 mb-3 align-items-end">
+                            <div class="col-12 col-lg-4">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="for-course" 
+                                           @bind="isForCourse" />
+                                    <label class="form-check-label fw-semibold" for="for-course">
+                                        För hela kursen
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-lg-4">
+                                <label for="module-select" class="form-label small text-muted mb-1">Modul</label>
+                                <select id="module-select"
+                                        class="form-select"
+                                        @bind="document.ModuleId"
+                                        disabled="@isForCourse">
+                                    <option value="">Välj modul...</option>
+                                    @foreach (var module in modules)
+                                    {
+                                        <option value="@module.Id">@module.Name</option>
+                                    }
+                                </select>
+                            </div>
+
+                            <div class="col-12 col-lg-4">
+                                <label for="group-select" class="form-label small text-muted mb-1">Grupp</label>
+                                <select id="group-select"
+                                        class="form-select"
+                                        @bind="document.GroupId">
+                                    <option value="">Välj grupp...</option>
+                                    @foreach (var group in Groups.All)
+                                    {
+                                        <option value="@group">Grupp @group</option>
+                                    }
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="document-file" class="form-label">
+                                Välj fil
+                            </label>
+                            <InputFile @key="fileInputKey"
+                                       id="document-file"
+                                       class="form-control"
+                                       accept="@AllowedExtensions"
+                                       aria-describedby="document-file-help"
+                                       OnChange="SelectFile" />
+
+                            <div id="document-file-help" class="form-text">
+                                Tillåtna filtyper: @AllowedExtensions.
+                                Högst @(DocumentConstraints.MaxFileSize / (1024 * 1024)) MB.
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" disabled="@(!isValid || isUploading)">
+                            @(isUploading ? "Laddar upp..." : "Ladda upp dokument")
+                        </button>
+                    </fieldset>
+                </form>
+
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsOpen { get; set; }
+    [Parameter] public int CourseId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+    [Parameter] public EventCallback<bool> OnDocumentUploaded { get; set; }
+
+    private List<ModuleLookupDto> modules = new(); // Module dropdown list
+    private bool isForCourse = false; // Upload on course level
+    private bool isValid => document.GroupId != null && (isForCourse || document.ModuleId != null);
+
+    private IBrowserFile? selectedFile;
+    private int fileInputKey = 0;
+
+    private UploadSharedDocumentDto document = new();
+
+    private string? errorMsg;
+
+    private bool isLoading = false;
+    private bool isUploading = false;
+    private bool isBusy => isLoading || isUploading;
+
+    private static string AllowedExtensions =>
+        string.Join(", ", DocumentConstraints.ContentTypes.Keys);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (IsOpen)
+        {
+            // Reset/initialize the form every time it opens
+            document = new UploadSharedDocumentDto { CourseId = CourseId };
+            selectedFile = null;
+            fileInputKey++;
+            isForCourse = false;
+            errorMsg = null;
+
+            await LoadModulesAsync();
+        }
+    }
+
+    private async Task LoadModulesAsync()
+    {
+        isLoading = true;
+        errorMsg = null;
+        try
+        {
+            var serviceModules = await ApiProxy.GetAsync<IEnumerable<ModuleDto>>(
+                $"modules/for-student"
+            ) ?? Enumerable.Empty<ModuleDto>();
+            
+            modules = serviceModules.Select(m => new ModuleLookupDto(CourseId, m.Id, m.Name)).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Misslyckades med att ladda moduler: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SelectFile(InputFileChangeEventArgs args)
+    {
+        selectedFile = args.File;
+        errorMsg = null;
+    }
+
+    private async Task UploadAsync()
+    {
+        if (isBusy || !isValid)
+            return;
+
+        errorMsg = null;
+
+        if (string.IsNullOrWhiteSpace(document.Name) ||
+            document.Name.Trim().Length > DocumentConstraints.MaxNameLength)
+        {
+            errorMsg = $"Ange ett namn med 1–{DocumentConstraints.MaxNameLength} tecken.";
+            return;
+        }
+
+        if (document.Description.Trim().Length > DocumentConstraints.MaxDescriptionLength)
+        {
+            errorMsg = $"Beskrivningen får innehålla högst {DocumentConstraints.MaxDescriptionLength} tecken.";
+            return;
+        }
+
+        var file = selectedFile;
+
+        if (file is null || file.Size == 0)
+        {
+            errorMsg = "Välj en fil som inte är tom.";
+            return;
+        }
+
+        if (file.Size > DocumentConstraints.MaxFileSize)
+        {
+            errorMsg = $"Filen får vara högst {DocumentConstraints.MaxFileSize / (1024 * 1024)} MB.";
+            return;
+        }
+
+        if (!DocumentConstraints.ContentTypes.ContainsKey(
+                System.IO.Path.GetExtension(file.Name)))
+        {
+            errorMsg = "Filtypen är inte tillåten.";
+            return;
+        }
+
+        isUploading = true;
+
+        try
+        {
+            // Build the multipart form content bundling properties and the file stream
+            using var content = new MultipartFormDataContent();
+            content.Add(new StringContent(document.Name), "Name");
+            content.Add(new StringContent(document.Description ?? string.Empty), "Description");
+            content.Add(new StringContent(document.CourseId.ToString()), "CourseId");
+            
+            if (!isForCourse && document.ModuleId.HasValue)
+            {
+                content.Add(new StringContent(document.ModuleId.Value.ToString()), "ModuleId");
+            }
+
+            if (document.GroupId.HasValue)
+            {
+                content.Add(new StringContent(document.GroupId.Value.ToString()), "GroupId");
+            }
+
+            // The name "File" here matches [FromForm(Name = "File")] in controller
+            var fileStream = file.OpenReadStream(DocumentConstraints.MaxFileSize);
+            var fileContent = new StreamContent(fileStream);
+            content.Add(fileContent, "File", file.Name);
+
+            // Send via your ApiProxy pattern
+            var (success, error) = await ApiProxy.SendAndHandleErrorAsync<bool>(
+                HttpMethod.Post,
+                "shared-documents/for-student",
+                content
+            );
+
+            if (!string.IsNullOrEmpty(error))
+            {
+                errorMsg = error;
+                return;
+            }
+
+            if (success)
+            {
+                ToastService.ShowToast("Dokumentet har laddats upp.", ToastType.Success);
+
+                // Tell the parent component to refresh its list
+                await OnDocumentUploaded.InvokeAsync(true);
+                
+                // Close the modal via the OnClose callback
+                await OnClose.InvokeAsync();
+            }
+            else
+            {
+                errorMsg = "Servern bekräftade inte uppladdningen.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Uppladdningen misslyckades: {ex.Message}";
+        }
+        finally
+        {
+            isUploading = false;
+        }
+    }
+
+    private async Task CloseModal()
+    {
+        IsOpen = false;
+        // Trigger parent's close handler
+        await OnClose.InvokeAsync();
+    }
+}

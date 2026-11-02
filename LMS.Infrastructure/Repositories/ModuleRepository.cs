@@ -32,7 +32,8 @@ public class ModuleRepository : BaseRepository<Module>, IModuleRepository
             .Select(m => new ModuleStatisticsDto(
                 m.Activities.Count(),
                 m.Assignments.Count(),
-                m.Documents.Count()
+                m.Documents.Count(),
+                m.SharedDocuments.Count()
             ))
             .FirstOrDefaultAsync(cancellationToken);
     }

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace LMS.Shared.Constants;
+﻿namespace LMS.Shared.Constants;
 
 public static class NotificationTypes
 {

@@ -21,6 +21,8 @@ public class UnitOfWork : IUnitOfWork
 
     public INotificationRepository Notifications { get; }
 
+    public ISharedDocumentRepository SharedDocuments { get; }
+
     public UnitOfWork(ApplicationDbContext context,
                 IUserRepository userRepository,
                       ICourseRepository courseRepository,
@@ -30,7 +32,8 @@ public class UnitOfWork : IUnitOfWork
                       IAssignmentRepository assignmentRepository,
                       ISubmissionRepository submissionRepository,
                       IFeedbackRepository feedbackRepository,
-                      INotificationRepository notificationRepository)
+                      INotificationRepository notificationRepository,
+                      ISharedDocumentRepository sharedDocumentRepository)
     {
         _context = context;
         Users = userRepository;
@@ -42,6 +45,7 @@ public class UnitOfWork : IUnitOfWork
 		Submissions = submissionRepository;
         Feedbacks = feedbackRepository;
         Notifications = notificationRepository;
+        SharedDocuments = sharedDocumentRepository;
     }
 
     public async Task<int> CompleteAsync()

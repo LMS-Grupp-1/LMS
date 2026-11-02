@@ -7,5 +7,6 @@ namespace LMS.Shared.DTOs.StatisticsDtos;
 public record ModuleStatisticsDto(
     int ActivityCount,
     int AssignmentCount,
-    int DocumentCount
+    int DocumentCount,
+    int SharedDocumentCount
 );
