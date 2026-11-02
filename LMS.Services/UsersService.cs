@@ -66,62 +66,62 @@ public class UsersService : IUsersService
         }
     }
 
-    public async Task UpdateUserAsync(UpdateUserDto dto)
-    {
-        // 1. Validate role-specific course rule
-        if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
-        {
-            throw new BadRequestException("Student must be assigned to a course.");
-        }
+	public async Task UpdateUserAsync(UpdateUserDto dto)
+	{
+		// 1. Validate before anything is changed, so no transaction is started for invalid input.
+		if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
+		{
+			throw new EntityNotFoundException("Role", dto.Role);
+		}
 
-        // 2. Find user
-        var user = await _userManager.FindByIdAsync(dto.Id);
-        if (user == null)
-        {
-            throw new EntityNotFoundException("User", dto.Id);
-        }
+		if (dto.Role.Equals(UserRoles.Student, StringComparison.OrdinalIgnoreCase) && (!dto.CourseId.HasValue || dto.CourseId.Value <= 0))
+		{
+			throw new BadRequestException("Student must be assigned to a course.");
+		}
 
-        // 3. Validate role existence
-        if (string.IsNullOrWhiteSpace(dto.Role) || !await _roleManager.RoleExistsAsync(dto.Role))
-        {
-            throw new EntityNotFoundException("Role", dto.Role);
-        }
+		var user = await _userManager.FindByIdAsync(dto.Id)
+			?? throw new EntityNotFoundException("User", dto.Id);
 
-        // 4. Handle Role Updates first (if role changed)
-        var currentRoles = await _userManager.GetRolesAsync(user);
-        if (!currentRoles.Contains(dto.Role))
-        {
-            if (currentRoles.Any())
-            {
-                var removeResult = await _userManager.RemoveFromRolesAsync(user, currentRoles);
-                if (!removeResult.Succeeded)
-                {
-                    throw new BadRequestException(string.Join(" ", removeResult.Errors.Select(e => e.Description)));
-                }
-            }
+		// 2. Roles and user details are saved together: if any step fails, nothing is saved.
+		await _unitOfWork.ExecuteInTransactionAsync(async () =>
+		{
+			// A user has exactly one role, so every role except the chosen one is removed.
+			var currentRoles = await _userManager.GetRolesAsync(user);
+			var rolesToRemove = currentRoles
+				.Where(role => !role.Equals(dto.Role, StringComparison.OrdinalIgnoreCase))
+				.ToList();
 
-            var addResult = await _userManager.AddToRoleAsync(user, dto.Role);
-            if (!addResult.Succeeded)
-            {
-                throw new BadRequestException(string.Join(" ", addResult.Errors.Select(e => e.Description)));
-            }
-        }
+			if (rolesToRemove.Count > 0)
+			{
+				ThrowIfFailed(await _userManager.RemoveFromRolesAsync(user, rolesToRemove));
+			}
 
-        // 5. Update User Properties last
-        user.UserName = dto.Email;
-        user.Email = dto.Email;
-        user.FirstName = dto.FirstName?.Trim() ?? string.Empty;
-        user.LastName = dto.LastName?.Trim() ?? string.Empty;
-        user.CourseId = dto.CourseId;
+			if (!currentRoles.Contains(dto.Role, StringComparer.OrdinalIgnoreCase))
+			{
+				ThrowIfFailed(await _userManager.AddToRoleAsync(user, dto.Role));
+			}
 
-        var result = await _userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
-            throw new BadRequestException(string.Join(" ", result.Errors.Select(e => e.Description)));
-        }
-    }
+			user.UserName = dto.Email;
+			user.Email = dto.Email;
+			user.FirstName = dto.FirstName?.Trim() ?? string.Empty;
+			user.LastName = dto.LastName?.Trim() ?? string.Empty;
+			user.CourseId = dto.CourseId;
 
-    public async Task<IEnumerable<UserDto>> GetUsersAsync()
+			ThrowIfFailed(await _userManager.UpdateAsync(user));
+		});
+	}
+
+	// Turns failed ASP.NET Core Identity results into a 400 with all error descriptions.
+	// Throwing inside ExecuteInTransactionAsync also rolls the transaction back.
+	private static void ThrowIfFailed(IdentityResult result)
+	{
+		if (!result.Succeeded)
+		{
+			throw new BadRequestException(string.Join(" ", result.Errors.Select(e => e.Description)));
+		}
+	}
+
+	public async Task<IEnumerable<UserDto>> GetUsersAsync()
     {
         // Single optimized database query using mixed LINQ query & method syntax (1 DB call instead of N+1)
         return await _unitOfWork.Users.GetUsersWithCoursesAsync();
