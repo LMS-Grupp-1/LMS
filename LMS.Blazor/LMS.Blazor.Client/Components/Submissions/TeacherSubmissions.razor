@@ -1,11 +1,11 @@
 ﻿@using System.Globalization
 @using System.Net
-@using LMS.Blazor.Client.Services
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Shared.DTOs.AssignmentDtos
 @using LMS.Blazor.Client.Components.Feedbacks
 @implements IAsyncDisposable
 
-@inject ISubmissionService SubmissionService
+@inject IApiProxyClient ApiProxy
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JS
 
@@ -216,7 +216,7 @@ else
         
         try
         {
-            var result = await SubmissionService.GetForCourseAsync(CourseId, componentCancellation.Token);
+            var result = await ApiProxy.GetAsync<List<TeacherSubmissionRowDto>>($"courses/{CourseId}/submissions", componentCancellation.Token);
 
             // The server-side prerender service deliberately returns null.
             // Keep showing the loading state until WebAssembly runs this again.

@@ -8,7 +8,15 @@
                     <button type="button" class="btn-close" disabled="@IsBusy" @onclick="Cancel"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="mb-0">@Message</p>
+                    <p class="mb-0">
+                        @if (!string.IsNullOrEmpty(Message))
+                        {
+                            @foreach (var line in Message.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+                            {
+                                @line <br />
+                            }
+                        }
+                    </p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" disabled="@IsBusy" @onclick="Cancel">@CancelButtonText</button>

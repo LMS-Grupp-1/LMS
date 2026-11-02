@@ -1,0 +1,241 @@
+﻿@using System.Net.Http.Json
+@using LMS.Blazor.Client.Services.ApiProxy
+@using LMS.Shared.DTOs.ActivityDtos
+@inject IApiProxyClient ApiProxy
+@inject ILogger<DeleteActivityDialog> Logger
+
+<div class="modal fade show d-block"
+     tabindex="-1"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="delete-activity-title"
+     style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="delete-activity-title" class="modal-title">
+                    @(showStudentWarning
+                        ? "Inlämningar och feedback raderas"
+                        : "Radera aktivitet")
+                </h5>
+
+                <button type="button"
+                        class="btn-close"
+                        aria-label="Stäng"
+                        disabled="@isDeleting"
+                        @onclick="CancelAsync">
+                </button>
+            </div>
+
+            <div class="modal-body">
+                @if (isLoading)
+                {
+                    <p role="status">Hämtar kopplat innehåll...</p>
+                }
+                else if (preview is not null)
+                {
+                    @if (showStudentWarning)
+                    {
+                        <div class="alert alert-warning">
+                            Aktiviteten innehåller
+                            <strong>@preview.Assignments.Sum(a => a.SubmissionCount)
+                                studentinlämningar</strong>
+                            och
+                            <strong>@preview.Assignments.Sum(a => a.FeedbackCount)
+                                feedbackposter</strong>.
+
+                            Även inlämningsfilerna kommer att raderas.
+                        </div>
+
+                        <p>
+                            Vill du flytta uppgifterna till en annan aktivitet
+                            innan du raderar? Då behålls deras inlämningar och
+                            feedback. Välj Avbryt om du vill göra det först.
+                        </p>
+
+                        <p class="fw-semibold">
+                            Om du fortsätter raderas aktiviteten och allt
+                            innehåll som listades i föregående steg.
+                        </p>
+                    }
+                    else
+                    {
+                        <ActivityDeletionSummary Preview="@preview" />
+                    }
+                }
+
+                @if (!string.IsNullOrWhiteSpace(error))
+                {
+                    <div class="alert alert-danger" role="alert">
+                        @error
+                    </div>
+
+                    <button type="button"
+                            class="btn btn-outline-primary"
+                            disabled="@isDeleting"
+                            @onclick="LoadPreviewAsync">
+                        Läs in underlaget igen
+                    </button>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button"
+                        class="btn btn-secondary"
+                        disabled="@isDeleting"
+                        @onclick="CancelAsync">
+                    Avbryt
+                </button>
+
+                <button type="button"
+                        class="btn btn-danger"
+                        disabled="@(isLoading || isDeleting || preview is null || error is not null)"
+                        @onclick="ConfirmAsync">
+                    @(isDeleting
+                        ? "Raderar..."
+                        : !showStudentWarning &&
+                          preview?.RequiresAdditionalConfirmation == true
+                            ? "Fortsätt"
+                            : "Radera aktiviteten och innehållet")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int ModuleId { get; set; }
+    [Parameter] public int ActivityId { get; set; }
+    [Parameter] public EventCallback OnDeleted { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    private ActivityDeletionPreviewDto? preview;
+    private string? error;
+    private bool isLoading = true;
+    private bool isDeleting;
+    private bool showStudentWarning;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPreviewAsync();
+    }
+
+    private async Task LoadPreviewAsync()
+    {
+        isLoading = true;
+        error = null;
+        preview = null;
+        showStudentWarning = false;
+
+        try
+        {
+            preview = await ApiProxy.GetAsync<ActivityDeletionPreviewDto>(
+                $"teacher/modules/{ModuleId}/activities/{ActivityId}/deletion-preview");
+
+            if (preview is null)
+            {
+                error = "Underlaget kunde inte hämtas. Försök igen.";
+            }
+        }
+        catch (UnauthorizedAccessException)
+        {
+            error = "Din session har gått ut. Logga in igen.";
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Could not load deletion preview for activity {ActivityId}.",
+                ActivityId);
+
+            error = "Underlaget kunde inte hämtas. Aktiviteten kan ha tagits bort. " +
+                    "Stäng dialogen och uppdatera sidan om problemet kvarstår.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ConfirmAsync()
+    {
+        if (isLoading || isDeleting || preview is null || error is not null)
+            return;
+
+        if (preview.RequiresAdditionalConfirmation && !showStudentWarning)
+        {
+            showStudentWarning = true;
+            return;
+        }
+
+        isDeleting = true;
+        bool deleted = false;
+
+        try
+        {
+            var request = new ActivityDeleteRequestDto
+            {
+                Version = preview.Version,
+                ConfirmDeletion = true,
+                ConfirmStudentWorkDeletion = showStudentWarning
+            };
+
+            using var content = JsonContent.Create(request);
+
+            var (_, responseError) = await ApiProxy.SendAndHandleErrorAsync<object>(
+                HttpMethod.Delete,
+                $"teacher/modules/{ModuleId}/activities/{ActivityId}",
+                content);
+
+            if (!string.IsNullOrWhiteSpace(responseError))
+            {
+                error = responseError switch
+                {
+                    "The activity content has changed. Review the deletion preview again." =>
+                        "Innehållet har ändrats. Läs in underlaget igen och granska det före radering.",
+
+                    "Deleting student submissions and feedback must be explicitly confirmed." =>
+                        "Inlämningar och feedback behöver bekräftas. Läs in underlaget igen.",
+
+                    _ =>
+                        "Aktiviteten kunde inte raderas. Läs in underlaget igen."
+                };
+
+                return;
+            }
+
+            deleted = true;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            error = "Din session har gått ut. Logga in igen.";
+        }
+        catch (Exception exception)
+        {
+            Logger.LogError(
+                exception,
+                "Could not confirm deletion of activity {ActivityId}.",
+                ActivityId);
+
+            error = "Raderingen kunde inte bekräftas. Stäng dialogen och " +
+                    "uppdatera sidan för att kontrollera om aktiviteten finns kvar.";
+        }
+        finally
+        {
+            isDeleting = false;
+        }
+
+        if (deleted)
+        {
+            await OnDeleted.InvokeAsync();
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        if (!isDeleting)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+}

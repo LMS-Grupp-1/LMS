@@ -1,7 +1,7 @@
 ﻿using Domain.Contracts;
 using Domain.Models.Documents;
 using Domain.Models.Entities;
-using Domain.Models.Exceptions;
+using Domain.Models.Exceptions.DocumentExceptions;
 using LMS.Shared.Constants;
 using LMS.Shared.DTOs.DocumentDtos;
 using LMS.Shared.DTOs.Users;
@@ -439,14 +439,13 @@ public sealed class DocumentService(
 
     private static void ValidateTarget(DocumentTarget target)
     {
-        if (target.CourseId.HasValue ||
-            CountTargets(target) != 1 ||
+        if (CountTargets(target) != 1 ||
             target.CourseId is <= 0 ||
             target.ModuleId is <= 0 ||
             target.ActivityId is <= 0)
         {
             throw new DocumentValidationException(
-                "Select one module or activity.");
+                "Select one course, module or activity.");
         }
     }
 }

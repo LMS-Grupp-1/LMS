@@ -15,4 +15,5 @@ public interface IUnitOfWork : IDisposable
     ISharedDocumentRepository SharedDocuments { get; }
 
     Task<int> CompleteAsync(); // Commits all changes to the database
+	Task ExecuteInTransactionAsync(Func<Task> action);
 }
