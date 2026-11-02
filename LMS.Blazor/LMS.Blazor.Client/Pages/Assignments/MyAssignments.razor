@@ -5,14 +5,15 @@
 @using System.Globalization
 @using System.Net
 @using Microsoft.AspNetCore.Authorization
-@using LMS.Blazor.Client.Services
+@using System.Net.Http.Headers
+@using LMS.Blazor.Client.Services.ApiProxy
 @using LMS.Shared.Constants
 @using LMS.Shared.DTOs.AssignmentDtos
 @using Microsoft.AspNetCore.Components.Forms
 @using LMS.Blazor.Client.Helpers
 @using LMS.Blazor.Client.Components.Feedbacks
 
-@inject IAssignmentService AssignmentService
+@inject IApiProxyClient ApiProxy
 @inject NavigationManager NavigationManager
 
 <PageTitle>Mina uppgifter</PageTitle>
@@ -160,7 +161,7 @@ else
     {
         try
         {
-            var result = await AssignmentService.GetMyAssignmentsAsync(componentCancellation.Token);
+            var result = await ApiProxy.GetAsync<List<StudentAssignmentDto>>("assignments/my", componentCancellation.Token);
 
             // The server-side prerender service deliberately returns null.
             // Keep showing the loading state until WebAssembly runs this again.
@@ -241,8 +242,21 @@ else
 
         try
         {
-            var (updated, error) = await AssignmentService.SubmitAsync(
-                assignmentId, selectedFile, componentCancellation.Token);
+            using var form = new MultipartFormDataContent();
+
+            // The size limit is checked again by the API; this stops large files before they are sent.
+            using var stream = selectedFile.OpenReadStream(DocumentConstraints.MaxFileSize, componentCancellation.Token);
+            using var fileContent = new StreamContent(stream);
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+
+            // "File" must match the property name in SubmissionUploadRequest.
+            form.Add(fileContent, "File", selectedFile.Name);
+
+            var (updated, error) = await ApiProxy.SendAndHandleErrorAsync<StudentAssignmentDto>(
+                HttpMethod.Post,
+                $"assignments/{assignmentId}/submissions",
+                form,
+                componentCancellation.Token);
 
             if (updated is null)
             {
