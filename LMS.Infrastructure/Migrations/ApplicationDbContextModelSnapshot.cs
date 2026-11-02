@@ -479,8 +479,7 @@ namespace LMS.Infrastructure.Migrations
 
                     b.ToTable("SharedDocuments", t =>
                         {
-                            t.HasCheckConstraint("CK_Documents_Size", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760")
-                                .HasName("CK_Documents_Size1");
+                            t.HasCheckConstraint("CK_SharedDocuments_Size", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760");
                         });
                 });
 
@@ -776,17 +775,17 @@ namespace LMS.Infrastructure.Migrations
                     b.HasOne("Domain.Models.Entities.Course", "Course")
                         .WithMany("SharedDocuments")
                         .HasForeignKey("CourseId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Models.Entities.Module", "Module")
                         .WithMany("SharedDocuments")
                         .HasForeignKey("ModuleId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Domain.Models.Entities.ApplicationUser", "UploadedBy")
                         .WithMany()
                         .HasForeignKey("UploadedById")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Course");

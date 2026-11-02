@@ -57,9 +57,25 @@ public class SharedDocumentService : ISharedDocumentService
             throw new PropertyNotFoundException("The user has not been registered to any course yet.");
         }
 
+        // Can not upload documents to other courses
         if (userCourseId.Value != dto.CourseId)
         {
-            throw new UnauthorizedAccessException("Students are not allowed to upload documents to other courses.");
+            throw new ForbiddenException("Students are not allowed to upload documents to other courses.");
+        }
+
+        // Can not upload documents to other modules in other courses
+        if (dto.ModuleId.HasValue)
+        {
+            var module = await _unitOfWork.Modules.GetByIdAsync(dto.ModuleId.Value);
+            
+            if (module is null)
+            {
+                throw new EntityNotFoundException("Module", dto.ModuleId.Value);
+            }
+            if (module.CourseId != dto.CourseId)
+            {
+                throw new ForbiddenException("Students are not allowed to upload documents to other courses.");
+            }
         }
 
         if (dto.Name.Length == 0 ||
@@ -134,7 +150,7 @@ public class SharedDocumentService : ISharedDocumentService
             }
             else if (userCourseId.Value != document.CourseId)
             {
-                throw new UnauthorizedAccessException("Students are not allowed to download documents from other courses.");
+                throw new ForbiddenException("Students are not allowed to download documents from other courses.");
             }
         }
 
@@ -162,7 +178,7 @@ public class SharedDocumentService : ISharedDocumentService
 
         if (isStudent && document.UploadedById != userId)
         {
-            throw new UnauthorizedAccessException("You are not allowed to delete other users' document.");
+            throw new ForbiddenException("You are not allowed to delete other users' document.");
         }
         string blobPath = document.BlobPath;
 

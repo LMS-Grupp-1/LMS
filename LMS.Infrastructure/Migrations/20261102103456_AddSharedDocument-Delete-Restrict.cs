@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LMS.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddSharedDocument : Migration
+    public partial class AddSharedDocumentDeleteRestrict : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -32,25 +32,25 @@ namespace LMS.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_SharedDocuments", x => x.Id);
-                    table.CheckConstraint("CK_Documents_Size1", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760");
+                    table.CheckConstraint("CK_SharedDocuments_Size", "[SizeBytes] > 0 AND [SizeBytes] <= 10485760");
                     table.ForeignKey(
                         name: "FK_SharedDocuments_AspNetUsers_UploadedById",
                         column: x => x.UploadedById,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_SharedDocuments_Courses_CourseId",
                         column: x => x.CourseId,
                         principalTable: "Courses",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_SharedDocuments_Modules_ModuleId",
                         column: x => x.ModuleId,
                         principalTable: "Modules",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateIndex(

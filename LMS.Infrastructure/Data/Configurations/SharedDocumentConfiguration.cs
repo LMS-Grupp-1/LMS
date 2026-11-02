@@ -50,7 +50,7 @@ namespace LMS.Infrastructure.Data.Configurations
             builder.ToTable(table =>
             {
                 table.HasCheckConstraint(
-                    "CK_Documents_Size",
+                    "CK_SharedDocuments_Size",
                     FormattableString.Invariant(
                     $"[SizeBytes] > 0 AND [SizeBytes] <= {DocumentConstraints.MaxFileSize}"));
 
