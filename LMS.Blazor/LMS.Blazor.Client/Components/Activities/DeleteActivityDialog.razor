@@ -130,7 +130,7 @@
         try
         {
             preview = await ApiProxy.GetAsync<ActivityDeletionPreviewDto>(
-                $"teacher/modules/{ModuleId}/activities/{ActivityId}/deletion-preview");
+                $"activities/in-module/{ModuleId}/{ActivityId}/deletion-preview");
 
             if (preview is null)
             {
