@@ -18,6 +18,7 @@ public static class ServiceExtensions
 		services.AddScoped<ISubmissionRepository, SubmissionRepository>();
         services.AddScoped<IFeedbackRepository, FeedbackRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<ISharedDocumentRepository, SharedDocumentRepository>();
         services.AddScoped<ICourseInvitationRepository, CourseInvitationRepository>();
     }
 
@@ -60,6 +61,9 @@ public static class ServiceExtensions
 
         services.AddScoped<INotificationService, NotificationService>();
         services.AddLazy<INotificationService>();
+
+        services.AddScoped<ISharedDocumentService, SharedDocumentService>();
+        services.AddLazy<ISharedDocumentService>();
 
         services.AddScoped<ICourseInvitationService, CourseInvitationService>();
         services.AddLazy<ICourseInvitationService>();

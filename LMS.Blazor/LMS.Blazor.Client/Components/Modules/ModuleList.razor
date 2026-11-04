@@ -246,7 +246,7 @@
                 else
                 {
                     isDeletable = false;
-                    deleteDialogMsg = $"Kan inte radera denna modul.\n\nModulen har {moduleStats.ActivityCount} aktivitet(er),\n{moduleStats.AssignmentCount} uppgift(er),\noch {moduleStats.DocumentCount} dokument.\n\nTa bort dem innan du kan radera modulen.";
+                    deleteDialogMsg = GetDeleteMessageWithModuleStats(moduleStats);
                 }
             }
         }
@@ -255,6 +255,16 @@
             moduleListErrorMsg = $"Kunde inte ladda modulstatistik: {ex.Message}";
         }
     }
+
+    private string GetDeleteMessageWithModuleStats(ModuleStatisticsDto moduleStats) =>
+        $@"Kan inte radera denna modul.
+
+Modulen har {moduleStats.ActivityCount} aktivitet(er),
+{moduleStats.AssignmentCount} uppgift(er),
+{moduleStats.DocumentCount} dokument,
+och {moduleStats.SharedDocumentCount} delade dokument.
+
+Ta bort dem innan du kan radera modulen.";
 
     private void CloseDeleteModal()
     {

@@ -132,13 +132,10 @@
 
             if (success)
             {
-                foreach (var notification in notifications)
+                // Directly update every item by its index without checking IDs
+                for (int i = 0; i < notifications.Count; i++)
                 {
-                    var index = notifications.FindIndex(n => n.Id == notification.Id);
-                    if (index != -1)
-                    {
-                        notifications[index] = notifications[index] with { IsRead = true };
-                    }
+                    notifications[i] = notifications[i] with { IsRead = true };
                 }
 
                 UnreadCount = 0;

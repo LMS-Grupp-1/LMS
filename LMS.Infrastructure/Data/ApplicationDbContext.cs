@@ -21,6 +21,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<CourseInvitation> CourseInvitations => Set<CourseInvitation>();
 
+    public DbSet<SharedDocument> SharedDocuments => Set<SharedDocument>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);

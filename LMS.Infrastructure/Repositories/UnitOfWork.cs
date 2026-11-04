@@ -1,5 +1,6 @@
 ﻿using Domain.Contracts;
 using LMS.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace LMS.Infrastructure.Repositories;
@@ -21,6 +22,8 @@ public class UnitOfWork : IUnitOfWork
     public INotificationRepository Notifications { get; }
     public ICourseInvitationRepository CourseInvitations { get; }
 
+    public ISharedDocumentRepository SharedDocuments { get; }
+
     public UnitOfWork(ApplicationDbContext context,
                 IUserRepository userRepository,
                       ICourseRepository courseRepository,
@@ -31,6 +34,7 @@ public class UnitOfWork : IUnitOfWork
                       ISubmissionRepository submissionRepository,
                       IFeedbackRepository feedbackRepository,
                       INotificationRepository notificationRepository,
+                      ISharedDocumentRepository sharedDocumentRepository,
                       ICourseInvitationRepository courseInvitationRepository)
     {
         _context = context;
@@ -43,6 +47,7 @@ public class UnitOfWork : IUnitOfWork
 		Submissions = submissionRepository;
         Feedbacks = feedbackRepository;
         Notifications = notificationRepository;
+        SharedDocuments = sharedDocumentRepository;
         CourseInvitations = courseInvitationRepository;
     }
 
@@ -51,7 +56,26 @@ public class UnitOfWork : IUnitOfWork
         return await _context.SaveChangesAsync();
     }
 
-    public void Dispose()
+	public async Task ExecuteInTransactionAsync(Func<Task> action)
+	{
+		// EnableRetryOnFailure (Program.cs) does not allow a transaction started directly
+		// with BeginTransactionAsync. The execution strategy runs the whole block,
+		// and retries all of it, transaction included, on a transient failure.
+		var strategy = _context.Database.CreateExecutionStrategy();
+
+		await strategy.ExecuteAsync(async () =>
+		{
+			await using var transaction = await _context.Database.BeginTransactionAsync();
+
+			await action();
+
+			// Only reached when the action did not throw. If it throws, the transaction
+			// is disposed without commit, which rolls back every change made inside it.
+			await transaction.CommitAsync();
+		});
+	}
+
+	public void Dispose()
     {
         _context.Dispose();
     }
